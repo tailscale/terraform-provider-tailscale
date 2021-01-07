@@ -14,7 +14,7 @@ var testAccProvider *schema.Provider
 func init() {
 	testAccProvider = tailscale.Provider()
 	testAccProviders = map[string]*schema.Provider{
-		"hashicups": testAccProvider,
+		"tailscale": testAccProvider,
 	}
 }
 
@@ -31,5 +31,8 @@ func TestProvider_impl(t *testing.T) {
 func testAccPreCheck(t *testing.T) {
 	if err := os.Getenv("TAILSCALE_API_KEY"); err == "" {
 		t.Fatal("TAILSCALE_API_KEY must be set for acceptance tests")
+	}
+	if err := os.Getenv("TAILSCALE_DOMAIN"); err == "" {
+		t.Fatal("TAILSCALE_DOMAIN must be set for acceptance tests")
 	}
 }
