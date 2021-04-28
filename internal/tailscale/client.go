@@ -173,15 +173,23 @@ func (c *Client) DNSNameservers(ctx context.Context) ([]string, error) {
 }
 
 type DomainACL struct {
-	ACLs   []DomainACLEntry    `json:"acls"`
-	Groups map[string][]string `json:"groups,omitempty"`
-	Hosts  map[string]string   `json:"hosts,omitempty"`
+	ACLs      []DomainACLEntry    `json:"acls"`
+	Groups    map[string][]string `json:"groups,omitempty"`
+	Hosts     map[string]string   `json:"hosts,omitempty"`
+	TagOwners map[string][]string `json:"tagowners,omitempty"`
+	Tests     []DomainACLTest     `json:"tests,omitempty"`
 }
 
 type DomainACLEntry struct {
 	Action string   `json:"action"`
 	Ports  []string `json:"ports"`
 	Users  []string `json:"users"`
+}
+
+type DomainACLTest struct {
+	User  string   `json:"user"`
+	Allow []string `json:"allow"`
+	Deny  []string `json:"deny"`
 }
 
 // ACL retrieves the ACL that is currently set for the given domain.
