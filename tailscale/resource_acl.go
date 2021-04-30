@@ -13,6 +13,7 @@ import (
 
 func resourceACL() *schema.Resource {
 	return &schema.Resource{
+		Description:   "The acl resource allows you to configure a Tailscale ACL. See https://tailscale.com/kb/1018/acls for more information.",
 		ReadContext:   resourceACLRead,
 		CreateContext: resourceACLCreate,
 		UpdateContext: resourceACLUpdate,
