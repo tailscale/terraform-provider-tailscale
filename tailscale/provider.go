@@ -29,10 +29,11 @@ func Provider() *schema.Provider {
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			"tailscale_acl":              resourceACL(),
-			"tailscale_dns_nameservers":  resourceDNSNameservers(),
-			"tailscale_dns_preferences":  resourceDNSPreferences(),
-			"tailscale_dns_search_paths": resourceDNSSearchPaths(),
+			"tailscale_acl":                  resourceACL(),
+			"tailscale_dns_nameservers":      resourceDNSNameservers(),
+			"tailscale_dns_preferences":      resourceDNSPreferences(),
+			"tailscale_dns_search_paths":     resourceDNSSearchPaths(),
+			"tailscale_device_subnet_routes": resourceDeviceSubnetRoutes(),
 		},
 	}
 }
