@@ -30,7 +30,7 @@ func resourceACL() *schema.Resource {
 }
 
 func validateACL(i interface{}, _ cty.Path) diag.Diagnostics {
-	var acl tailscale.DomainACL
+	var acl tailscale.ACL
 	if err := json.Unmarshal([]byte(i.(string)), &acl); err != nil {
 		return diagnosticsError(err, "Invalid ACL")
 	}
@@ -38,8 +38,8 @@ func validateACL(i interface{}, _ cty.Path) diag.Diagnostics {
 }
 
 func suppressACLDiff(_, old, new string, _ *schema.ResourceData) bool {
-	var oldACL tailscale.DomainACL
-	var newACL tailscale.DomainACL
+	var oldACL tailscale.ACL
+	var newACL tailscale.ACL
 
 	if err := json.Unmarshal([]byte(old), &oldACL); err != nil {
 		return false
@@ -81,7 +81,7 @@ func resourceACLCreate(ctx context.Context, d *schema.ResourceData, m interface{
 	client := m.(*tailscale.Client)
 	aclStr := d.Get("acl").(string)
 
-	var acl tailscale.DomainACL
+	var acl tailscale.ACL
 	if err := json.Unmarshal([]byte(aclStr), &acl); err != nil {
 		return diagnosticsError(err, "Failed to unmarshal ACL")
 	}
@@ -102,7 +102,7 @@ func resourceACLUpdate(ctx context.Context, d *schema.ResourceData, m interface{
 		return nil
 	}
 
-	var acl tailscale.DomainACL
+	var acl tailscale.ACL
 	if err := json.Unmarshal([]byte(aclStr), &acl); err != nil {
 		return diagnosticsError(err, "Failed to unmarshal ACL")
 	}
@@ -117,8 +117,8 @@ func resourceACLUpdate(ctx context.Context, d *schema.ResourceData, m interface{
 func resourceACLDelete(ctx context.Context, _ *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*tailscale.Client)
 
-	acl := tailscale.DomainACL{
-		ACLs: []tailscale.DomainACLEntry{
+	acl := tailscale.ACL{
+		ACLs: []tailscale.ACLEntry{
 			{
 				Action: "accept",
 				Users:  []string{"*"},

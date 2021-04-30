@@ -46,13 +46,13 @@ func TestDomainACL_Unmarshal(t *testing.T) {
 		]
 	}`
 
-	var actual tailscale.DomainACL
+	var actual tailscale.ACL
 	if err := json.Unmarshal([]byte(acl), &actual); err != nil {
 		t.Fatal(err)
 	}
 
-	expected := tailscale.DomainACL{
-		ACLs: []tailscale.DomainACLEntry{
+	expected := tailscale.ACL{
+		ACLs: []tailscale.ACLEntry{
 			{
 				Action: "accept",
 				Ports:  []string{"*:*"},
@@ -72,7 +72,7 @@ func TestDomainACL_Unmarshal(t *testing.T) {
 				"user2@example.com",
 			},
 		},
-		Tests: []tailscale.DomainACLTest{
+		Tests: []tailscale.ACLTest{
 			{
 				User:  "user1@example.com",
 				Allow: []string{"example-host-1:22", "example-host-2:80"},

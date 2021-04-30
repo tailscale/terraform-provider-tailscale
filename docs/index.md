@@ -17,7 +17,7 @@ Do not keep your api key in HCL for production environments, use Terraform envir
 ```terraform
 provider "tailscale" {
   api_key = "my_api_key"
-  domain = "example.com"
+  tailnet = "example.com"
 }
 ```
 
@@ -26,4 +26,4 @@ provider "tailscale" {
 ### Required
 
 - **api_key** (String) API key to authenticate with the Tailscale API
-- **domain** (String) Tailscale domain to manage resources for
+- **tailnet** (String) Tailscale tailnet to manage resources for

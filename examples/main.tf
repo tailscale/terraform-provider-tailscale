@@ -9,7 +9,7 @@ terraform {
 
 provider "tailscale" {
   api_key = "my-api-key"
-  domain = "my-domain"
+  tailnet = "my-tailnet"
 }
 
 resource "tailscale_acl" "sample_acl" {
