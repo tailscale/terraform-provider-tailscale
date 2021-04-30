@@ -22,9 +22,9 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_API_KEY", nil),
 				Required:    true,
 			},
-			"domain": {
+			"tailnet": {
 				Type:        schema.TypeString,
-				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_DOMAIN", nil),
+				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_TAILNET", nil),
 				Required:    true,
 			},
 		},
@@ -39,9 +39,9 @@ func Provider() *schema.Provider {
 
 func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 	apiKey := d.Get("api_key").(string)
-	domain := d.Get("domain").(string)
+	tailnet := d.Get("tailnet").(string)
 
-	client := tailscale.NewClient(apiKey, domain)
+	client := tailscale.NewClient(apiKey, tailnet)
 	return client, nil
 }
 

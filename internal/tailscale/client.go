@@ -17,7 +17,7 @@ type (
 		apiKey  string
 		http    *http.Client
 		baseURL *url.URL
-		domain  string
+		tailnet string
 	}
 
 	APIError struct {
@@ -29,7 +29,7 @@ type (
 const baseURL = "https://api.tailscale.com"
 const contentType = "application/json"
 
-func NewClient(apiKey, domain string) *Client {
+func NewClient(apiKey, tailnet string) *Client {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		panic(err)
@@ -39,7 +39,7 @@ func NewClient(apiKey, domain string) *Client {
 		apiKey:  apiKey,
 		http:    &http.Client{Timeout: time.Minute},
 		baseURL: u,
-		domain:  domain,
+		tailnet: tailnet,
 	}
 }
 
@@ -101,16 +101,12 @@ func (err APIError) Error() string {
 	return fmt.Sprintf("%s (%v)", err.Message, err.status)
 }
 
-type DomainSearchPaths struct {
-	SearchPaths []string `json:"searchPaths"`
-}
-
 // SetDNSSearchPaths replaces the list of search paths with the list supplied by the user and returns an error otherwise.
 func (c *Client) SetDNSSearchPaths(ctx context.Context, searchPaths []string) error {
-	const uriFmt = "/api/v2/domain/%v/dns/searchpaths"
+	const uriFmt = "/api/v2/tailnet/%v/dns/searchpaths"
 
-	req, err := c.buildRequest(ctx, http.MethodPost, fmt.Sprintf(uriFmt, c.domain), DomainSearchPaths{
-		SearchPaths: searchPaths,
+	req, err := c.buildRequest(ctx, http.MethodPost, fmt.Sprintf(uriFmt, c.tailnet), map[string][]string{
+		"searchPaths": searchPaths,
 	})
 	if err != nil {
 		return err
@@ -119,34 +115,30 @@ func (c *Client) SetDNSSearchPaths(ctx context.Context, searchPaths []string) er
 	return c.performRequest(req, nil)
 }
 
-// DNSSearchPaths retrieves the list of search paths that is currently set for the given domain.
+// DNSSearchPaths retrieves the list of search paths that is currently set for the given tailnet.
 func (c *Client) DNSSearchPaths(ctx context.Context) ([]string, error) {
-	const uriFmt = "/api/v2/domain/%v/dns/searchpaths"
+	const uriFmt = "/api/v2/tailnet/%v/dns/searchpaths"
 
-	req, err := c.buildRequest(ctx, http.MethodGet, fmt.Sprintf(uriFmt, c.domain), nil)
+	req, err := c.buildRequest(ctx, http.MethodGet, fmt.Sprintf(uriFmt, c.tailnet), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var resp DomainSearchPaths
+	resp := make(map[string][]string)
 	if err = c.performRequest(req, &resp); err != nil {
 		return nil, err
 	}
 
-	return resp.SearchPaths, nil
+	return resp["searchPaths"], nil
 }
 
-type DomainDNSNameservers struct {
-	DNS []string `json:"dns"`
-}
-
-// SetDNSNameservers replaces the list of DNS nameservers for the given domain with the list supplied by the user. Note
+// SetDNSNameservers replaces the list of DNS nameservers for the given tailnet with the list supplied by the user. Note
 // that changing the list of DNS nameservers may also affect the status of MagicDNS (if MagicDNS is on).
 func (c *Client) SetDNSNameservers(ctx context.Context, dns []string) error {
-	const uriFmt = "/api/v2/domain/%v/dns/nameservers"
+	const uriFmt = "/api/v2/tailnet/%v/dns/nameservers"
 
-	req, err := c.buildRequest(ctx, http.MethodPost, fmt.Sprintf(uriFmt, c.domain), DomainDNSNameservers{
-		DNS: dns,
+	req, err := c.buildRequest(ctx, http.MethodPost, fmt.Sprintf(uriFmt, c.tailnet), map[string][]string{
+		"dns": dns,
 	})
 	if err != nil {
 		return err
@@ -155,53 +147,53 @@ func (c *Client) SetDNSNameservers(ctx context.Context, dns []string) error {
 	return c.performRequest(req, nil)
 }
 
-// DNSNameservers lists the DNS nameservers for a domain
+// DNSNameservers lists the DNS nameservers for a tailnet
 func (c *Client) DNSNameservers(ctx context.Context) ([]string, error) {
-	const uriFmt = "/api/v2/domain/%v/dns/nameservers"
+	const uriFmt = "/api/v2/tailnet/%v/dns/nameservers"
 
-	req, err := c.buildRequest(ctx, http.MethodGet, fmt.Sprintf(uriFmt, c.domain), nil)
+	req, err := c.buildRequest(ctx, http.MethodGet, fmt.Sprintf(uriFmt, c.tailnet), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var resp DomainDNSNameservers
+	resp := make(map[string][]string)
 	if err = c.performRequest(req, &resp); err != nil {
 		return nil, err
 	}
 
-	return resp.DNS, nil
+	return resp["dns"], nil
 }
 
-type DomainACL struct {
-	ACLs      []DomainACLEntry    `json:"acls"`
+type ACL struct {
+	ACLs      []ACLEntry          `json:"acls"`
 	Groups    map[string][]string `json:"groups,omitempty"`
 	Hosts     map[string]string   `json:"hosts,omitempty"`
 	TagOwners map[string][]string `json:"tagowners,omitempty"`
-	Tests     []DomainACLTest     `json:"tests,omitempty"`
+	Tests     []ACLTest           `json:"tests,omitempty"`
 }
 
-type DomainACLEntry struct {
+type ACLEntry struct {
 	Action string   `json:"action"`
 	Ports  []string `json:"ports"`
 	Users  []string `json:"users"`
 }
 
-type DomainACLTest struct {
+type ACLTest struct {
 	User  string   `json:"user"`
 	Allow []string `json:"allow"`
 	Deny  []string `json:"deny"`
 }
 
-// ACL retrieves the ACL that is currently set for the given domain.
-func (c *Client) ACL(ctx context.Context) (*DomainACL, error) {
-	const uriFmt = "/api/v2/domain/%s/acl"
+// ACL retrieves the ACL that is currently set for the given tailnet.
+func (c *Client) ACL(ctx context.Context) (*ACL, error) {
+	const uriFmt = "/api/v2/tailnet/%s/acl"
 
-	req, err := c.buildRequest(ctx, http.MethodGet, fmt.Sprintf(uriFmt, c.domain), nil)
+	req, err := c.buildRequest(ctx, http.MethodGet, fmt.Sprintf(uriFmt, c.tailnet), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var resp DomainACL
+	var resp ACL
 	if err = c.performRequest(req, &resp); err != nil {
 		return nil, err
 	}
@@ -209,11 +201,11 @@ func (c *Client) ACL(ctx context.Context) (*DomainACL, error) {
 	return &resp, nil
 }
 
-// SetACL sets the ACL for the given domain.
-func (c *Client) SetACL(ctx context.Context, acl DomainACL) error {
-	const uriFmt = "/api/v2/domain/%s/acl"
+// SetACL sets the ACL for the given tailnet.
+func (c *Client) SetACL(ctx context.Context, acl ACL) error {
+	const uriFmt = "/api/v2/tailnet/%s/acl"
 
-	req, err := c.buildRequest(ctx, http.MethodPost, fmt.Sprintf(uriFmt, c.domain), acl)
+	req, err := c.buildRequest(ctx, http.MethodPost, fmt.Sprintf(uriFmt, c.tailnet), acl)
 	if err != nil {
 		return err
 	}
@@ -225,12 +217,12 @@ type DNSPreferences struct {
 	MagicDNS bool `json:"magicDNS"`
 }
 
-// DNSPreferences retrieves the DNS preferences that are currently set for the given domain. Supply the domain of
+// DNSPreferences retrieves the DNS preferences that are currently set for the given tailnet. Supply the tailnet of
 // interest in the path.
 func (c *Client) DNSPreferences(ctx context.Context) (*DNSPreferences, error) {
-	const uriFmt = "/api/v2/domain/%s/dns/preferences"
+	const uriFmt = "/api/v2/tailnet/%s/dns/preferences"
 
-	req, err := c.buildRequest(ctx, http.MethodGet, fmt.Sprintf(uriFmt, c.domain), nil)
+	req, err := c.buildRequest(ctx, http.MethodGet, fmt.Sprintf(uriFmt, c.tailnet), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -243,12 +235,12 @@ func (c *Client) DNSPreferences(ctx context.Context) (*DNSPreferences, error) {
 	return &resp, nil
 }
 
-// SetDNSPreferences replaces the DNS preferences for a domain, specifically, the MagicDNS setting. Note that MagicDNS
+// SetDNSPreferences replaces the DNS preferences for a tailnet, specifically, the MagicDNS setting. Note that MagicDNS
 // is dependent on DNS servers.
 func (c *Client) SetDNSPreferences(ctx context.Context, preferences DNSPreferences) error {
-	const uriFmt = "/api/v2/domain/%s/dns/preferences"
+	const uriFmt = "/api/v2/tailnet/%s/dns/preferences"
 
-	req, err := c.buildRequest(ctx, http.MethodPost, fmt.Sprintf(uriFmt, c.domain), preferences)
+	req, err := c.buildRequest(ctx, http.MethodPost, fmt.Sprintf(uriFmt, c.tailnet), preferences)
 	if err != nil {
 		return nil
 	}

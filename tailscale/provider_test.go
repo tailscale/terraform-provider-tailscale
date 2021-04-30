@@ -32,8 +32,8 @@ func testProviderPreCheck(t *testing.T) {
 	if err := os.Getenv("TAILSCALE_API_KEY"); err == "" {
 		t.Fatal("TAILSCALE_API_KEY must be set for acceptance tests")
 	}
-	if err := os.Getenv("TAILSCALE_DOMAIN"); err == "" {
-		t.Fatal("TAILSCALE_DOMAIN must be set for acceptance tests")
+	if err := os.Getenv("TAILSCALE_TAILNET"); err == "" {
+		t.Fatal("TAILSCALE_TAILNET must be set for acceptance tests")
 	}
 }
 
