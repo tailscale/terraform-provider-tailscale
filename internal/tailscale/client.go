@@ -288,3 +288,42 @@ func (c *Client) DeviceSubnetRoutes(ctx context.Context, deviceID string) (*Devi
 
 	return &resp, nil
 }
+
+type (
+	Device struct {
+		Addresses                 []string  `json:"addresses"`
+		ClientVersion             string    `json:"clientVersion"`
+		Os                        string    `json:"os"`
+		Name                      string    `json:"name"`
+		Created                   time.Time `json:"created"`
+		LastSeen                  string    `json:"lastSeen"`
+		Hostname                  string    `json:"hostname"`
+		Machinekey                string    `json:"machineKey"`
+		NodeKey                   string    `json:"nodeKey"`
+		ID                        string    `json:"id"`
+		User                      string    `json:"user"`
+		Expires                   time.Time `json:"expires"`
+		KeyExpiryDisabled         bool      `json:"keyExpiryDisabled"`
+		Authorized                bool      `json:"authorized"`
+		IsExternal                bool      `json:"isExternal"`
+		UpdateAvailable           bool      `json:"updateAvailable"`
+		BlocksIncomingConnections bool      `json:"blocksIncomingConnections"`
+	}
+)
+
+// Devices lists the devices in a tailnet.
+func (c *Client) Devices(ctx context.Context) ([]Device, error) {
+	const uriFmt = "/api/v2/tailnet/%s/devices"
+
+	req, err := c.buildRequest(ctx, http.MethodGet, fmt.Sprintf(uriFmt, c.tailnet), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := make(map[string][]Device)
+	if err = c.performRequest(req, &resp); err != nil {
+		return nil, err
+	}
+
+	return resp["devices"], nil
+}

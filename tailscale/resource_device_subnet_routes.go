@@ -10,6 +10,7 @@ import (
 
 func resourceDeviceSubnetRoutes() *schema.Resource {
 	return &schema.Resource{
+		Description:   "The device_subnet_routes resource allows you to configure subnet routes for your Tailscale devices. See https://tailscale.com/kb/1019/subnets for more information.",
 		ReadContext:   resourceDeviceSubnetRoutesRead,
 		CreateContext: resourceDeviceSubnetRoutesCreate,
 		UpdateContext: resourceDeviceSubnetRoutesUpdate,
