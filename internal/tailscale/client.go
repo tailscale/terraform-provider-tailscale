@@ -247,3 +247,44 @@ func (c *Client) SetDNSPreferences(ctx context.Context, preferences DNSPreferenc
 
 	return c.performRequest(req, nil)
 }
+
+type (
+	DeviceRoutes struct {
+		Advertised []string `json:"advertisedRoutes"`
+		Enabled    []string `json:"enabledRoutes"`
+	}
+)
+
+// SetDeviceSubnetRoutes sets which subnet routes are enabled to be routed by a device by replacing the existing list
+// of subnet routes with the supplied routes. Routes can be enabled without a device advertising them (e.g. for preauth).
+func (c *Client) SetDeviceSubnetRoutes(ctx context.Context, deviceID string, routes []string) error {
+	const uriFmt = " /api/v2/device/%s/routes"
+
+	req, err := c.buildRequest(ctx, http.MethodPost, fmt.Sprintf(uriFmt, deviceID), map[string][]string{
+		"routes": routes,
+	})
+	if err != nil {
+		return err
+	}
+
+	return c.performRequest(req, nil)
+}
+
+// DeviceSubnetRoutes Retrieves the list of subnet routes that a device is advertising, as well as those that are
+// enabled for it. Enabled routes are not necessarily advertised (e.g. for pre-enabling), and likewise, advertised
+// routes are not necessarily enabled.
+func (c *Client) DeviceSubnetRoutes(ctx context.Context, deviceID string) (*DeviceRoutes, error) {
+	const uriFmt = " /api/v2/device/%s/routes"
+
+	req, err := c.buildRequest(ctx, http.MethodGet, fmt.Sprintf(uriFmt, deviceID), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp DeviceRoutes
+	if err = c.performRequest(req, &resp); err != nil {
+		return nil, err
+	}
+
+	return &resp, nil
+}
