@@ -10,6 +10,7 @@ import (
 
 func resourceDNSSearchPaths() *schema.Resource {
 	return &schema.Resource{
+		Description:   "The dns_nameservers resource allows you to configure DNS nameservers for your Tailscale network. See https://tailscale.com/kb/1054/dns for more information.",
 		ReadContext:   resourceDNSSearchPathsRead,
 		UpdateContext: resourceDNSSearchPathsUpdate,
 		DeleteContext: resourceDNSSearchPathsDelete,
