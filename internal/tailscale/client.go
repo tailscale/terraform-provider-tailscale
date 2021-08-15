@@ -291,23 +291,8 @@ func (c *Client) DeviceSubnetRoutes(ctx context.Context, deviceID string) (*Devi
 
 type (
 	Device struct {
-		Addresses                 []string  `json:"addresses"`
-		ClientVersion             string    `json:"clientVersion"`
-		Os                        string    `json:"os"`
-		Name                      string    `json:"name"`
-		Created                   time.Time `json:"created"`
-		LastSeen                  string    `json:"lastSeen"`
-		Hostname                  string    `json:"hostname"`
-		Machinekey                string    `json:"machineKey"`
-		NodeKey                   string    `json:"nodeKey"`
-		ID                        string    `json:"id"`
-		User                      string    `json:"user"`
-		Expires                   time.Time `json:"expires"`
-		KeyExpiryDisabled         bool      `json:"keyExpiryDisabled"`
-		Authorized                bool      `json:"authorized"`
-		IsExternal                bool      `json:"isExternal"`
-		UpdateAvailable           bool      `json:"updateAvailable"`
-		BlocksIncomingConnections bool      `json:"blocksIncomingConnections"`
+		Name string `json:"name"`
+		ID   string `json:"id"`
 	}
 )
 
