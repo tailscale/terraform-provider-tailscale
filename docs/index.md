@@ -26,4 +26,8 @@ provider "tailscale" {
 ### Required
 
 - **api_key** (String) API key to authenticate with the Tailscale API
-- **tailnet** (String) Tailscale tailnet to manage resources for
+- **tailnet** (String) Tailscale tailnet to manage resources for. 
+
+A tailnet is the name of your Tailscale network. You can find it in the top left corner of the Admin Panel beside the 
+Tailscale logo. `alice@example.com` belongs to the `example.com` tailnet. For solo plans, the tailnet is the email you 
+signed up with. So `alice@gmail.com` has the tailnet `alice@gmail.com` since `@gmail.com` is a shared email host.
