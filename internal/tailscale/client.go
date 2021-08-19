@@ -258,7 +258,7 @@ type (
 // SetDeviceSubnetRoutes sets which subnet routes are enabled to be routed by a device by replacing the existing list
 // of subnet routes with the supplied routes. Routes can be enabled without a device advertising them (e.g. for preauth).
 func (c *Client) SetDeviceSubnetRoutes(ctx context.Context, deviceID string, routes []string) error {
-	const uriFmt = " /api/v2/device/%s/routes"
+	const uriFmt = "/api/v2/device/%s/routes"
 
 	req, err := c.buildRequest(ctx, http.MethodPost, fmt.Sprintf(uriFmt, deviceID), map[string][]string{
 		"routes": routes,
