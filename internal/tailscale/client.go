@@ -274,7 +274,7 @@ func (c *Client) SetDeviceSubnetRoutes(ctx context.Context, deviceID string, rou
 // enabled for it. Enabled routes are not necessarily advertised (e.g. for pre-enabling), and likewise, advertised
 // routes are not necessarily enabled.
 func (c *Client) DeviceSubnetRoutes(ctx context.Context, deviceID string) (*DeviceRoutes, error) {
-	const uriFmt = " /api/v2/device/%s/routes"
+	const uriFmt = "/api/v2/device/%s/routes"
 
 	req, err := c.buildRequest(ctx, http.MethodGet, fmt.Sprintf(uriFmt, deviceID), nil)
 	if err != nil {
