@@ -36,7 +36,8 @@ func Provider() *schema.Provider {
 			"tailscale_device_subnet_routes": resourceDeviceSubnetRoutes(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			"tailscale_device": dataSourceDevice(),
+			"tailscale_device":  dataSourceDevice(),
+			"tailscale_devices": dataSourceDevices(),
 		},
 	}
 }

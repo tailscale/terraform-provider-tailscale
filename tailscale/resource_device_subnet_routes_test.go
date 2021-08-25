@@ -12,7 +12,7 @@ const testDeviceSubnetRoutes = `
 	}
 	
 	resource "tailscale_device_subnet_routes" "test_subnet_routes" {
-		device_id = tailscale_device.test_device.id,
+		device_id = data.tailscale_device.test_device.id,
 		routes = [
 			"10.0.1.0/24", 
 			"1.2.0.0/16", 
