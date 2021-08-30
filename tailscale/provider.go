@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/davidsbond/terraform-provider-tailscale/internal/tailscale"
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -58,6 +59,12 @@ func diagnosticsError(err error, message string, args ...interface{}) diag.Diagn
 			Detail:   err.Error(),
 		},
 	}
+}
+
+func diagnosticsErrorWithPath(err error, message string, path cty.Path, args ...interface{}) diag.Diagnostics {
+	d := diagnosticsError(err, message, args...)
+	d[0].AttributePath = path
+	return d
 }
 
 func createUUID() string {

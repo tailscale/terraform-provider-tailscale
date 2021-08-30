@@ -2,13 +2,13 @@ package tailscale
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/davidsbond/terraform-provider-tailscale/internal/tailscale"
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/tailscale/hujson"
 )
 
 func resourceACL() *schema.Resource {
@@ -30,10 +30,10 @@ func resourceACL() *schema.Resource {
 	}
 }
 
-func validateACL(i interface{}, _ cty.Path) diag.Diagnostics {
+func validateACL(i interface{}, p cty.Path) diag.Diagnostics {
 	var acl tailscale.ACL
-	if err := json.Unmarshal([]byte(i.(string)), &acl); err != nil {
-		return diagnosticsError(err, "Invalid ACL")
+	if err := hujson.Unmarshal([]byte(i.(string)), &acl); err != nil {
+		return diagnosticsErrorWithPath(err, "Invalid ACL", p)
 	}
 	return nil
 }
@@ -42,11 +42,11 @@ func suppressACLDiff(_, old, new string, _ *schema.ResourceData) bool {
 	var oldACL tailscale.ACL
 	var newACL tailscale.ACL
 
-	if err := json.Unmarshal([]byte(old), &oldACL); err != nil {
+	if err := hujson.Unmarshal([]byte(old), &oldACL); err != nil {
 		return false
 	}
 
-	if err := json.Unmarshal([]byte(new), &newACL); err != nil {
+	if err := hujson.Unmarshal([]byte(new), &newACL); err != nil {
 		return false
 	}
 
@@ -60,7 +60,7 @@ func resourceACLRead(ctx context.Context, d *schema.ResourceData, m interface{})
 		return diagnosticsError(err, "Failed to fetch ACL")
 	}
 
-	aclStr, err := json.MarshalIndent(acl, "", "  ")
+	aclStr, err := hujson.MarshalIndent(acl, "", "  ")
 	if err != nil {
 		return diagnosticsError(err, "Failed to marshal ACL for")
 	}
@@ -83,7 +83,7 @@ func resourceACLCreate(ctx context.Context, d *schema.ResourceData, m interface{
 	aclStr := d.Get("acl").(string)
 
 	var acl tailscale.ACL
-	if err := json.Unmarshal([]byte(aclStr), &acl); err != nil {
+	if err := hujson.Unmarshal([]byte(aclStr), &acl); err != nil {
 		return diagnosticsError(err, "Failed to unmarshal ACL")
 	}
 
@@ -104,7 +104,7 @@ func resourceACLUpdate(ctx context.Context, d *schema.ResourceData, m interface{
 	}
 
 	var acl tailscale.ACL
-	if err := json.Unmarshal([]byte(aclStr), &acl); err != nil {
+	if err := hujson.Unmarshal([]byte(aclStr), &acl); err != nil {
 		return diagnosticsError(err, "Failed to unmarshal ACL")
 	}
 
