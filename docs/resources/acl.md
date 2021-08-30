@@ -14,17 +14,15 @@ for more information.
 
 ```terraform
 resource "tailscale_acl" "sample_acl" {
-  acl = <<EOF
-  {
-    "acls": [
-        {
-            "action": "accept",
-            "users": ["*"],
-            "ports": ["*:*"]
-        }
-    ]
-  }
-EOF
+  acl = jsonencode({
+    acls : [
+      {
+        // Allow all users access to all ports.
+        action = "accept",
+        users  = ["*"],
+        ports  = ["*:*"],
+      }],
+  })
 }
 ```
 
