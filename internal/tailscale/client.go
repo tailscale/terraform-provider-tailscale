@@ -5,11 +5,12 @@ package tailscale
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/tailscale/hujson"
 )
 
 type (
@@ -51,7 +52,7 @@ func (c *Client) buildRequest(ctx context.Context, method, uri string, body inte
 
 	var bodyBytes []byte
 	if body != nil {
-		bodyBytes, err = json.MarshalIndent(body, "", " ")
+		bodyBytes, err = hujson.MarshalIndent(body, "", " ")
 		if err != nil {
 			return nil, err
 		}
@@ -82,7 +83,7 @@ func (c *Client) performRequest(req *http.Request, out interface{}) error {
 
 	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusCreated {
 		var apiErr APIError
-		if err = json.NewDecoder(res.Body).Decode(&apiErr); err != nil {
+		if err = hujson.NewDecoder(res.Body).Decode(&apiErr); err != nil {
 			return err
 		}
 
@@ -91,7 +92,7 @@ func (c *Client) performRequest(req *http.Request, out interface{}) error {
 	}
 
 	if out != nil {
-		return json.NewDecoder(res.Body).Decode(out)
+		return hujson.NewDecoder(res.Body).Decode(out)
 	}
 
 	return nil
@@ -165,23 +166,23 @@ func (c *Client) DNSNameservers(ctx context.Context) ([]string, error) {
 }
 
 type ACL struct {
-	ACLs      []ACLEntry          `json:"acls"`
-	Groups    map[string][]string `json:"groups,omitempty"`
-	Hosts     map[string]string   `json:"hosts,omitempty"`
-	TagOwners map[string][]string `json:"tagowners,omitempty"`
-	Tests     []ACLTest           `json:"tests,omitempty"`
+	ACLs      []ACLEntry          `json:"acls" hujson:"ACLs,omitempty"`
+	Groups    map[string][]string `json:"groups,omitempty" hujson:"Groups,omitempty"`
+	Hosts     map[string]string   `json:"hosts,omitempty" hujson:"Hosts,omitempty"`
+	TagOwners map[string][]string `json:"tagowners,omitempty" hujson:"TagOwners,omitempty"`
+	Tests     []ACLTest           `json:"tests,omitempty" hujson:"Tests,omitempty"`
 }
 
 type ACLEntry struct {
-	Action string   `json:"action"`
-	Ports  []string `json:"ports"`
-	Users  []string `json:"users"`
+	Action string   `json:"action" hujson:"Action"`
+	Ports  []string `json:"ports" hujson:"Ports"`
+	Users  []string `json:"users" hujson:"Users"`
 }
 
 type ACLTest struct {
-	User  string   `json:"user"`
-	Allow []string `json:"allow"`
-	Deny  []string `json:"deny"`
+	User  string   `json:"user" hujson:"User"`
+	Allow []string `json:"allow" hujson:"Allow"`
+	Deny  []string `json:"deny" hujson:"Deny"`
 }
 
 // ACL retrieves the ACL that is currently set for the given tailnet.

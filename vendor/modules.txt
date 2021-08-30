@@ -222,6 +222,9 @@ github.com/mitchellh/reflectwalk
 # github.com/oklog/run v1.0.0
 ## explicit
 github.com/oklog/run
+# github.com/tailscale/hujson v0.0.0-20210818175511-7360507a6e88
+## explicit; go 1.13
+github.com/tailscale/hujson
 # github.com/ulikunitz/xz v0.5.8
 ## explicit; go 1.12
 github.com/ulikunitz/xz

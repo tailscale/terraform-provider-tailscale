@@ -10,37 +10,40 @@ const testACL = `
 	resource "tailscale_acl" "test_acl" {
 		acl = <<EOF
 		{
-			"acls": [
+			// Access control lists.
+			"ACLs": [
 				{
-					"action": "accept",
-					"users": ["*"],
-					"ports": ["*:*"]
+					"Action": "accept",
+					"Users": ["*"],
+					"Ports": ["*:*"]
 				}
 			],
-			"tagowners": {
+			"TagOwners": {
 				"tag:example": [
 					"group:example"
 				]
 			},
-			"groups": {
+			// Declare static groups of users
+			"Groups": {
 				"group:example": [
 					"user1@example.com",
 					"user2@example.com"
 				]
 			},
-			"hosts": {
+			// Declare convenient hostname aliases to use in place of IP addresses.
+			"Hosts": {
 				"example-host-1": "100.100.100.100",
 				"example-host-2": "100.100.101.100/24"
 			},
-			"tests": [
+			"Tests": [
 				{
-					"user": "user1@example.com",
-					"allow": ["example-host-1:22", "example-host-2:80"],
-					"deny": ["exapmle-host-2:100"]
+					"User": "user1@example.com",
+					"Allow": ["example-host-1:22", "example-host-2:80"],
+					"Deny": ["exapmle-host-2:100"]
 				},
 				{
-					"user": "user2@example.com",
-					"allow": ["100.60.3.4:22"]
+					"User": "user2@example.com",
+					"Allow": ["100.60.3.4:22"]
 				}
 			]
 		}
