@@ -292,8 +292,9 @@ func (c *Client) DeviceSubnetRoutes(ctx context.Context, deviceID string) (*Devi
 
 type (
 	Device struct {
-		Name string `json:"name"`
-		ID   string `json:"id"`
+		Addresses []string `json:"addresses"`
+		Name      string   `json:"name"`
+		ID        string   `json:"id"`
 	}
 )
 
