@@ -27,3 +27,4 @@ data "tailscale_device" "sample_device" {
 The following attributes are exported.
 
 - `id` - The unique identifier for the device
+- `addresses` - Tailscale IPs for the device
