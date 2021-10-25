@@ -170,6 +170,7 @@ type ACL struct {
 	Groups    map[string][]string `json:"groups,omitempty" hujson:"Groups,omitempty"`
 	Hosts     map[string]string   `json:"hosts,omitempty" hujson:"Hosts,omitempty"`
 	TagOwners map[string][]string `json:"tagowners,omitempty" hujson:"TagOwners,omitempty"`
+	DerpMap   *DERPMap            `json:"derpMap,omitempty" hujson:"DerpMap,omitempty"`
 	Tests     []ACLTest           `json:"tests,omitempty" hujson:"Tests,omitempty"`
 }
 
@@ -183,6 +184,35 @@ type ACLTest struct {
 	User  string   `json:"user" hujson:"User"`
 	Allow []string `json:"allow" hujson:"Allow"`
 	Deny  []string `json:"deny" hujson:"Deny"`
+}
+
+// Custom DERPMap settings
+// https://tailscale.com/kb/1118/custom-derp-servers/
+type DERPMap struct {
+	Regions            map[int]*DERPRegion `json:"regions" hujson:"Regions"`
+	OmitDefaultRegions bool                `json:"omitDefaultRegions,omitempty" hujson:"OmitDefaultRegions,omitempty"`
+}
+
+type DERPRegion struct {
+	RegionID   int         `json:"regionID" hujson:"RegionID"`
+	RegionCode string      `json:"regionCode" hujson:"RegionCode"`
+	RegionName string      `json:"regionName" hujson:"RegionName"`
+	Avoid      bool        `json:"avoid,omitempty" hujson:"Avoid,omitempty"`
+	Nodes      []*DERPNode `json:"nodes" hujson:"Nodes"`
+}
+
+type DERPNode struct {
+	Name             string `json:"name" hujson:"Name"`
+	RegionID         int    `json:"regionID" hujson:"RegionID"`
+	HostName         string `json:"hostName" hujson:"HostName"`
+	CertName         string `json:"certName,omitempty" hujson:"CertName,omitempty"`
+	IPv4             string `json:"ipv4,omitempty" hujson:"IPv4,omitempty"`
+	IPv6             string `json:"ipv6,omitempty" hujson:"IPv6,omitempty"`
+	STUNPort         int    `json:"stunPort,omitempty" hujson:"STUNPort,omitempty"`
+	STUNOnly         bool   `json:"stunOnly,omitempty" hujson:"STUNOnly,omitempty"`
+	DERPPort         int    `json:"derpPort,omitempty" hujson:"DERPPort,omitempty"`
+	InsecureForTests bool   `json:"insecureForRests,omitempty" hujson:"InsecureForTests,omitempty"`
+	STUNTestIP       string `json:"stunTestIP,omitempty" hujson:"STUNTestIP,omitempty"`
 }
 
 // ACL retrieves the ACL that is currently set for the given tailnet.

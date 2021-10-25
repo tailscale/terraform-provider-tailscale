@@ -35,6 +35,20 @@ const testACL = `
 				"example-host-1": "100.100.100.100",
 				"example-host-2": "100.100.101.100/24"
 			},
+			"DerpMap": {
+				"Regions": {
+					"900": {
+						"RegionID": 900,
+						"RegionCode": "example",
+						"RegionName": "example",
+						"Nodes": [{
+							"Name": "1",
+							"RegionID": 900,
+							"HostName": "example.com"
+						}]
+					}
+				}
+			},
 			"Tests": [
 				{
 					"User": "user1@example.com",
