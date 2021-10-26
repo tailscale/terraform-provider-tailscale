@@ -47,7 +47,11 @@ func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, 
 	apiKey := d.Get("api_key").(string)
 	tailnet := d.Get("tailnet").(string)
 
-	client := tailscale.NewClient(apiKey, tailnet)
+	client, err := tailscale.NewClient(apiKey, tailnet)
+	if err != nil {
+		return nil, diagnosticsError(err, "failed to initialise client")
+	}
+
 	return client, nil
 }
 
