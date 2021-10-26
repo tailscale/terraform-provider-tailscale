@@ -14,6 +14,7 @@ import (
 )
 
 type (
+	// The Client type is used to perform actions against the Tailscale API.
 	Client struct {
 		apiKey  string
 		http    *http.Client
@@ -21,26 +22,53 @@ type (
 		tailnet string
 	}
 
+	// The APIError type describes an error as returned by the Tailscale API.
 	APIError struct {
 		Message string `json:"message"`
 		status  int
 	}
+
+	// The ClientOption type is a function that is used to modify a Client.
+	ClientOption func(c *Client) error
 )
 
 const baseURL = "https://api.tailscale.com"
 const contentType = "application/json"
 
-func NewClient(apiKey, tailnet string) *Client {
+// NewClient returns a new instance of the Client type that will perform operations against a chosen tailnet and will
+// provide the apiKey for authorization. Additional options can be provided, see ClientOption for more details.
+func NewClient(apiKey, tailnet string, options ...ClientOption) (*Client, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return &Client{
+	c := &Client{
 		apiKey:  apiKey,
 		http:    &http.Client{Timeout: time.Minute},
 		baseURL: u,
 		tailnet: tailnet,
+	}
+
+	for _, option := range options {
+		if err = option(c); err != nil {
+			return nil, err
+		}
+	}
+
+	return c, nil
+}
+
+// WithBaseURL sets a custom baseURL for the Tailscale API, this is primarily used for testing purposes.
+func WithBaseURL(baseURL string) ClientOption {
+	return func(c *Client) error {
+		u, err := url.Parse(baseURL)
+		if err != nil {
+			return err
+		}
+
+		c.baseURL = u
+		return nil
 	}
 }
 

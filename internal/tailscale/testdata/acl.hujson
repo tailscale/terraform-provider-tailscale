@@ -1,0 +1,50 @@
+{
+  // Allow all users access to all ports.
+  "ACLS": [
+    {
+      "Action": "accept",
+      "Users": ["*"],
+      "Ports": ["*:*"]
+    }
+  ],
+  "TagOwners": {
+    "tag:example": [
+      "group:example",
+    ]
+  },
+  "Groups": {
+    "group:example": [
+      "user1@example.com",
+      "user2@example.com",
+    ]
+  },
+  "Hosts": {
+    "example-host-1": "100.100.100.100",
+    "example-host-2": "100.100.101.100/24",
+  },
+  "DerpMap": {
+    "Regions": {
+      "900": {
+        "RegionID": 900,
+        "RegionCode": "example",
+        "RegionName": "example",
+        "Nodes": [{
+          "Name": "1",
+          "RegionID": 900,
+          "HostName": "example.com"
+        }]
+      }
+    }
+  },
+  "Tests": [
+    {
+      "User": "user1@example.com",
+      "Allow": ["example-host-1:22", "example-host-2:80"],
+      "Deny": ["exapmle-host-2:100"],
+    },
+    {
+      "User": "user2@example.com",
+      "Allow": ["100.60.3.4:22"],
+    }
+  ]
+}
