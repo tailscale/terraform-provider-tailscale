@@ -88,13 +88,13 @@ func TestDomainACL_HuJSON_Unmarshal(t *testing.T) {
 				"user2@example.com",
 			},
 		},
-		DerpMap: &tailscale.DERPMap{
-			Regions: map[int]*tailscale.DERPRegion{
+		DERPMap: &tailscale.ACLDERPMap{
+			Regions: map[int]*tailscale.ACLDERPRegion{
 				900: {
 					RegionID:   900,
 					RegionCode: "example",
 					RegionName: "example",
-					Nodes: []*tailscale.DERPNode{
+					Nodes: []*tailscale.ACLDERPNode{
 						{
 							Name:     "1",
 							RegionID: 900,
@@ -200,13 +200,13 @@ func TestDomainACL_JSON_Unmarshal(t *testing.T) {
 				"user2@example.com",
 			},
 		},
-		DerpMap: &tailscale.DERPMap{
-			Regions: map[int]*tailscale.DERPRegion{
+		DERPMap: &tailscale.ACLDERPMap{
+			Regions: map[int]*tailscale.ACLDERPRegion{
 				900: {
 					RegionID:   900,
 					RegionCode: "example",
 					RegionName: "example",
-					Nodes: []*tailscale.DERPNode{
+					Nodes: []*tailscale.ACLDERPNode{
 						{
 							Name:     "1",
 							RegionID: 900,

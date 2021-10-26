@@ -170,7 +170,7 @@ type ACL struct {
 	Groups    map[string][]string `json:"groups,omitempty" hujson:"Groups,omitempty"`
 	Hosts     map[string]string   `json:"hosts,omitempty" hujson:"Hosts,omitempty"`
 	TagOwners map[string][]string `json:"tagowners,omitempty" hujson:"TagOwners,omitempty"`
-	DerpMap   *DERPMap            `json:"derpMap,omitempty" hujson:"DerpMap,omitempty"`
+	DERPMap   *ACLDERPMap         `json:"derpMap,omitempty" hujson:"DerpMap,omitempty"`
 	Tests     []ACLTest           `json:"tests,omitempty" hujson:"Tests,omitempty"`
 }
 
@@ -186,22 +186,20 @@ type ACLTest struct {
 	Deny  []string `json:"deny" hujson:"Deny"`
 }
 
-// Custom DERPMap settings
-// https://tailscale.com/kb/1118/custom-derp-servers/
-type DERPMap struct {
-	Regions            map[int]*DERPRegion `json:"regions" hujson:"Regions"`
-	OmitDefaultRegions bool                `json:"omitDefaultRegions,omitempty" hujson:"OmitDefaultRegions,omitempty"`
+type ACLDERPMap struct {
+	Regions            map[int]*ACLDERPRegion `json:"regions" hujson:"Regions"`
+	OmitDefaultRegions bool                   `json:"omitDefaultRegions,omitempty" hujson:"OmitDefaultRegions,omitempty"`
 }
 
-type DERPRegion struct {
-	RegionID   int         `json:"regionID" hujson:"RegionID"`
-	RegionCode string      `json:"regionCode" hujson:"RegionCode"`
-	RegionName string      `json:"regionName" hujson:"RegionName"`
-	Avoid      bool        `json:"avoid,omitempty" hujson:"Avoid,omitempty"`
-	Nodes      []*DERPNode `json:"nodes" hujson:"Nodes"`
+type ACLDERPRegion struct {
+	RegionID   int            `json:"regionID" hujson:"RegionID"`
+	RegionCode string         `json:"regionCode" hujson:"RegionCode"`
+	RegionName string         `json:"regionName" hujson:"RegionName"`
+	Avoid      bool           `json:"avoid,omitempty" hujson:"Avoid,omitempty"`
+	Nodes      []*ACLDERPNode `json:"nodes" hujson:"Nodes"`
 }
 
-type DERPNode struct {
+type ACLDERPNode struct {
 	Name             string `json:"name" hujson:"Name"`
 	RegionID         int    `json:"regionID" hujson:"RegionID"`
 	HostName         string `json:"hostName" hujson:"HostName"`
