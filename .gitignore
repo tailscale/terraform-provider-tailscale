@@ -1,6 +1,6 @@
 .DS_Store
 
-terraform-provider-hashicups
+terraform-provider-tailscale
 bin
 
 # Local .terraform directories
