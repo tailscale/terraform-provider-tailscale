@@ -35,6 +35,7 @@ func Provider() *schema.Provider {
 			"tailscale_dns_preferences":      resourceDNSPreferences(),
 			"tailscale_dns_search_paths":     resourceDNSSearchPaths(),
 			"tailscale_device_subnet_routes": resourceDeviceSubnetRoutes(),
+			"tailscale_device_authorization": resourceDeviceAuthorization(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"tailscale_device":  dataSourceDevice(),
