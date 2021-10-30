@@ -411,3 +411,20 @@ func TestClient_SetDNSSearchPaths(t *testing.T) {
 	assert.NoError(t, json.Unmarshal(server.Body.Bytes(), &body))
 	assert.EqualValues(t, paths, body["searchPaths"])
 }
+
+func TestClient_AuthorizeDevice(t *testing.T) {
+	t.Parallel()
+
+	client, server := NewTestHarness(t)
+	server.ResponseCode = http.StatusOK
+
+	const deviceID = "test"
+
+	assert.NoError(t, client.AuthorizeDevice(context.Background(), deviceID))
+	assert.Equal(t, http.MethodPost, server.Method)
+	assert.Equal(t, "/api/v2/device/test/authorized", server.Path)
+
+	body := make(map[string]bool)
+	assert.NoError(t, json.Unmarshal(server.Body.Bytes(), &body))
+	assert.EqualValues(t, true, body["authorized"])
+}

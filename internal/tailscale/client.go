@@ -346,13 +346,12 @@ func (c *Client) DeviceSubnetRoutes(ctx context.Context, deviceID string) (*Devi
 	return &resp, nil
 }
 
-type (
-	Device struct {
-		Addresses []string `json:"addresses"`
-		Name      string   `json:"name"`
-		ID        string   `json:"id"`
-	}
-)
+type Device struct {
+	Addresses  []string `json:"addresses"`
+	Name       string   `json:"name"`
+	ID         string   `json:"id"`
+	Authorized bool     `json:"authorized"`
+}
 
 // Devices lists the devices in a tailnet.
 func (c *Client) Devices(ctx context.Context) ([]Device, error) {
@@ -369,4 +368,18 @@ func (c *Client) Devices(ctx context.Context) ([]Device, error) {
 	}
 
 	return resp["devices"], nil
+}
+
+// AuthorizeDevice marks the specified device identifier as authorized to join the tailnet.
+func (c *Client) AuthorizeDevice(ctx context.Context, deviceID string) error {
+	const uriFmt = "/api/v2/device/%s/authorized"
+
+	req, err := c.buildRequest(ctx, http.MethodPost, fmt.Sprintf(uriFmt, deviceID), map[string]bool{
+		"authorized": true,
+	})
+	if err != nil {
+		return err
+	}
+
+	return c.performRequest(req, nil)
 }
