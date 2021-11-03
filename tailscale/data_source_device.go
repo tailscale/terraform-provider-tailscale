@@ -18,6 +18,11 @@ func dataSourceDevice() *schema.Resource {
 				Required:    true,
 				Description: "The name of the device",
 			},
+			"user": {
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The user associated with the device",
+			},
 			"addresses": {
 				Type:        schema.TypeList,
 				Description: "The list of device's IPs",
@@ -54,6 +59,7 @@ func dataSourceDeviceRead(ctx context.Context, d *schema.ResourceData, m interfa
 	}
 
 	d.SetId(selected.ID)
+	d.Set("user", selected.User)
 	d.Set("addresses", selected.Addresses)
 	return nil
 }
