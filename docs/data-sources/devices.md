@@ -29,4 +29,5 @@ The following attributes are exported.
 - `devices` - The list of devices returned from the Tailscale API. Each element contains the following:
   - `id` - The unique identifier of the device
   - `name` - The name of the device
+  - `user` - The user associated with the device
   - `addresses` - Tailscale IPs for the device

@@ -30,6 +30,11 @@ func dataSourceDevices() *schema.Resource {
 							Description: "The name of the device",
 							Computed:    true,
 						},
+						"user": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The user associated with the device",
+						},
 						"id": {
 							Type:        schema.TypeString,
 							Description: "The unique identifier of the device",
@@ -68,6 +73,7 @@ func dataSourceDevicesRead(ctx context.Context, d *schema.ResourceData, m interf
 		deviceMaps = append(deviceMaps, map[string]interface{}{
 			"addresses": device.Addresses,
 			"name":      device.Name,
+			"user":      device.User,
 			"id":        device.ID,
 		})
 	}
