@@ -1,8 +1,10 @@
 package tailscale_test
 
 import (
+	"net/http"
 	"testing"
 
+	"github.com/davidsbond/terraform-provider-tailscale/internal/tailscale"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
@@ -12,14 +14,25 @@ const testDeviceAuthorization = `
 	}
 	
 	resource "tailscale_device_authorization" "test_authorization" {
-		device_id = data.tailscale_device.test_device.id,
+		device_id = data.tailscale_device.test_device.id
 		authorized = true
 	}`
 
 func TestProvider_TailscaleDeviceAuthorization(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testProviderPreCheck(t) },
-		ProviderFactories: providerFactories,
+		IsUnitTest: true,
+		PreCheck: func() {
+			testServer.ResponseCode = http.StatusOK
+			testServer.ResponseBody = map[string][]tailscale.Device{
+				"devices": {
+					{
+						Name: "device.example.com",
+						ID:   "123",
+					},
+				},
+			}
+		},
+		ProviderFactories: testProviderFactories(t),
 		Steps: []resource.TestStep{
 			testResourceCreated("tailscale_device_authorization.test_authorization", testDeviceAuthorization),
 			testResourceDestroyed("tailscale_device_authorization.test_authorization", testDeviceAuthorization),

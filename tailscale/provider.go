@@ -13,9 +13,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
+type ProviderOption func(p *schema.Provider)
+
 // Provider returns the *schema.Provider instance that implements the terraform provider.
-func Provider() *schema.Provider {
-	return &schema.Provider{
+func Provider(options ...ProviderOption) *schema.Provider {
+	provider := &schema.Provider{
 		ConfigureContextFunc: providerConfigure,
 		Schema: map[string]*schema.Schema{
 			"api_key": {
@@ -42,6 +44,12 @@ func Provider() *schema.Provider {
 			"tailscale_devices": dataSourceDevices(),
 		},
 	}
+
+	for _, option := range options {
+		option(provider)
+	}
+
+	return provider
 }
 
 func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
