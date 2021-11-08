@@ -20,8 +20,8 @@ func dataSourceDevice() *schema.Resource {
 			},
 			"user": {
 				Type:        schema.TypeString,
-				Required:    true,
 				Description: "The user associated with the device",
+				Computed:    true,
 			},
 			"addresses": {
 				Type:        schema.TypeList,
