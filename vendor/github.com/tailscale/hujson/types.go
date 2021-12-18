@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package hujson contains a parser and packer for the HuJSON format.
+// Package hujson contains a parser and packer for the JWCC format:
+// JSON With Commas and Comments (or "human JSON").
 //
-// HuJSON is an extension of standard JSON (as defined in RFC 8259) in order to
+// JWCC is an extension of standard JSON (as defined in RFC 8259) in order to
 // make it more suitable for humans and configuration files. In particular,
 // it supports line comments (e.g., //...), block comments (e.g., /*...*/), and
 // trailing commas after the last member or element in a JSON object or array.
+//
+// See https://nigeltao.github.io/blog/2021/json-with-commas-comments.html
 //
 //
 // Functionality
@@ -60,6 +63,26 @@
 //	 	'0020' ws
 //	 	'000A' ws
 //	 	'000D' ws
+//
+//
+// Use with the Standard Library
+//
+// This package operates with HuJSON as an AST. In order to parse HuJSON
+// into arbitrary Go types, use this package to parse HuJSON input as an AST,
+// strip the AST of any HuJSON-specific lexicographical elements, and
+// then pack the AST as a standard JSON output.
+//
+// Example usage:
+//
+//	ast, err := hujson.Parse(b)
+//	if err != nil {
+//		... // handle err
+//	}
+//	ast.Standardize()
+//	b = ast.Pack()
+//	if err := json.Unmarshal(b, &v); err != nil {
+//		... // handle err
+//	}
 //
 package hujson
 

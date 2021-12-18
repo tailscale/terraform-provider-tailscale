@@ -384,3 +384,66 @@ func (c *Client) AuthorizeDevice(ctx context.Context, deviceID string) error {
 
 	return c.performRequest(req, nil)
 }
+
+type (
+	// The KeyCapabilities type describes the capabilities of an authentication key.
+	KeyCapabilities struct {
+		Devices struct {
+			Create struct {
+				Reusable  bool `json:"reusable"`
+				Ephemeral bool `json:"ephemeral"`
+			} `json:"create"`
+		} `json:"devices"`
+	}
+
+	// The Key type describes an authentication key within the tailnet.
+	Key struct {
+		ID           string          `json:"id"`
+		Key          string          `json:"key"`
+		Created      time.Time       `json:"created"`
+		Expires      time.Time       `json:"expires"`
+		Capabilities KeyCapabilities `json:"capabilities"`
+	}
+)
+
+// CreateKey creates a new authentication key with the capabilities selected via the KeyCapabilities type. Returns
+// the generated key if successful.
+func (c *Client) CreateKey(ctx context.Context, capabilities KeyCapabilities) (Key, error) {
+	const uriFmt = "/api/v2/tailnet/%s/keys"
+
+	req, err := c.buildRequest(ctx, http.MethodPost, fmt.Sprintf(uriFmt, c.tailnet), map[string]KeyCapabilities{
+		"capabilities": capabilities,
+	})
+	if err != nil {
+		return Key{}, err
+	}
+
+	var key Key
+	return key, c.performRequest(req, &key)
+}
+
+// GetKey returns all information on a key whose identifier matches the one provided. This will not return the
+// authentication key itself, just the metadata.
+func (c *Client) GetKey(ctx context.Context, id string) (Key, error) {
+	const uriFmt = "/api/v2/tailnet/%s/keys/%s"
+
+	req, err := c.buildRequest(ctx, http.MethodGet, fmt.Sprintf(uriFmt, c.tailnet, id), nil)
+	if err != nil {
+		return Key{}, err
+	}
+
+	var key Key
+	return key, c.performRequest(req, &key)
+}
+
+// DeleteKey removes a authentication key from the tailnet.
+func (c *Client) DeleteKey(ctx context.Context, id string) error {
+	const uriFmt = "/api/v2/tailnet/%s/keys/%s"
+
+	req, err := c.buildRequest(ctx, http.MethodDelete, fmt.Sprintf(uriFmt, c.tailnet, id), nil)
+	if err != nil {
+		return err
+	}
+
+	return c.performRequest(req, nil)
+}

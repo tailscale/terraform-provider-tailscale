@@ -1,52 +1,20 @@
-# HuJSON - Human JSON
+# HuJSON - "Human JSON" ([JWCC](https://nigeltao.github.io/blog/2021/json-with-commas-comments.html))
 
-The HuJSON decoder is a JSON decoder that also allows
+The `github.com/tailscale/hujson` package implements
+the [JWCC](https://nigeltao.github.io/blog/2021/json-with-commas-comments.html) extension
+of [standard JSON](https://datatracker.ietf.org/doc/html/rfc8259).
+This package is a fork of the Go standard library's `encoding/json`.
 
-- comments, both `/* ... */` and `// to end of line`
-- trailing commas on arrays and object members
+The `JWCC` format permits two things over standard JSON:
 
-It is a soft fork of the Go standard library `encoding/json` package.
-The plan is to merge in all changes from each Go release.
+1. C-style line comments and block comments intermixed with whitespace,
+2. allows trailing commas after the last member/element in an object/array.
 
-Currently HuJSON is based on Go 1.13.
+All JSON is valid JWCC.
 
-## Grammar
+For details, see the JWCC docs at:
 
-The changes to the [JSON grammar](https://json.org) are:
+https://nigeltao.github.io/blog/2021/json-with-commas-comments.html
 
-```
---- grammar.json
-+++ grammar.hujson
-@@ -1,13 +1,31 @@
- members
- 	member
-+	member ',' ws
- 	member ',' members
- 
- elements
- 	element
-+	element ',' ws
- 	element ',' elements
- 
-+comments
-+	"*/"
-+	comment comments
-+
-+comment
-+	'0000' . '10FFFF'
-+
-+linecomments
-+	'\n'
-+	linecomment linecomments
-+
-+linecomment
-+	'0000' . '10FFFF' - '\n'
-+
- ws
- 	""
-+	"/*" comments
-+	"//" linecomments
- 	'0020' ws
- 	'000A' ws
- 	'000D' ws
-```
+
+

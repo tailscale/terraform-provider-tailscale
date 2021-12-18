@@ -59,7 +59,13 @@ func dataSourceDeviceRead(ctx context.Context, d *schema.ResourceData, m interfa
 	}
 
 	d.SetId(selected.ID)
-	d.Set("user", selected.User)
-	d.Set("addresses", selected.Addresses)
+
+	if err = d.Set("user", selected.User); err != nil {
+		return diagnosticsError(err, "Failed to set user")
+	}
+
+	if err = d.Set("addresses", selected.Addresses); err != nil {
+		return diagnosticsError(err, "Failed to set addresses")
+	}
 	return nil
 }
