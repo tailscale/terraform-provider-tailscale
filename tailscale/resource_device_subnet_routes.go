@@ -22,7 +22,7 @@ func resourceDeviceSubnetRoutes() *schema.Resource {
 				Description: "The device to set subnet routes for",
 			},
 			"routes": {
-				Type: schema.TypeList,
+				Type: schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -52,7 +52,7 @@ func resourceDeviceSubnetRoutesRead(ctx context.Context, d *schema.ResourceData,
 func resourceDeviceSubnetRoutesCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*tailscale.Client)
 	deviceID := d.Get("device_id").(string)
-	routes := d.Get("routes").([]interface{})
+	routes := d.Get("routes").(*schema.Set).List()
 
 	subnetRoutes := make([]string, len(routes))
 	for i, route := range routes {
@@ -70,7 +70,7 @@ func resourceDeviceSubnetRoutesCreate(ctx context.Context, d *schema.ResourceDat
 func resourceDeviceSubnetRoutesUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*tailscale.Client)
 	deviceID := d.Get("device_id").(string)
-	routes := d.Get("routes").([]interface{})
+	routes := d.Get("routes").(*schema.Set).List()
 
 	subnetRoutes := make([]string, len(routes))
 	for i, route := range routes {
