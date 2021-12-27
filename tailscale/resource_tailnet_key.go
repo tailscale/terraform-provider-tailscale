@@ -27,6 +27,15 @@ func resourceTailnetKey() *schema.Resource {
 				Description: "Indicates if the key is ephemeral.",
 				ForceNew:    true,
 			},
+			"tags": {
+				Type: schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Optional:    true,
+				Description: "List of tags to apply to the machines authenticated by the key.",
+				ForceNew:    true,
+			},
 			"key": {
 				Type:        schema.TypeString,
 				Description: "The authentication key",
@@ -46,10 +55,15 @@ func resourceTailnetKeyCreate(ctx context.Context, d *schema.ResourceData, m int
 	client := m.(*tailscale.Client)
 	reusable := d.Get("reusable").(bool)
 	ephemeral := d.Get("ephemeral").(bool)
+	var tags []string
+	for _, tag := range d.Get("tags").(*schema.Set).List() {
+		tags = append(tags, tag.(string))
+	}
 
 	var capabilities tailscale.KeyCapabilities
 	capabilities.Devices.Create.Reusable = reusable
 	capabilities.Devices.Create.Ephemeral = ephemeral
+	capabilities.Devices.Create.Tags = tags
 
 	key, err := client.CreateKey(ctx, capabilities)
 	if err != nil {

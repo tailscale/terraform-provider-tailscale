@@ -390,8 +390,9 @@ type (
 	KeyCapabilities struct {
 		Devices struct {
 			Create struct {
-				Reusable  bool `json:"reusable"`
-				Ephemeral bool `json:"ephemeral"`
+				Reusable  bool     `json:"reusable"`
+				Ephemeral bool     `json:"ephemeral"`
+				Tags      []string `json:"tags"`
 			} `json:"create"`
 		} `json:"devices"`
 	}

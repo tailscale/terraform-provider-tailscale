@@ -7,7 +7,7 @@ The tailnet_key resource allows you to generate pre-authentication keys for your
 
 # Resource `tailscale_tailnet_key`
 
-The tailnet_key resource allows you to generate pre-authentication keys for your tailnet. See the 
+The `tailnet_key` resource allows you to generate pre-authentication keys for your tailnet. See the
 [Tailscale auth keys](https://tailscale.com/kb/1085/auth-keys/) documentation for more information
 
 ## Example Usage
@@ -21,10 +21,12 @@ resource "tailscale_tailnet_key" "sample_key" {
 
 ## Argument Reference
 
-- `reusable` - (Optional) Determines if the generated key is reusable. Reusable keys can be used to connect multiple 
-nodes. For example, multiple instances of on-prem database might use a reusable key to connect. 
-- `ephemeral` - (Optional) Determines if the generated key is ephemeral. Ephemeral keys are used for authenticating 
+- `reusable` - (Optional) Determines if the generated key is reusable. Reusable keys can be used to connect multiple
+nodes. For example, multiple instances of on-prem database might use a reusable key to connect.
+- `ephemeral` - (Optional) Determines if the generated key is ephemeral. Ephemeral keys are used for authenticating
 ephemeral nodes for short-lived workloads.
+- `tags` - (Optional) Set of tags to apply to the machines authenticated by the key. These tags can be used in ACL
+rules, see the [Tailscale ACL tag documentation](https://tailscale.com/kb/1068/acl-tags/).
 
 ## Attributes Reference
 
