@@ -5,6 +5,7 @@ package tailscale
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -437,7 +438,7 @@ func (c *Client) GetKey(ctx context.Context, id string) (Key, error) {
 	return key, c.performRequest(req, &key)
 }
 
-// DeleteKey removes a authentication key from the tailnet.
+// DeleteKey removes an authentication key from the tailnet.
 func (c *Client) DeleteKey(ctx context.Context, id string) error {
 	const uriFmt = "/api/v2/tailnet/%s/keys/%s"
 
@@ -447,4 +448,14 @@ func (c *Client) DeleteKey(ctx context.Context, id string) error {
 	}
 
 	return c.performRequest(req, nil)
+}
+
+// IsNotFound returns true if the provided error implementation is an APIError with a status of 404.
+func IsNotFound(err error) bool {
+	var apiErr APIError
+	if errors.As(err, &apiErr) {
+		return apiErr.status == http.StatusNotFound
+	}
+
+	return false
 }
