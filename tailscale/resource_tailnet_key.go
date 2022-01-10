@@ -87,11 +87,16 @@ func resourceTailnetKeyDelete(ctx context.Context, d *schema.ResourceData, m int
 	client := m.(*tailscale.Client)
 	id := d.Get("id").(string)
 
-	if err := client.DeleteKey(ctx, id); err != nil {
+	err := client.DeleteKey(ctx, id)
+	switch {
+	case tailscale.IsNotFound(err):
+		// Single-use keys may no longer be here, so we can ignore deletions that fail due to not-found errors.
+		return nil
+	case err != nil:
 		return diagnosticsError(err, "Failed to delete key")
+	default:
+		return nil
 	}
-
-	return nil
 }
 
 func resourceTailnetKeyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -99,7 +104,13 @@ func resourceTailnetKeyRead(ctx context.Context, d *schema.ResourceData, m inter
 	id := d.Get("id").(string)
 	key, err := client.GetKey(ctx, id)
 
-	if err != nil {
+	reusable := d.Get("reusable").(bool)
+
+	switch {
+	case tailscale.IsNotFound(err) && !reusable:
+		// If we get a 404 on a one-off key, don't return an error here.
+		return nil
+	case err != nil:
 		return diagnosticsError(err, "Failed to fetch key")
 	}
 

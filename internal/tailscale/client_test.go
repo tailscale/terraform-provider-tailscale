@@ -495,3 +495,14 @@ func TestClient_DeleteKey(t *testing.T) {
 	assert.Equal(t, http.MethodDelete, server.Method)
 	assert.Equal(t, "/api/v2/tailnet/example.com/keys/"+keyID, server.Path)
 }
+
+func TestIsNotFound(t *testing.T) {
+	t.Parallel()
+
+	client, server := NewTestHarness(t)
+	server.ResponseCode = http.StatusNotFound
+	server.ResponseBody = tailscale.APIError{Message: "error"}
+
+	_, err := client.GetKey(context.Background(), "test")
+	assert.True(t, tailscale.IsNotFound(err))
+}
