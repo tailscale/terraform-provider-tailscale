@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/davidsbond/terraform-provider-tailscale/internal/tailscale"
+	"github.com/davidsbond/tailscale-client-go/tailscale"
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
