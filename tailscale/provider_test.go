@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	ts "github.com/davidsbond/terraform-provider-tailscale/internal/tailscale"
+	ts "github.com/davidsbond/tailscale-client-go/tailscale"
 	"github.com/davidsbond/terraform-provider-tailscale/tailscale"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"

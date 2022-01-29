@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/davidsbond/terraform-provider-tailscale/internal/tailscale"
+	"github.com/davidsbond/tailscale-client-go/tailscale"
 	"github.com/stretchr/testify/assert"
 )
 
