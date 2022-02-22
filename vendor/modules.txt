@@ -7,7 +7,7 @@ github.com/apparentlymart/go-textseg/v13/textseg
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/davidsbond/tailscale-client-go v1.0.0
+# github.com/davidsbond/tailscale-client-go v1.1.0
 ## explicit; go 1.17
 github.com/davidsbond/tailscale-client-go/tailscale
 # github.com/fatih/color v1.13.0
