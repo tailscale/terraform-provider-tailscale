@@ -31,6 +31,14 @@ func dataSourceDevice() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"tags": {
+				Type:        schema.TypeSet,
+				Description: "The tags applied to the device",
+				Computed:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -67,5 +75,10 @@ func dataSourceDeviceRead(ctx context.Context, d *schema.ResourceData, m interfa
 	if err = d.Set("addresses", selected.Addresses); err != nil {
 		return diagnosticsError(err, "Failed to set addresses")
 	}
+
+	if err = d.Set("tags", selected.Tags); err != nil {
+		return diagnosticsError(err, "Failed to set tags")
+	}
+
 	return nil
 }

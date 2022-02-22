@@ -29,3 +29,4 @@ The following attributes are exported.
 - `id` - The unique identifier for the device
 - `user` - The user associated with the device
 - `addresses` - Tailscale IPs for the device
+- `tags` - Tags applied to the device

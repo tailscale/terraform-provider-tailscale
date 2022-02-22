@@ -48,6 +48,14 @@ func dataSourceDevices() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
+						"tags": {
+							Type:        schema.TypeSet,
+							Description: "The tags applied to the device",
+							Computed:    true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
 					},
 				},
 			},
@@ -75,6 +83,7 @@ func dataSourceDevicesRead(ctx context.Context, d *schema.ResourceData, m interf
 			"name":      device.Name,
 			"user":      device.User,
 			"id":        device.ID,
+			"tags":      device.Tags,
 		})
 	}
 
