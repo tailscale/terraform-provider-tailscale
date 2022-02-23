@@ -11,6 +11,7 @@ import (
 const testDeviceTags = `
 	data "tailscale_device" "test_device" {
 		name = "device.example.com"
+		wait_for = "60s"
 	}
 	
 	resource "tailscale_device_tags" "test_tags" {
