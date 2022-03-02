@@ -14,6 +14,7 @@ The device data source describes a single device in a tailnet.
 ```terraform
 data "tailscale_device" "sample_device" {
   name = "user1-device.example.com"
+  wait_for = "60s"
 }
 
 ```
@@ -21,6 +22,7 @@ data "tailscale_device" "sample_device" {
 ## Argument Reference
 
 - `name` - (Required) The name of the tailnet device to obtain the attributes of.
+- `wait_for` - (Optional) If specified, the provider will retry obtaining the device data every second until the specified duration has been reached. Must be a value greater than 1 second
 
 ## Attributes Reference
 

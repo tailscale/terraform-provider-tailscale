@@ -2,8 +2,10 @@ package tailscale
 
 import (
 	"context"
+	"time"
 
 	"github.com/davidsbond/tailscale-client-go/tailscale"
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -11,7 +13,7 @@ import (
 func dataSourceDevice() *schema.Resource {
 	return &schema.Resource{
 		Description: "The device data source describes a single device in a tailnet",
-		ReadContext: dataSourceDeviceRead,
+		ReadContext: readWithWaitFor(dataSourceDeviceRead),
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -37,6 +39,22 @@ func dataSourceDevice() *schema.Resource {
 				Computed:    true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
+				},
+			},
+			"wait_for": {
+				Type:        schema.TypeString,
+				Description: "If specified, the provider will make multiple attempts to obtain the data source until the wait_for duration is reached. Retries are made every second so this value should be greater than 1s",
+				Optional:    true,
+				ValidateDiagFunc: func(i interface{}, path cty.Path) diag.Diagnostics {
+					waitFor, err := time.ParseDuration(i.(string))
+					switch {
+					case err != nil:
+						return diagnosticsErrorWithPath(err, "failed to parse wait_for", path)
+					case waitFor <= time.Second:
+						return diagnosticsErrorWithPath(nil, "wait_for must be greater than 1 second", path)
+					default:
+						return nil
+					}
 				},
 			},
 		},
