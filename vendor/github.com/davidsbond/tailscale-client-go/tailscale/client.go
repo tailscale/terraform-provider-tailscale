@@ -25,8 +25,15 @@ type (
 
 	// The APIError type describes an error as returned by the Tailscale API.
 	APIError struct {
-		Message string `json:"message"`
+		Message string         `json:"message"`
+		Data    []APIErrorData `json:"data"`
 		status  int
+	}
+
+	// The APIErrorData type describes elements of the data field within errors returned by the Tailscale API.
+	APIErrorData struct {
+		User   string   `json:"user"`
+		Errors []string `json:"errors"`
 	}
 
 	// The ClientOption type is a function that is used to modify a Client.
@@ -484,4 +491,15 @@ func IsNotFound(err error) bool {
 	}
 
 	return false
+}
+
+// ErrorData returns the contents of the APIError.Data field from the provided error if it is of type APIError. Returns
+// a nil slice if the given error is not of type APIError.
+func ErrorData(err error) []APIErrorData {
+	var apiErr APIError
+	if errors.As(err, &apiErr) {
+		return apiErr.Data
+	}
+
+	return nil
 }
