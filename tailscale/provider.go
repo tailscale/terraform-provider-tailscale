@@ -73,18 +73,34 @@ func diagnosticsError(err error, message string, args ...interface{}) diag.Diagn
 		detail = err.Error()
 	}
 
-	return diag.Diagnostics{
+	diags := []diag.Diagnostic{
 		{
 			Severity: diag.Error,
 			Summary:  fmt.Sprintf(message, args...),
 			Detail:   detail,
 		},
 	}
+
+	if details := tailscale.ErrorData(err); len(details) > 0 {
+		for _, dt := range details {
+			for _, e := range dt.Errors {
+				diags = append(diags, diag.Diagnostic{
+					Severity: diag.Error,
+					Detail:   fmt.Sprintf("user: %s\nerror: %s", dt.User, e),
+				})
+			}
+		}
+	}
+
+	return diags
 }
 
 func diagnosticsErrorWithPath(err error, message string, path cty.Path, args ...interface{}) diag.Diagnostics {
 	d := diagnosticsError(err, message, args...)
-	d[0].AttributePath = path
+	for i := range d {
+		d[i].AttributePath = path
+	}
+
 	return d
 }
 
