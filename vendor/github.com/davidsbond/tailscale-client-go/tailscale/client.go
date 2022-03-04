@@ -483,6 +483,27 @@ func (c *Client) SetDeviceTags(ctx context.Context, deviceID string, tags []stri
 	return c.performRequest(req, nil)
 }
 
+type (
+	// The DeviceKey type represents the properties of the key of an individual device within
+	// the tailnet.
+	DeviceKey struct {
+		KeyExpiryDisabled bool `json:"keyExpiryDisabled"` // Whether or not this device's key will ever expire.
+		Preauthorized     bool `json:"preauthorized"`     // Whether or not this device is pre-authorized for the tailnet.
+	}
+)
+
+// SetDeviceKey updates the properties of a device's key.
+func (c *Client) SetDeviceKey(ctx context.Context, deviceID string, key DeviceKey) error {
+	const uriFmt = "/api/v2/device/%s/key"
+
+	req, err := c.buildRequest(ctx, http.MethodPost, fmt.Sprintf(uriFmt, deviceID), key)
+	if err != nil {
+		return err
+	}
+
+	return c.performRequest(req, nil)
+}
+
 // IsNotFound returns true if the provided error implementation is an APIError with a status of 404.
 func IsNotFound(err error) bool {
 	var apiErr APIError
