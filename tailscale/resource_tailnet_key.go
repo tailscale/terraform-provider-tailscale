@@ -42,11 +42,6 @@ func resourceTailnetKey() *schema.Resource {
 				Computed:    true,
 				Sensitive:   true,
 			},
-			"id": {
-				Type:        schema.TypeString,
-				Description: "The key's identifier",
-				Computed:    true,
-			},
 		},
 	}
 }
@@ -76,18 +71,13 @@ func resourceTailnetKeyCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diagnosticsError(err, "Failed to set key")
 	}
 
-	if err = d.Set("id", key.ID); err != nil {
-		return diagnosticsError(err, "Failed to set id")
-	}
-
 	return nil
 }
 
 func resourceTailnetKeyDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*tailscale.Client)
-	id := d.Get("id").(string)
 
-	err := client.DeleteKey(ctx, id)
+	err := client.DeleteKey(ctx, d.Id())
 	switch {
 	case tailscale.IsNotFound(err):
 		// Single-use keys may no longer be here, so we can ignore deletions that fail due to not-found errors.
@@ -101,8 +91,7 @@ func resourceTailnetKeyDelete(ctx context.Context, d *schema.ResourceData, m int
 
 func resourceTailnetKeyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*tailscale.Client)
-	id := d.Get("id").(string)
-	key, err := client.GetKey(ctx, id)
+	key, err := client.GetKey(ctx, d.Id())
 
 	reusable := d.Get("reusable").(bool)
 
