@@ -41,6 +41,7 @@ func Provider(options ...ProviderOption) *schema.Provider {
 			"tailscale_device_authorization": resourceDeviceAuthorization(),
 			"tailscale_tailnet_key":          resourceTailnetKey(),
 			"tailscale_device_tags":          resourceDeviceTags(),
+			"tailscale_device_key":           resourceDeviceKey(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"tailscale_device":  dataSourceDevice(),
