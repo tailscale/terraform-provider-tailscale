@@ -355,13 +355,24 @@ func (c *Client) DeviceSubnetRoutes(ctx context.Context, deviceID string) (*Devi
 }
 
 type Device struct {
-	Addresses         []string `json:"addresses"`
-	Name              string   `json:"name"`
-	ID                string   `json:"id"`
-	Authorized        bool     `json:"authorized"`
-	User              string   `json:"user"`
-	Tags              []string `json:"tags"`
-	KeyExpiryDisabled bool     `json:"keyExpiryDisabled"`
+	Addresses                 []string  `json:"addresses"`
+	Name                      string    `json:"name"`
+	ID                        string    `json:"id"`
+	Authorized                bool      `json:"authorized"`
+	User                      string    `json:"user"`
+	Tags                      []string  `json:"tags"`
+	KeyExpiryDisabled         bool      `json:"keyExpiryDisabled"`
+	BlocksIncomingConnections bool      `json:"blocksIncomingConnections"`
+	ClientVersion             string    `json:"clientVersion"`
+	Created                   time.Time `json:"created"`
+	Expires                   time.Time `json:"expires"`
+	Hostname                  string    `json:"hostname"`
+	IsExternal                bool      `json:"isExternal"`
+	LastSeen                  time.Time `json:"lastSeen"`
+	MachineKey                string    `json:"machineKey"`
+	NodeKey                   string    `json:"nodeKey"`
+	OS                        string    `json:"os"`
+	UpdateAvailable           bool      `json:"updateAvailable"`
 }
 
 // Devices lists the devices in a tailnet.
