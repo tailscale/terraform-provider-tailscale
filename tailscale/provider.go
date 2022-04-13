@@ -87,7 +87,7 @@ func diagnosticsError(err error, message string, args ...interface{}) diag.Diagn
 			for _, e := range dt.Errors {
 				diags = append(diags, diag.Diagnostic{
 					Severity: diag.Error,
-					Detail:   fmt.Sprintf("user: %s\nerror: %s", dt.User, e),
+					Summary:  fmt.Sprintf("user: %s\nerror: %s", dt.User, e),
 				})
 			}
 		}
