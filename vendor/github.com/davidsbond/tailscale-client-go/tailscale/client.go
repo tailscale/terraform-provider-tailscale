@@ -211,15 +211,20 @@ type ACL struct {
 }
 
 type ACLEntry struct {
-	Action string   `json:"action" hujson:"Action"`
-	Ports  []string `json:"ports" hujson:"Ports"`
-	Users  []string `json:"users" hujson:"Users"`
+	Action      string   `json:"action" hujson:"Action"`
+	Ports       []string `json:"ports" hujson:"Ports"`
+	Users       []string `json:"users" hujson:"Users"`
+	Source      []string `json:"src" hujson:"Src"`
+	Destination []string `json:"dst" hujson:"Dst"`
+	Protocol    string   `json:"proto" hujson:"Proto"`
 }
 
 type ACLTest struct {
-	User  string   `json:"user" hujson:"User"`
-	Allow []string `json:"allow" hujson:"Allow"`
-	Deny  []string `json:"deny" hujson:"Deny"`
+	User        string   `json:"user" hujson:"User"`
+	Allow       []string `json:"allow" hujson:"Allow"`
+	Deny        []string `json:"deny" hujson:"Deny"`
+	Source      []string `json:"src" hujson:"Src"`
+	Destination []string `json:"dst" hujson:"Dst"`
 }
 
 type ACLDERPMap struct {
