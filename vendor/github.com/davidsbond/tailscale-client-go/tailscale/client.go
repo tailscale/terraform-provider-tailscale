@@ -224,7 +224,6 @@ type ACLTest struct {
 	Allow       []string `json:"allow" hujson:"Allow"`
 	Deny        []string `json:"deny" hujson:"Deny"`
 	Source      string   `json:"src" hujson:"Src"`
-	Destination string   `json:"dst" hujson:"Dst"`
 	Accept      []string `json:"accept" hujson:"Accept"`
 }
 
