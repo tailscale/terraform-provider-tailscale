@@ -223,8 +223,9 @@ type ACLTest struct {
 	User        string   `json:"user" hujson:"User"`
 	Allow       []string `json:"allow" hujson:"Allow"`
 	Deny        []string `json:"deny" hujson:"Deny"`
-	Source      []string `json:"src" hujson:"Src"`
-	Destination []string `json:"dst" hujson:"Dst"`
+	Source      string   `json:"src" hujson:"Src"`
+	Destination string   `json:"dst" hujson:"Dst"`
+	Accept      []string `json:"accept" hujson:"Accept"`
 }
 
 type ACLDERPMap struct {

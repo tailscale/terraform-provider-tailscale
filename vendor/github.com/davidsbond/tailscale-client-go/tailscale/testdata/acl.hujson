@@ -1,50 +1,41 @@
 {
-  // Allow all users access to all ports.
-  "ACLS": [
-    {
-      "Action": "accept",
-      "Users": ["*"],
-      "Ports": ["*:*"]
-    }
+  "groups": {
+    // Alice and Bob are in group:dev
+    "group:dev": ["alice@example.com", "bob@example.com",],
+    // Carl is in group:devops
+    "group:devops": ["carl@example.com",],
+  },
+  "acls": [
+    // all employees can access their own devices
+    { "action": "accept", "src": ["autogroup:members"], "dst": ["autogroup:self:*"] },
+    // users in group:dev can access devices tagged tag:dev
+    { "action": "accept", "src": ["group:dev"], "dst": ["tag:dev:*"] },
+    // users in group:devops can access devices tagged tag:prod
+    { "action": "accept", "src": ["group:devops"], "dst": ["tag:prod:*"] },
+    // all employees can access devices tagged tag:monitoring on
+    // ports 80 and 443
+    { "action": "accept", "src": ["autogroup:members"], "dst": ["tag:monitoring:80,443"] },
   ],
-  "TagOwners": {
-    "tag:example": [
-      "group:example",
-    ]
+  "tagOwners": {
+    // users in group:devops can apply the tag tag:monitoring
+    "tag:monitoring": ["group:devops"],
+    // users in group:devops can apply the tag tag:dev
+    "tag:dev": ["group:devops"],
+    // users in group:devops can apply the tag tag:prod
+    "tag:prod": ["group:devops"],
   },
-  "Groups": {
-    "group:example": [
-      "user1@example.com",
-      "user2@example.com",
-    ]
-  },
-  "Hosts": {
-    "example-host-1": "100.100.100.100",
-    "example-host-2": "100.100.101.100/24",
-  },
-  "DerpMap": {
-    "Regions": {
-      "900": {
-        "RegionID": 900,
-        "RegionCode": "example",
-        "RegionName": "example",
-        "Nodes": [{
-          "Name": "1",
-          "RegionID": 900,
-          "HostName": "example.com"
-        }]
-      }
-    }
-  },
-  "Tests": [
+  "tests": [
     {
-      "User": "user1@example.com",
-      "Allow": ["example-host-1:22", "example-host-2:80"],
-      "Deny": ["exapmle-host-2:100"],
+      "src": "carl@example.com",
+      // test that Carl can access devices tagged tag:prod on port 80
+      "accept": ["tag:prod:80"],
     },
     {
-      "User": "user2@example.com",
-      "Allow": ["100.60.3.4:22"],
-    }
-  ]
+      "src": "alice@example.com",
+      // test that Alice can access devices tagged tag:dev on port 80
+      "accept": ["tag:dev:80"],
+      // test that Alice cannot access devices tagged tag:prod on port 80
+      "deny": ["tag:prod:80"],
+    },
+  ],
 }
