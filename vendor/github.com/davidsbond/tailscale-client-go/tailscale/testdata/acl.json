@@ -1,49 +1,28 @@
 {
-  "acls": [
-    {
-      "action": "accept",
-      "users": ["*"],
-      "ports": ["*:*"]
-    }
-  ],
-  "tagowners": {
-    "tag:example": [
-      "group:example"
-    ]
-  },
   "groups": {
-    "group:example": [
-      "user1@example.com",
-      "user2@example.com"
-    ]
+    "group:dev": ["alice@example.com", "bob@example.com"],
+    "group:devops": ["carl@example.com"]
   },
-  "hosts": {
-    "example-host-1": "100.100.100.100",
-    "example-host-2": "100.100.101.100/24"
-  },
-  "derpMap": {
-    "regions": {
-      "900": {
-        "regionID": 900,
-        "regionCode": "example",
-        "regionName": "example",
-        "nodes": [{
-          "name": "1",
-          "regionID": 900,
-          "hostName": "example.com"
-        }]
-      }
-    }
+  "acls": [
+    { "action": "accept", "src": ["autogroup:members"], "dst": ["autogroup:self:*"] },
+    { "action": "accept", "src": ["group:dev"], "dst": ["tag:dev:*"] },
+    { "action": "accept", "src": ["group:devops"], "dst": ["tag:prod:*"] },
+    { "action": "accept", "src": ["autogroup:members"], "dst": ["tag:monitoring:80,443"] }
+  ],
+  "tagOwners": {
+    "tag:monitoring": ["group:devops"],
+    "tag:dev": ["group:devops"],
+    "tag:prod": ["group:devops"]
   },
   "tests": [
     {
-      "user": "user1@example.com",
-      "allow": ["example-host-1:22", "example-host-2:80"],
-      "deny": ["exapmle-host-2:100"]
+      "src": "carl@example.com",
+      "accept": ["tag:prod:80"]
     },
     {
-      "user": "user2@example.com",
-      "allow": ["100.60.3.4:22"]
+      "src": "alice@example.com",
+      "accept": ["tag:dev:80"],
+      "deny": ["tag:prod:80"]
     }
   ]
 }
