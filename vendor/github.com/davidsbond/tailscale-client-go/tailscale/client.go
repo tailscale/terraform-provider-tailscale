@@ -5,6 +5,7 @@ package tailscale
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -202,12 +203,18 @@ func (c *Client) DNSNameservers(ctx context.Context) ([]string, error) {
 }
 
 type ACL struct {
-	ACLs      []ACLEntry          `json:"acls" hujson:"ACLs,omitempty"`
-	Groups    map[string][]string `json:"groups,omitempty" hujson:"Groups,omitempty"`
-	Hosts     map[string]string   `json:"hosts,omitempty" hujson:"Hosts,omitempty"`
-	TagOwners map[string][]string `json:"tagowners,omitempty" hujson:"TagOwners,omitempty"`
-	DERPMap   *ACLDERPMap         `json:"derpMap,omitempty" hujson:"DerpMap,omitempty"`
-	Tests     []ACLTest           `json:"tests,omitempty" hujson:"Tests,omitempty"`
+	ACLs          []ACLEntry          `json:"acls" hujson:"ACLs,omitempty"`
+	AutoApprovers *ACLAutoApprovers   `json:"autoapprovers,omitempty" hujson:"AutoApprovers,omitempty"`
+	Groups        map[string][]string `json:"groups,omitempty" hujson:"Groups,omitempty"`
+	Hosts         map[string]string   `json:"hosts,omitempty" hujson:"Hosts,omitempty"`
+	TagOwners     map[string][]string `json:"tagowners,omitempty" hujson:"TagOwners,omitempty"`
+	DERPMap       *ACLDERPMap         `json:"derpMap,omitempty" hujson:"DerpMap,omitempty"`
+	Tests         []ACLTest           `json:"tests,omitempty" hujson:"Tests,omitempty"`
+}
+
+type ACLAutoApprovers struct {
+	Routes   map[string][]string `json:"routes" hujson:"Routes"`
+	ExitNode []string            `json:"exitNode" hujson:"ExitNode"`
 }
 
 type ACLEntry struct {
@@ -220,11 +227,11 @@ type ACLEntry struct {
 }
 
 type ACLTest struct {
-	User        string   `json:"user" hujson:"User"`
-	Allow       []string `json:"allow" hujson:"Allow"`
-	Deny        []string `json:"deny" hujson:"Deny"`
-	Source      string   `json:"src" hujson:"Src"`
-	Accept      []string `json:"accept" hujson:"Accept"`
+	User   string   `json:"user" hujson:"User"`
+	Allow  []string `json:"allow" hujson:"Allow"`
+	Deny   []string `json:"deny" hujson:"Deny"`
+	Source string   `json:"src" hujson:"Src"`
+	Accept []string `json:"accept" hujson:"Accept"`
 }
 
 type ACLDERPMap struct {
@@ -359,25 +366,49 @@ func (c *Client) DeviceSubnetRoutes(ctx context.Context, deviceID string) (*Devi
 	return &resp, nil
 }
 
+// Time wraps a time and allows for unmarshalling timestamps that represent an empty time as an empty string (e.g "")
+// this is used by the tailscale API when it returns devices that have no created date, such as its hello service.
+type Time struct {
+	time.Time
+}
+
+// MarshalJSON is an implementation of json.Marshal.
+func (t Time) MarshalJSON() ([]byte, error) {
+	return json.Marshal(t.Time)
+}
+
+// MarshalJSON unmarshals the content of data as a time.Duration, a blank string will keep the time at its zero value.
+func (t *Time) UnmarshalJSON(data []byte) error {
+	if string(data) == `""` {
+		return nil
+	}
+
+	if err := json.Unmarshal(data, &t.Time); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type Device struct {
-	Addresses                 []string  `json:"addresses"`
-	Name                      string    `json:"name"`
-	ID                        string    `json:"id"`
-	Authorized                bool      `json:"authorized"`
-	User                      string    `json:"user"`
-	Tags                      []string  `json:"tags"`
-	KeyExpiryDisabled         bool      `json:"keyExpiryDisabled"`
-	BlocksIncomingConnections bool      `json:"blocksIncomingConnections"`
-	ClientVersion             string    `json:"clientVersion"`
-	Created                   time.Time `json:"created"`
-	Expires                   time.Time `json:"expires"`
-	Hostname                  string    `json:"hostname"`
-	IsExternal                bool      `json:"isExternal"`
-	LastSeen                  time.Time `json:"lastSeen"`
-	MachineKey                string    `json:"machineKey"`
-	NodeKey                   string    `json:"nodeKey"`
-	OS                        string    `json:"os"`
-	UpdateAvailable           bool      `json:"updateAvailable"`
+	Addresses                 []string       `json:"addresses"`
+	Name                      string         `json:"name"`
+	ID                        string         `json:"id"`
+	Authorized                bool           `json:"authorized"`
+	User                      string         `json:"user"`
+	Tags                      []string       `json:"tags"`
+	KeyExpiryDisabled         bool           `json:"keyExpiryDisabled"`
+	BlocksIncomingConnections bool           `json:"blocksIncomingConnections"`
+	ClientVersion             string         `json:"clientVersion"`
+	Created                   Time `json:"created"`
+	Expires                   Time `json:"expires"`
+	Hostname                  string         `json:"hostname"`
+	IsExternal                bool           `json:"isExternal"`
+	LastSeen                  Time `json:"lastSeen"`
+	MachineKey                string         `json:"machineKey"`
+	NodeKey                   string         `json:"nodeKey"`
+	OS                        string         `json:"os"`
+	UpdateAvailable           bool           `json:"updateAvailable"`
 }
 
 // Devices lists the devices in a tailnet.

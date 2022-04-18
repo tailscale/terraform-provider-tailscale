@@ -1,0 +1,48 @@
+{
+  "devices": [
+    {
+      "addresses": [
+        "100.101.102.103",
+        "fd7a:115c:a1e0:ab12:4843:cd96:6265:6667"
+      ],
+      "authorized": true,
+      "blocksIncomingConnections": false,
+      "clientVersion": "",
+      "created": "",
+      "expires": "0001-01-01T00:00:00Z",
+      "hostname": "hello",
+      "id": "50052",
+      "isExternal": true,
+      "keyExpiryDisabled": true,
+      "lastSeen": "2022-04-15T13:24:40Z",
+      "machineKey": "",
+      "name": "hello.tailscale.com",
+      "nodeKey": "nodekey:30dc3c061ac8b33fdc6d88a4a67b053b01b56930d78cae0cf7a164411d424c0d",
+      "os": "linux",
+      "updateAvailable": false,
+      "user": "services@tailscale.com"
+    },
+    {
+      "addresses": [
+        "100.121.200.21",
+        "fd7a:115c:a1e0:ab12:4843:cd96:6265:e618"
+      ],
+      "authorized": true,
+      "blocksIncomingConnections": false,
+      "clientVersion": "1.22.2-t60b671955-gecc5d9846",
+      "created": "2022-03-05T17:10:27Z",
+      "expires": "2022-09-01T17:10:27Z",
+      "hostname": "foo",
+      "id": "50053",
+      "isExternal": false,
+      "keyExpiryDisabled": true,
+      "lastSeen": "2022-04-15T13:25:21Z",
+      "machineKey": "mkey:30dc3c061ac8b33fdc6d88a4a67b053b01b56930d78cae0cf7a164411d424c0d",
+      "name": "foo.example.com",
+      "nodeKey": "nodekey:30dc3c061ac8b33fdc6d88a4a67b053b01b56930d78cae0cf7a164411d424c0d",
+      "os": "linux",
+      "updateAvailable": false,
+      "user": "foo@example.com"
+    }
+  ]
+}
