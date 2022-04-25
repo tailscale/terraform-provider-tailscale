@@ -31,9 +31,9 @@ func Provider(options ...ProviderOption) *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_TAILNET", nil),
 				Required:    true,
 			},
-			"baseurl": {
+			"base_url": {
 				Type:        schema.TypeString,
-				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_BASEURL", nil),
+				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_BASE_URL", "https://api.tailscale.com"),
 				Required:    true,
 			},
 		},
@@ -64,9 +64,9 @@ func Provider(options ...ProviderOption) *schema.Provider {
 func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 	apiKey := d.Get("api_key").(string)
 	tailnet := d.Get("tailnet").(string)
-	baseurl := d.Get("baseurl").(string)
-	newbase := tailscale.WithBaseURL(baseurl)
-	client, err := tailscale.NewClient(apiKey, tailnet, newbase)
+	baseURL := d.Get("base_url").(string)
+
+	client, err := tailscale.NewClient(apiKey, tailnet, tailscale.WithBaseURL(baseURL))
 	if err != nil {
 		return nil, diagnosticsError(err, "failed to initialise client")
 	}
