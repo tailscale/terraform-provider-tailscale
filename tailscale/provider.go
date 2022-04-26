@@ -34,7 +34,7 @@ func Provider(options ...ProviderOption) *schema.Provider {
 			"base_url": {
 				Type:        schema.TypeString,
 				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_BASE_URL", "https://api.tailscale.com"),
-				Required:    true,
+				Optional:    true,
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
