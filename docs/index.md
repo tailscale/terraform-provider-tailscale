@@ -21,6 +21,15 @@ provider "tailscale" {
 }
 ```
 
+**Optional**
+```terraform
+provider "tailscale" {
+  api_key = "my_api_key"
+  tailnet = "example.com"
+  base_url = "https://api.us.tailscale.com"
+}
+```
+
 ## Schema
 
 ### Required
@@ -31,3 +40,7 @@ provider "tailscale" {
 A tailnet is the name of your Tailscale network. You can find it in the top left corner of the Admin Panel beside the 
 Tailscale logo. `alice@example.com` belongs to the `example.com` tailnet. For solo plans, the tailnet is the email you 
 signed up with. So `alice@gmail.com` has the tailnet `alice@gmail.com` since `@gmail.com` is a shared email host.
+
+### Optional
+
+- **base_url** (String - `TAILSCALE_BASE_URL`) Tailscale API endpoint URL. Default is `https://api.tailscale.com`.
