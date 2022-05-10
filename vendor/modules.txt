@@ -7,7 +7,7 @@ github.com/apparentlymart/go-textseg/v13/textseg
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/davidsbond/tailscale-client-go v1.3.0
+# github.com/davidsbond/tailscale-client-go v1.3.1
 ## explicit; go 1.17
 github.com/davidsbond/tailscale-client-go/tailscale
 # github.com/fatih/color v1.13.0
@@ -169,10 +169,9 @@ github.com/pmezard/go-difflib/difflib
 # github.com/stretchr/testify v1.7.1
 ## explicit; go 1.13
 github.com/stretchr/testify/assert
-# github.com/tailscale/hujson v0.0.0-20211215203138-ffd971c5f362
-## explicit; go 1.13
+# github.com/tailscale/hujson v0.0.0-20220506213045-af5ed07155e5
+## explicit; go 1.18
 github.com/tailscale/hujson
-github.com/tailscale/hujson/internal/hujson
 # github.com/vmihailenco/msgpack v4.0.4+incompatible
 ## explicit
 github.com/vmihailenco/msgpack

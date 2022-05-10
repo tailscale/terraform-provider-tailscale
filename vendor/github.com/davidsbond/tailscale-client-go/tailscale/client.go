@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -89,7 +90,7 @@ func (c *Client) buildRequest(ctx context.Context, method, uri string, body inte
 
 	var bodyBytes []byte
 	if body != nil {
-		bodyBytes, err = hujson.MarshalIndent(body, "", " ")
+		bodyBytes, err = json.MarshalIndent(body, "", " ")
 		if err != nil {
 			return nil, err
 		}
@@ -118,9 +119,20 @@ func (c *Client) performRequest(req *http.Request, out interface{}) error {
 	}
 	defer res.Body.Close()
 
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+	if !json.Valid(body) {
+		body, err = hujson.Standardize(body)
+		if err != nil {
+			return err
+		}
+	}
+
 	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusCreated {
 		var apiErr APIError
-		if err = hujson.NewDecoder(res.Body).Decode(&apiErr); err != nil {
+		if err = json.Unmarshal(body, &apiErr); err != nil {
 			return err
 		}
 
@@ -129,7 +141,7 @@ func (c *Client) performRequest(req *http.Request, out interface{}) error {
 	}
 
 	if out != nil {
-		return hujson.NewDecoder(res.Body).Decode(out)
+		return json.Unmarshal(body, out)
 	}
 
 	return nil
@@ -391,24 +403,24 @@ func (t *Time) UnmarshalJSON(data []byte) error {
 }
 
 type Device struct {
-	Addresses                 []string       `json:"addresses"`
-	Name                      string         `json:"name"`
-	ID                        string         `json:"id"`
-	Authorized                bool           `json:"authorized"`
-	User                      string         `json:"user"`
-	Tags                      []string       `json:"tags"`
-	KeyExpiryDisabled         bool           `json:"keyExpiryDisabled"`
-	BlocksIncomingConnections bool           `json:"blocksIncomingConnections"`
-	ClientVersion             string         `json:"clientVersion"`
-	Created                   Time `json:"created"`
-	Expires                   Time `json:"expires"`
-	Hostname                  string         `json:"hostname"`
-	IsExternal                bool           `json:"isExternal"`
-	LastSeen                  Time `json:"lastSeen"`
-	MachineKey                string         `json:"machineKey"`
-	NodeKey                   string         `json:"nodeKey"`
-	OS                        string         `json:"os"`
-	UpdateAvailable           bool           `json:"updateAvailable"`
+	Addresses                 []string `json:"addresses"`
+	Name                      string   `json:"name"`
+	ID                        string   `json:"id"`
+	Authorized                bool     `json:"authorized"`
+	User                      string   `json:"user"`
+	Tags                      []string `json:"tags"`
+	KeyExpiryDisabled         bool     `json:"keyExpiryDisabled"`
+	BlocksIncomingConnections bool     `json:"blocksIncomingConnections"`
+	ClientVersion             string   `json:"clientVersion"`
+	Created                   Time     `json:"created"`
+	Expires                   Time     `json:"expires"`
+	Hostname                  string   `json:"hostname"`
+	IsExternal                bool     `json:"isExternal"`
+	LastSeen                  Time     `json:"lastSeen"`
+	MachineKey                string   `json:"machineKey"`
+	NodeKey                   string   `json:"nodeKey"`
+	OS                        string   `json:"os"`
+	UpdateAvailable           bool     `json:"updateAvailable"`
 }
 
 // Devices lists the devices in a tailnet.
