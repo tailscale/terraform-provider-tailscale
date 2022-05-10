@@ -3,13 +3,13 @@ module github.com/davidsbond/terraform-provider-tailscale
 go 1.17
 
 require (
-	github.com/davidsbond/tailscale-client-go v1.3.0
+	github.com/davidsbond/tailscale-client-go v1.3.1
 	github.com/google/go-cmp v0.5.8
 	github.com/hashicorp/go-cty v1.4.1-0.20200414143053-d3edf31b6320
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.16.0
 	github.com/stretchr/testify v1.7.1
-	github.com/tailscale/hujson v0.0.0-20211215203138-ffd971c5f362
+	github.com/tailscale/hujson v0.0.0-20220506213045-af5ed07155e5
 )
 
 require (
