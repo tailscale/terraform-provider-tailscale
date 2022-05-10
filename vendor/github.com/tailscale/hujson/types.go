@@ -12,8 +12,7 @@
 //
 // See https://nigeltao.github.io/blog/2021/json-with-commas-comments.html
 //
-//
-// Functionality
+// # Functionality
 //
 // The Parse function parses HuJSON input as a Value,
 // which is a syntax tree exactly representing the input.
@@ -24,8 +23,7 @@
 // which is byte-for-byte identical to the input if no transformations
 // were performed on the value.
 //
-//
-// Grammar
+// # Grammar
 //
 // The changes to the JSON grammar are:
 //
@@ -64,8 +62,7 @@
 //	 	'000A' ws
 //	 	'000D' ws
 //
-//
-// Use with the Standard Library
+// # Use with the Standard Library
 //
 // This package operates with HuJSON as an AST. In order to parse HuJSON
 // into arbitrary Go types, use this package to parse HuJSON input as an AST,
@@ -74,16 +71,13 @@
 //
 // Example usage:
 //
-//	ast, err := hujson.Parse(b)
+//	b, err := hujson.Standardize(b)
 //	if err != nil {
 //		... // handle err
 //	}
-//	ast.Standardize()
-//	b = ast.Pack()
 //	if err := json.Unmarshal(b, &v); err != nil {
 //		... // handle err
 //	}
-//
 package hujson
 
 import (
@@ -106,7 +100,6 @@ import (
 //	'0': number
 //	'{': object
 //	'[': array
-//
 type Kind byte
 
 // Value is an exact syntactic representation of a JSON value.
@@ -331,7 +324,7 @@ type Object struct {
 	// after the preceding open brace or comma and before the closing brace.
 	AfterExtra Extra
 }
-type ObjectMember = struct {
+type ObjectMember struct {
 	Name, Value Value
 }
 
