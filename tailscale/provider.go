@@ -25,16 +25,20 @@ func Provider(options ...ProviderOption) *schema.Provider {
 				Type:        schema.TypeString,
 				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_API_KEY", nil),
 				Required:    true,
+				Description: "The API key to use for authenticating requests to the API. Can be set via the TAILSCALE_API_KEY environment variable.",
+				Sensitive:   true,
 			},
 			"tailnet": {
 				Type:        schema.TypeString,
 				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_TAILNET", nil),
 				Required:    true,
+				Description: "The Tailnet to perform actions in. Can be set via the TAILSCALE_TAILNET environment variable.",
 			},
 			"base_url": {
 				Type:        schema.TypeString,
 				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_BASE_URL", "https://api.tailscale.com"),
 				Optional:    true,
+				Description: "The base URL of the Tailscale API. Defaults to https://api.tailscale.com. Can be set via the TAILSCALE_BASE_URL environment variable.",
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{

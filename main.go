@@ -1,3 +1,4 @@
+//go:generate tfplugindocs
 package main
 
 import (
