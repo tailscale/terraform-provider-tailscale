@@ -1,6 +1,6 @@
 module github.com/davidsbond/terraform-provider-tailscale
 
-go 1.17
+go 1.18
 
 require (
 	github.com/davidsbond/tailscale-client-go v1.3.1
