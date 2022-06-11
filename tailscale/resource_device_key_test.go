@@ -15,7 +15,6 @@ const testDeviceKey = `
 	
 	resource "tailscale_device_key" "test_key" {
 		device_id = data.tailscale_device.test_device.id
-		preauthorized = true
 		key_expiry_disabled = true
 	}`
 
