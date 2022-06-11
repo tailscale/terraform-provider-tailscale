@@ -19,7 +19,6 @@ data "tailscale_device" "example_device" {
 
 resource "tailscale_device_key" "example_key" {
   device_id           = data.tailscale_device.example_device.id
-  preauthorized       = true
   key_expiry_disabled = true
 }
 ```
@@ -34,7 +33,6 @@ resource "tailscale_device_key" "example_key" {
 ### Optional
 
 - `key_expiry_disabled` (Boolean) Determines whether or not the device's key will expire
-- `preauthorized` (Boolean) Determines whether or not the device will be authorized for the tailnet by default.
 
 ### Read-Only
 

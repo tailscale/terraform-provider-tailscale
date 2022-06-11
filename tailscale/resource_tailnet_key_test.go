@@ -12,6 +12,7 @@ const testTailnetKey = `
 	resource "tailscale_tailnet_key" "example_key" {
 		reusable = true
 		ephemeral = true
+		preauthorized = true
 		tags = ["tag:server"]
 	}
 `

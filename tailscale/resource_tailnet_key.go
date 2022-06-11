@@ -36,6 +36,12 @@ func resourceTailnetKey() *schema.Resource {
 				Description: "List of tags to apply to the machines authenticated by the key.",
 				ForceNew:    true,
 			},
+			"preauthorized": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default.",
+				ForceNew:    true,
+			},
 			"key": {
 				Type:        schema.TypeString,
 				Description: "The authentication key",
@@ -50,6 +56,7 @@ func resourceTailnetKeyCreate(ctx context.Context, d *schema.ResourceData, m int
 	client := m.(*tailscale.Client)
 	reusable := d.Get("reusable").(bool)
 	ephemeral := d.Get("ephemeral").(bool)
+	preauthorized := d.Get("preauthorized").(bool)
 	var tags []string
 	for _, tag := range d.Get("tags").(*schema.Set).List() {
 		tags = append(tags, tag.(string))
@@ -59,6 +66,7 @@ func resourceTailnetKeyCreate(ctx context.Context, d *schema.ResourceData, m int
 	capabilities.Devices.Create.Reusable = reusable
 	capabilities.Devices.Create.Ephemeral = ephemeral
 	capabilities.Devices.Create.Tags = tags
+	capabilities.Devices.Create.Preauthorized = preauthorized
 
 	key, err := client.CreateKey(ctx, capabilities)
 	if err != nil {

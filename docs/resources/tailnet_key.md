@@ -14,8 +14,9 @@ The tailnet_key resource allows you to create pre-authentication keys that can r
 
 ```terraform
 resource "tailscale_tailnet_key" "sample_key" {
-  reusable  = true
-  ephemeral = false
+  reusable      = true
+  ephemeral     = false
+  preauthorized = true
 }
 ```
 
@@ -25,6 +26,7 @@ resource "tailscale_tailnet_key" "sample_key" {
 ### Optional
 
 - `ephemeral` (Boolean) Indicates if the key is ephemeral.
+- `preauthorized` (Boolean) Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default.
 - `reusable` (Boolean) Indicates if the key is reusable or single-use.
 - `tags` (Set of String) List of tags to apply to the machines authenticated by the key.
 
