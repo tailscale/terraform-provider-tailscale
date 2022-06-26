@@ -1,8 +1,10 @@
 package tailscale
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/davidsbond/tailscale-client-go/tailscale"
 	"github.com/google/go-cmp/cmp"
@@ -126,11 +128,21 @@ func resourceACLDelete(ctx context.Context, _ *schema.ResourceData, m interface{
 	return nil
 }
 
-func unmarshalACL(s string) (acl tailscale.ACL, err error) {
+func unmarshalACL(s string) (tailscale.ACL, error) {
 	b, err := hujson.Standardize([]byte(s))
 	if err != nil {
-		return acl, err
+		return tailscale.ACL{}, err
 	}
-	err = json.Unmarshal(b, &acl)
-	return acl, err
+
+	decoder := json.NewDecoder(bytes.NewBuffer(b))
+	decoder.DisallowUnknownFields()
+
+	var acl tailscale.ACL
+	if err = decoder.Decode(&acl); err != nil {
+		return acl, fmt.Errorf("%w. (This error may be caused by a new ACL feature that is not yet supported by "+
+			"this terraform provider. If you're using a valid ACL field, please raise an issue at "+
+			"https://github.com/davidsbond/terraform-provider-tailscale/issues/new/choose)", err)
+	}
+
+	return acl, nil
 }
