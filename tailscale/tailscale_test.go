@@ -9,8 +9,9 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/davidsbond/tailscale-client-go/tailscale"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/davidsbond/tailscale-client-go/tailscale"
 )
 
 type TestServer struct {

@@ -6,12 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/davidsbond/tailscale-client-go/tailscale"
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/tailscale/hujson"
+
+	"github.com/davidsbond/tailscale-client-go/tailscale"
 )
 
 func resourceACL() *schema.Resource {
