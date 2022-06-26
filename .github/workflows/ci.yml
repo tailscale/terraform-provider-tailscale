@@ -81,3 +81,43 @@ jobs:
         run: |
           git add .
           git diff --staged --exit-code
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.18.x'
+
+      - name: Get cache paths
+        id: cache
+        run: |
+          echo "::set-output name=build::$(go env GOCACHE)"
+          echo "::set-output name=module::$(go env GOMODCACHE)"
+
+      - name: Set up cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ steps.cache.outputs.build }}
+            ${{ steps.cache.outputs.module }}
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install goimports
+        run: go install golang.org/x/tools/cmd/goimports
+
+      - name: Format code
+        run: |
+          go fmt ./...
+          goimports -w -local github.com/davidsbond .
+
+      - name: Check for uncommitted changes
+        run: |
+          git add .
+          git diff --staged --exit-code

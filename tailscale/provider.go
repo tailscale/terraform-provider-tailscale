@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/davidsbond/tailscale-client-go/tailscale"
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/davidsbond/tailscale-client-go/tailscale"
 )
 
 type ProviderOption func(p *schema.Provider)
