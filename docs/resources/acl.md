@@ -37,4 +37,10 @@ resource "tailscale_acl" "sample_acl" {
 
 - `id` (String) The ID of this resource.
 
+## Import
 
+Import is supported using the following syntax:
+
+```shell
+terraform import tailscale_acl.sample_acl acl
+```

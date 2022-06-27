@@ -13,12 +13,12 @@ The device_key resource allows you to update the properties of a device's key
 ## Example Usage
 
 ```terraform
-data "tailscale_device" "example_device" {
+data "tailscale_device" "sample_device" {
   name = "device.example.com"
 }
 
-resource "tailscale_device_key" "example_key" {
-  device_id           = data.tailscale_device.example_device.id
+resource "tailscale_device_key" "sample_key" {
+  device_id           = data.tailscale_device.sample_device.id
   key_expiry_disabled = true
 }
 ```
@@ -32,10 +32,16 @@ resource "tailscale_device_key" "example_key" {
 
 ### Optional
 
-- `key_expiry_disabled` (Boolean) Determines whether or not the device's key will expire
+- `key_expiry_disabled` (Boolean) Determines whether the device's key will expire
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
 
+## Import
 
+Import is supported using the following syntax:
+
+```shell
+terraform import tailscale_device_key.sample_key "<device_name>"
+```

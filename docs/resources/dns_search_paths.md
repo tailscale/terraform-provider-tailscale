@@ -31,4 +31,10 @@ resource "tailscale_dns_search_paths" "sample_search_paths" {
 
 - `id` (String) The ID of this resource.
 
+## Import
 
+Import is supported using the following syntax:
+
+```shell
+terraform import tailscale_dns_search_paths.sample_search_paths dns_search_paths
+```

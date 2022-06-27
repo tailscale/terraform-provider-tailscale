@@ -1,0 +1,1 @@
+terraform import tailscale_dns_nameservers.sample_nameservers nameservers

@@ -16,6 +16,9 @@ func resourceDeviceTags() *schema.Resource {
 		CreateContext: resourceDeviceTagsCreate,
 		UpdateContext: resourceDeviceTagsUpdate,
 		DeleteContext: resourceDeviceTagsDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: importWithDeviceIDFromName,
+		},
 		Schema: map[string]*schema.Schema{
 			"device_id": {
 				Type:        schema.TypeString,

@@ -16,6 +16,9 @@ func resourceDeviceAuthorization() *schema.Resource {
 		CreateContext: resourceDeviceAuthorizationCreate,
 		UpdateContext: resourceDeviceAuthorizationUpdate,
 		DeleteContext: resourceDeviceAuthorizationDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: importWithDeviceIDFromName,
+		},
 		Schema: map[string]*schema.Schema{
 			"device_id": {
 				Type:        schema.TypeString,

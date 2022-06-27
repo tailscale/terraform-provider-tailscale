@@ -16,6 +16,9 @@ func resourceDeviceSubnetRoutes() *schema.Resource {
 		CreateContext: resourceDeviceSubnetRoutesCreate,
 		UpdateContext: resourceDeviceSubnetRoutesUpdate,
 		DeleteContext: resourceDeviceSubnetRoutesDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: importWithDeviceIDFromName,
+		},
 		Schema: map[string]*schema.Schema{
 			"device_id": {
 				Type:        schema.TypeString,

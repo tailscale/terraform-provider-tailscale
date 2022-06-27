@@ -16,6 +16,9 @@ func resourceDNSPreferences() *schema.Resource {
 		CreateContext: resourceDNSPreferencesCreate,
 		UpdateContext: resourceDNSPreferencesUpdate,
 		DeleteContext: resourceDNSPreferencesDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 		Schema: map[string]*schema.Schema{
 			"magic_dns": {
 				Type:        schema.TypeBool,

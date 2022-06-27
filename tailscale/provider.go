@@ -168,3 +168,33 @@ func readWithWaitFor(fn schema.ReadContextFunc) schema.ReadContextFunc {
 		}
 	}
 }
+
+func importWithDeviceIDFromName(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+	client := m.(*tailscale.Client)
+
+	devices, err := client.Devices(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch devices: %w", err)
+	}
+
+	var selected *tailscale.Device
+	for _, device := range devices {
+		if device.Name != d.Id() {
+			continue
+		}
+
+		selected = &device
+		break
+	}
+
+	if selected == nil {
+		return nil, fmt.Errorf("could not find device with name %s", d.Id())
+	}
+
+	if err = d.Set("device_id", selected.ID); err != nil {
+		return nil, err
+	}
+
+	return []*schema.ResourceData{d}, nil
+
+}

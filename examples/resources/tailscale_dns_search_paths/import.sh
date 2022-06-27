@@ -1,0 +1,1 @@
+terraform import tailscale_dns_search_paths.sample_search_paths dns_search_paths

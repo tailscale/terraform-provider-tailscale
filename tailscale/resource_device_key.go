@@ -16,6 +16,9 @@ func resourceDeviceKey() *schema.Resource {
 		CreateContext: resourceDeviceKeyCreate,
 		DeleteContext: resourceDeviceKeyDelete,
 		UpdateContext: resourceDeviceKeyUpdate,
+		Importer: &schema.ResourceImporter{
+			StateContext: importWithDeviceIDFromName,
+		},
 		Schema: map[string]*schema.Schema{
 			"device_id": {
 				Type:        schema.TypeString,
@@ -25,7 +28,7 @@ func resourceDeviceKey() *schema.Resource {
 			"key_expiry_disabled": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Determines whether or not the device's key will expire",
+				Description: "Determines whether the device's key will expire",
 			},
 		},
 	}

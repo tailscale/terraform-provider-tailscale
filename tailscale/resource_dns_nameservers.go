@@ -16,6 +16,9 @@ func resourceDNSNameservers() *schema.Resource {
 		CreateContext: resourceDNSNameserversCreate,
 		UpdateContext: resourceDNSNameserversUpdate,
 		DeleteContext: resourceDNSNameserversDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 		Schema: map[string]*schema.Schema{
 			"nameservers": {
 				Type: schema.TypeList,

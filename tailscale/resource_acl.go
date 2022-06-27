@@ -22,6 +22,9 @@ func resourceACL() *schema.Resource {
 		CreateContext: resourceACLCreate,
 		UpdateContext: resourceACLUpdate,
 		DeleteContext: resourceACLDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 		Schema: map[string]*schema.Schema{
 			"acl": {
 				Type:             schema.TypeString,
@@ -81,7 +84,7 @@ func resourceACLCreate(ctx context.Context, d *schema.ResourceData, m interface{
 		return diagnosticsError(err, "Failed to unmarshal ACL")
 	}
 
-	if err := client.SetACL(ctx, acl); err != nil {
+	if err = client.SetACL(ctx, acl); err != nil {
 		return diagnosticsError(err, "Failed to set ACL")
 	}
 
@@ -102,7 +105,7 @@ func resourceACLUpdate(ctx context.Context, d *schema.ResourceData, m interface{
 		return diagnosticsError(err, "Failed to unmarshal ACL")
 	}
 
-	if err := client.SetACL(ctx, acl); err != nil {
+	if err = client.SetACL(ctx, acl); err != nil {
 		return diagnosticsError(err, "Failed to set ACL")
 	}
 

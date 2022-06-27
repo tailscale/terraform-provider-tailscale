@@ -15,6 +15,9 @@ func resourceTailnetKey() *schema.Resource {
 		ReadContext:   resourceTailnetKeyRead,
 		CreateContext: resourceTailnetKeyCreate,
 		DeleteContext: resourceTailnetKeyDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 		Schema: map[string]*schema.Schema{
 			"reusable": {
 				Type:        schema.TypeBool,
