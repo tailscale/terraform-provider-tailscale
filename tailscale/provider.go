@@ -24,14 +24,14 @@ func Provider(options ...ProviderOption) *schema.Provider {
 		Schema: map[string]*schema.Schema{
 			"api_key": {
 				Type:        schema.TypeString,
-				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_API_KEY", nil),
+				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_API_KEY", ""),
 				Optional:    true,
 				Description: "The API key to use for authenticating requests to the API. Can be set via the TAILSCALE_API_KEY environment variable.",
 				Sensitive:   true,
 			},
 			"tailnet": {
 				Type:        schema.TypeString,
-				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_TAILNET", nil),
+				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_TAILNET", ""),
 				Optional:    true,
 				Description: "The Tailnet to perform actions in. Can be set via the TAILSCALE_TAILNET environment variable.",
 			},
