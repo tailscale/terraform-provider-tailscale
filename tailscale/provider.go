@@ -69,7 +69,7 @@ func Provider(options ...ProviderOption) *schema.Provider {
 func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 	apiKey := d.Get("api_key").(string)
 	if apiKey == "" {
-		return nil, diag.Errorf("tailscale provider argument `api_key' is empty")
+		return nil, diag.Errorf("tailscale provider argument 'api_key' is empty")
 	}
 
 	tailnet := d.Get("tailnet").(string)
