@@ -74,7 +74,7 @@ func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, 
 
 	tailnet := d.Get("tailnet").(string)
 	if tailnet == "" {
-		return nil, diag.Errorf("tailscale provider argument `tailnet' is empty")
+		return nil, diag.Errorf("tailscale provider argument 'tailnet' is empty")
 	}
 
 	baseURL := d.Get("base_url").(string)
