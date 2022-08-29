@@ -4,7 +4,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/tailscale/terraform-provider-tailscale)](https://goreportcard.com/report/github.com/tailscale/terraform-provider-tailscale)
 ![Github Actions](https://github.com/tailscale/terraform-provider-tailscale/actions/workflows/ci.yml/badge.svg?branch=master)
 
-This repository contains the source code for the [Tailscale Terraform provider](https://registry.terraform.io/providers/davidsbond/tailscale).
+This repository contains the source code for the [Tailscale Terraform provider](https://registry.terraform.io/providers/tailscale/tailscale).
 This Terraform provider lets you interact with the [Tailscale](https://tailscale.com) API.
 
 See the [documentation](https://registry.terraform.io/providers/tailscale/tailscale/latest/docs) in the Terraform registry
