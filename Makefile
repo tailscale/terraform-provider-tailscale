@@ -1,6 +1,6 @@
 TEST?=$$(go list ./... | grep -v 'vendor')
 HOSTNAME=github.com
-NAMESPACE=davidsbond
+NAMESPACE=tailscale
 NAME=tailscale
 BINARY=terraform-provider-${NAME}
 VERSION=0.1
@@ -38,4 +38,4 @@ testacc:
 
 format:
 	go fmt ./...
-	goimports -w -local github.com/davidsbond .
+	goimports -w -local github.com/tailscale .

@@ -1,9 +1,8 @@
-module github.com/davidsbond/terraform-provider-tailscale
+module github.com/tailscale/terraform-provider-tailscale
 
-go 1.18
+go 1.19
 
 require (
-	github.com/davidsbond/tailscale-client-go v1.5.0
 	github.com/google/go-cmp v0.5.8
 	github.com/hashicorp/go-cty v1.4.1-0.20200414143053-d3edf31b6320
 	github.com/hashicorp/go-uuid v1.0.3
@@ -11,6 +10,7 @@ require (
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.21.0
 	github.com/stretchr/testify v1.8.0
 	github.com/tailscale/hujson v0.0.0-20220630195928-54599719472f
+	github.com/tailscale/tailscale-client-go v1.6.0
 	golang.org/x/tools v0.1.11
 	inet.af/netaddr v0.0.0-20220811202034-502d2d690317
 	tailscale.com v1.28.0

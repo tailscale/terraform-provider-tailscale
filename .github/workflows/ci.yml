@@ -107,7 +107,7 @@ jobs:
       - name: Format code
         run: |
           go fmt ./...
-          goimports -w -local github.com/davidsbond .
+          goimports -w -local github.com/tailscale .
 
       - name: Check for uncommitted changes
         run: |

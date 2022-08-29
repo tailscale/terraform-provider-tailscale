@@ -11,8 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	ts "github.com/davidsbond/tailscale-client-go/tailscale"
-	"github.com/davidsbond/terraform-provider-tailscale/tailscale"
+	ts "github.com/tailscale/tailscale-client-go/tailscale"
+	"github.com/tailscale/terraform-provider-tailscale/tailscale"
 )
 
 var testClient *ts.Client
