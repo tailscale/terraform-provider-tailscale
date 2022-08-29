@@ -1,17 +1,11 @@
 name: ci
 on:
   push:
-    paths:
-      - '**.go'
-      - '**.mod'
-      - '**.sum'
     branches:
-      - master
+      - main
   pull_request:
-    paths:
-      - '**.go'
-      - '**.mod'
-      - '**.sum'
+      branches:
+      - main
 
 jobs:
   test:
