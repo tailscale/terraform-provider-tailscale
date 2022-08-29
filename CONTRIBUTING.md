@@ -5,7 +5,7 @@ advice.
 
 ## Raising Issues
 
-Please use the GitHub [issues](https://github.com/davidsbond/terraform-provider-tailscale/issues/new/choose) tab to create a new issue, 
+Please use the GitHub [issues](https://github.com/tailscale/terraform-provider-tailscale/issues/new/choose) tab to create a new issue, 
 choosing an appropriate category from the list available.
 
 This terraform provider is limited by the functionality available in the [Tailscale API](https://github.com/tailscale/tailscale/blob/main/api.md),
