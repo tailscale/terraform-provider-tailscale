@@ -4,9 +4,10 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/tailscale/terraform-provider-tailscale)](https://goreportcard.com/report/github.com/tailscale/terraform-provider-tailscale)
 ![Github Actions](https://github.com/tailscale/terraform-provider-tailscale/actions/workflows/ci.yml/badge.svg?branch=master)
 
-This repository contains the source code for the [Tailscale Terraform provider](https://registry.terraform.io/providers/davidsbond/tailscale). This Terraform provider lets you interact with the [Tailscale](https://tailscale.com) API.
+This repository contains the source code for the [Tailscale Terraform provider](https://registry.terraform.io/providers/davidsbond/tailscale).
+This Terraform provider lets you interact with the [Tailscale](https://tailscale.com) API.
 
-See the [documentation](https://registry.terraform.io/providers/davidsbond/tailscale/latest/docs) in the Terraform registry
+See the [documentation](https://registry.terraform.io/providers/tailscale/tailscale/latest/docs) in the Terraform registry
 for the most up-to-date information and latest release.
 
 This provider is maintained by Tailscale. Thanks to everyone who contributed to the development of the Tailscale Terraform provider, and special thanks to [davidsbond](https://github.com/davidsbond).
@@ -19,7 +20,7 @@ To install this provider, copy and paste this code into your Terraform configura
 terraform {
   required_providers {
     tailscale = {
-      source = "davidsbond/tailscale"
+      source = "tailscale/tailscale"
       version = "0.2.0"
     }
   }

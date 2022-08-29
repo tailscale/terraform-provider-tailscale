@@ -10,9 +10,10 @@ import (
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/tailscale/hujson"
 
-	"github.com/davidsbond/tailscale-client-go/tailscale"
+	"github.com/tailscale/tailscale-client-go/tailscale"
 )
 
 func resourceACL() *schema.Resource {
@@ -142,7 +143,7 @@ func unmarshalACL(s string) (tailscale.ACL, error) {
 	if err = decoder.Decode(&acl); err != nil {
 		return acl, fmt.Errorf("%w. (This error may be caused by a new ACL feature that is not yet supported by "+
 			"this terraform provider. If you're using a valid ACL field, please raise an issue at "+
-			"https://github.com/davidsbond/terraform-provider-tailscale/issues/new/choose)", err)
+			"https://github.com/tailscale/terraform-provider-tailscale/issues/new/choose)", err)
 	}
 
 	return acl, nil
