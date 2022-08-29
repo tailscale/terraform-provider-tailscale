@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 
-	"github.com/davidsbond/tailscale-client-go/tailscale"
+	"github.com/tailscale/tailscale-client-go/tailscale"
 )
 
 const testDeviceAuthorization = `
