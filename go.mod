@@ -11,7 +11,7 @@ require (
 	github.com/stretchr/testify v1.8.0
 	github.com/tailscale/hujson v0.0.0-20220630195928-54599719472f
 	github.com/tailscale/tailscale-client-go v1.6.0
-	golang.org/x/tools v0.1.11
+	golang.org/x/tools v0.1.12
 	inet.af/netaddr v0.0.0-20220811202034-502d2d690317
 	tailscale.com v1.28.0
 )
@@ -69,8 +69,8 @@ require (
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20220617031537-928513b29760 // indirect
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
-	golang.org/x/net v0.0.0-20220607020251-c690dde0001d // indirect
-	golang.org/x/sys v0.0.0-20220627191245-f75cf1eec38b // indirect
+	golang.org/x/net v0.0.0-20220722155237-a158d28d115b // indirect
+	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20220608133413-ed9918b62aac // indirect
