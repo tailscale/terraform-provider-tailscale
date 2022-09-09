@@ -409,5 +409,5 @@ honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWh
 honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 inet.af/netaddr v0.0.0-20220811202034-502d2d690317 h1:U2fwK6P2EqmopP/hFLTOAjWTki0qgd4GMJn5X8wOleU=
 inet.af/netaddr v0.0.0-20220811202034-502d2d690317/go.mod h1:OIezDfdzOgFhuw4HuWapWq2e9l0H9tK4F1j+ETRtF3k=
-tailscale.com v1.28.0 h1:eW5bJMqw6eu7YUjBcgJY94uIcm5Zv+xpyTxxa7ztZOM=
-tailscale.com v1.28.0/go.mod h1:T9uKhlkxVPdSu1Qvp882evcS/hQ1+TAyZ7sJ/VACGRI=
+tailscale.com v1.30.1 h1:ZhacIpLTAtlxJwTCvBz0ZpwMFeyvn2CvVAuIIRIWm5Y=
+tailscale.com v1.30.1/go.mod h1:MO+tWkQp2YIF3KBnnej/mQvgYccRS5Xk/IrEpZ4Z3BU=
