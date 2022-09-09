@@ -2,12 +2,12 @@ package tailscale_test
 
 import (
 	"fmt"
+	"net/netip"
 	"strconv"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"inet.af/netaddr"
 	"tailscale.com/net/tsaddr"
 )
 
@@ -57,7 +57,7 @@ func check4Via6Result(n string) resource.TestCheckFunc {
 			return fmt.Errorf("attribute cidr expected to not be nil")
 		}
 
-		cidr, err := netaddr.ParseIPPrefix(cidrAttr)
+		cidr, err := netip.ParsePrefix(cidrAttr)
 		if err != nil {
 			return fmt.Errorf("invalid CIDR %q: %s", cidrAttr, err)
 		}

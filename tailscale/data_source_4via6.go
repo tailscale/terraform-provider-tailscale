@@ -2,11 +2,11 @@ package tailscale
 
 import (
 	"context"
+	"net/netip"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"inet.af/netaddr"
 	"tailscale.com/net/tsaddr"
 )
 
@@ -38,7 +38,7 @@ func dataSource4Via6() *schema.Resource {
 
 func dataSource4Via6Read(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	site := uint32(d.Get("site").(int))
-	cidr, err := netaddr.ParseIPPrefix(d.Get("cidr").(string))
+	cidr, err := netip.ParsePrefix(d.Get("cidr").(string))
 	if err != nil {
 		return diagnosticsError(err, "Provided CIDR is invalid")
 	}

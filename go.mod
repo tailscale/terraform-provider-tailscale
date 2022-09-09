@@ -13,7 +13,7 @@ require (
 	github.com/tailscale/tailscale-client-go v1.6.0
 	golang.org/x/tools v0.1.12
 	inet.af/netaddr v0.0.0-20220811202034-502d2d690317
-	tailscale.com v1.28.0
+	tailscale.com v1.30.1
 )
 
 require (
