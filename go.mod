@@ -12,8 +12,7 @@ require (
 	github.com/tailscale/hujson v0.0.0-20220630195928-54599719472f
 	github.com/tailscale/tailscale-client-go v1.6.0
 	golang.org/x/tools v0.1.12
-	inet.af/netaddr v0.0.0-20220811202034-502d2d690317
-	tailscale.com v1.30.1
+	tailscale.com v1.30.2
 )
 
 require (
@@ -65,8 +64,6 @@ require (
 	github.com/vmihailenco/msgpack/v4 v4.3.12 // indirect
 	github.com/vmihailenco/tagparser v0.1.2 // indirect
 	github.com/zclconf/go-cty v1.11.0 // indirect
-	go4.org/intern v0.0.0-20211027215823-ae77deb06f29 // indirect
-	go4.org/unsafe/assume-no-moving-gc v0.0.0-20220617031537-928513b29760 // indirect
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/net v0.0.0-20220722155237-a158d28d115b // indirect
