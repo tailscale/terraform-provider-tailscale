@@ -113,6 +113,13 @@ func resourceDeviceAuthorizationUpdate(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceDeviceAuthorizationDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	// Since authorization cannot be removed at this point, deleting the resource will do nothing.
+	client := m.(*tailscale.Client)
+	deviceID := d.Get("device_id").(string)
+
+	// when the device_authorization resource is deleted, delete the device
+	if err := client.DeleteDevice(ctx, deviceID); err != nil {
+		return diagnosticsError(err, "Failed to delete device")
+	}
+
 	return nil
 }
