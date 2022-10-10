@@ -242,6 +242,8 @@ github.com/tailscale/hujson v0.0.0-20220630195928-54599719472f h1:n4r/sJ92cBSBHK
 github.com/tailscale/hujson v0.0.0-20220630195928-54599719472f/go.mod h1:DFSS3NAGHthKo1gTlmEcSBiZrRJXi28rLNd/1udP1c8=
 github.com/tailscale/tailscale-client-go v1.6.0 h1:ZyJfRxhvTGNRvG5fQie1SEld4W4oJ9wuDa+Oja4mfBE=
 github.com/tailscale/tailscale-client-go v1.6.0/go.mod h1:yJRyNe2PoUgMw92N37oHGgKTODN4oIsdvb/ykRY+OtQ=
+github.com/tailscale/tailscale-client-go v1.6.1-0.20221010210317-4916933bdd36 h1:fE7V3uW0kDCvCC384HV6nb5e703cnPzp/RDEe38+8pk=
+github.com/tailscale/tailscale-client-go v1.6.1-0.20221010210317-4916933bdd36/go.mod h1:yJRyNe2PoUgMw92N37oHGgKTODN4oIsdvb/ykRY+OtQ=
 github.com/vmihailenco/msgpack v3.3.3+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=
 github.com/vmihailenco/msgpack v4.0.4+incompatible h1:dSLoQfGFAo3F6OoNhwUmLwVgaUXK79GlxNBwueZn0xI=
 github.com/vmihailenco/msgpack v4.0.4+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=

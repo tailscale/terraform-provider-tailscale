@@ -82,7 +82,13 @@ func resourceACLCreate(ctx context.Context, d *schema.ResourceData, m interface{
 		return diagnosticsError(err, "Failed to unmarshal ACL")
 	}
 
-	if err := client.SetACL(ctx, acl); err != nil {
+	if len(acl.Tests) > 0 {
+		if err = client.ValidateACL(ctx, acl); err != nil {
+			return diagnosticsError(err, "Failed to validate ACL")
+		}
+	}
+
+	if err = client.SetACL(ctx, acl); err != nil {
 		return diagnosticsError(err, "Failed to set ACL")
 	}
 
@@ -103,7 +109,13 @@ func resourceACLUpdate(ctx context.Context, d *schema.ResourceData, m interface{
 		return diagnosticsError(err, "Failed to unmarshal ACL")
 	}
 
-	if err := client.SetACL(ctx, acl); err != nil {
+	if len(acl.Tests) > 0 {
+		if err = client.ValidateACL(ctx, acl); err != nil {
+			return diagnosticsError(err, "Failed to validate ACL")
+		}
+	}
+
+	if err = client.SetACL(ctx, acl); err != nil {
 		return diagnosticsError(err, "Failed to set ACL")
 	}
 
