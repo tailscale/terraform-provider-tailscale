@@ -21,7 +21,7 @@ terraform {
   required_providers {
     tailscale = {
       source = "tailscale/tailscale"
-      version = "0.2.0"
+      version = "0.13.5"
     }
   }
 }
@@ -43,6 +43,12 @@ provider "tailscale" {
   tailnet = "example.com"
   base_url = "https://api.us.tailscale.com"
 }
+```
+
+## Updating an existing installation
+To update an existing terraform deployment currently using the original `davidsbond/tailscale` provider, use:
+```
+terraform state replace-provider registry.terraform.io/davidsbond/tailscale registry.terraform.io/tailscale/tailscale
 ```
 
 ## Contributing
