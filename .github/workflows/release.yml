@@ -24,8 +24,8 @@ jobs:
       - name: Get cache paths
         id: cache
         run: |
-          echo "::set-output name=build::$(go env GOCACHE)"
-          echo "::set-output name=module::$(go env GOMODCACHE)"
+          echo "build=$(go env GOCACHE)" | tee -a $GITHUB_OUTPUT
+          echo "module=$(go env GOMODCACHE)" | tee -a $GITHUB_OUTPUT
 
       - name: Set up cache
         uses: actions/cache@v3
