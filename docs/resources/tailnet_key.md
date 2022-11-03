@@ -17,6 +17,7 @@ resource "tailscale_tailnet_key" "sample_key" {
   reusable      = true
   ephemeral     = false
   preauthorized = true
+  expiry = 3600
 }
 ```
 
@@ -29,6 +30,7 @@ resource "tailscale_tailnet_key" "sample_key" {
 - `preauthorized` (Boolean) Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default.
 - `reusable` (Boolean) Indicates if the key is reusable or single-use.
 - `tags` (Set of String) List of tags to apply to the machines authenticated by the key.
+- `expiry` (Integer) Expiration of the key, in seconds.
 
 ### Read-Only
 
