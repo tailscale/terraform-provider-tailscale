@@ -49,6 +49,12 @@ func resourceTailnetKey() *schema.Resource {
 				Computed:    true,
 				Sensitive:   true,
 			},
+			"expiry": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The expiry of the key in seconds",
+				ForceNew:    true,
+			},
 		},
 	}
 }
@@ -58,6 +64,7 @@ func resourceTailnetKeyCreate(ctx context.Context, d *schema.ResourceData, m int
 	reusable := d.Get("reusable").(bool)
 	ephemeral := d.Get("ephemeral").(bool)
 	preauthorized := d.Get("preauthorized").(bool)
+	expiry := d.Get("expiry").(int)
 	var tags []string
 	for _, tag := range d.Get("tags").(*schema.Set).List() {
 		tags = append(tags, tag.(string))
@@ -68,6 +75,7 @@ func resourceTailnetKeyCreate(ctx context.Context, d *schema.ResourceData, m int
 	capabilities.Devices.Create.Ephemeral = ephemeral
 	capabilities.Devices.Create.Tags = tags
 	capabilities.Devices.Create.Preauthorized = preauthorized
+	capabilities.Devices.Create.Expiry = expiry
 
 	key, err := client.CreateKey(ctx, capabilities)
 	if err != nil {

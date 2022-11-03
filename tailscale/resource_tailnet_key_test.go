@@ -15,6 +15,7 @@ const testTailnetKey = `
 		ephemeral = true
 		preauthorized = true
 		tags = ["tag:server"]
+		expiry = 3600
 	}
 `
 
