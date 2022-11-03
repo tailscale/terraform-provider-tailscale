@@ -242,8 +242,8 @@ github.com/stretchr/testify v1.8.1 h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYKs
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/tailscale/hujson v0.0.0-20220630195928-54599719472f h1:n4r/sJ92cBSBHK8n9lR1XLFr0OiTVeGfN5TR+9LaN7E=
 github.com/tailscale/hujson v0.0.0-20220630195928-54599719472f/go.mod h1:DFSS3NAGHthKo1gTlmEcSBiZrRJXi28rLNd/1udP1c8=
-github.com/tailscale/tailscale-client-go v1.6.0 h1:ZyJfRxhvTGNRvG5fQie1SEld4W4oJ9wuDa+Oja4mfBE=
-github.com/tailscale/tailscale-client-go v1.6.0/go.mod h1:yJRyNe2PoUgMw92N37oHGgKTODN4oIsdvb/ykRY+OtQ=
+github.com/tailscale/tailscale-client-go v1.7.0 h1:82XCfbZCDuuvZPwdPgG6x0MLlijzRTdIKLMggWxWylI=
+github.com/tailscale/tailscale-client-go v1.7.0/go.mod h1:vHy4QKSL+16KKl12Gfa3kf13lu/4lJjFINDsnzOCi/M=
 github.com/vmihailenco/msgpack v3.3.3+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=
 github.com/vmihailenco/msgpack v4.0.4+incompatible h1:dSLoQfGFAo3F6OoNhwUmLwVgaUXK79GlxNBwueZn0xI=
 github.com/vmihailenco/msgpack v4.0.4+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=
