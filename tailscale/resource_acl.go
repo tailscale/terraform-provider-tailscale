@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-cty/cty"
@@ -22,7 +23,10 @@ func resourceACL() *schema.Resource {
 		ReadContext:   resourceACLRead,
 		CreateContext: resourceACLCreate,
 		UpdateContext: resourceACLUpdate,
-		DeleteContext: resourceACLDelete,
+		Delete:        schema.Noop,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 		Schema: map[string]*schema.Schema{
 			"acl": {
 				Type:             schema.TypeString,
@@ -82,7 +86,14 @@ func resourceACLCreate(ctx context.Context, d *schema.ResourceData, m interface{
 		return diagnosticsError(err, "Failed to unmarshal ACL")
 	}
 
-	if err := client.SetACL(ctx, acl); err != nil {
+	if err := client.SetACLWithETag(ctx, acl, "ts-default"); err != nil {
+		if strings.HasSuffix(err.Error(), "(412)") {
+			err = fmt.Errorf(
+				"! You seem to be trying to overwrite a non-default ACL with a tailscale_acl resource.\n"+
+					"Before doing this, please import your existing ACL into Terraform state using:\n"+
+					" terraform import $(this_resource) 1\n"+
+					"(got error %q)", err)
+		}
 		return diagnosticsError(err, "Failed to set ACL")
 	}
 
@@ -101,26 +112,6 @@ func resourceACLUpdate(ctx context.Context, d *schema.ResourceData, m interface{
 	acl, err := unmarshalACL(aclStr)
 	if err != nil {
 		return diagnosticsError(err, "Failed to unmarshal ACL")
-	}
-
-	if err := client.SetACL(ctx, acl); err != nil {
-		return diagnosticsError(err, "Failed to set ACL")
-	}
-
-	return nil
-}
-
-func resourceACLDelete(ctx context.Context, _ *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
-
-	acl := tailscale.ACL{
-		ACLs: []tailscale.ACLEntry{
-			{
-				Action: "accept",
-				Users:  []string{"*"},
-				Ports:  []string{"*:*"},
-			},
-		},
 	}
 
 	if err := client.SetACL(ctx, acl); err != nil {
