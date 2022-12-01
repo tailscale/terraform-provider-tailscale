@@ -2,6 +2,7 @@ package tailscale
 
 import (
 	"context"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -64,7 +65,7 @@ func resourceTailnetKeyCreate(ctx context.Context, d *schema.ResourceData, m int
 	reusable := d.Get("reusable").(bool)
 	ephemeral := d.Get("ephemeral").(bool)
 	preauthorized := d.Get("preauthorized").(bool)
-	expiry := d.Get("expiry").(int)
+	expiry, hasExpiry := d.GetOk("expiry")
 	var tags []string
 	for _, tag := range d.Get("tags").(*schema.Set).List() {
 		tags = append(tags, tag.(string))
@@ -75,9 +76,13 @@ func resourceTailnetKeyCreate(ctx context.Context, d *schema.ResourceData, m int
 	capabilities.Devices.Create.Ephemeral = ephemeral
 	capabilities.Devices.Create.Tags = tags
 	capabilities.Devices.Create.Preauthorized = preauthorized
-	capabilities.Devices.Create.Expiry = expiry
 
-	key, err := client.CreateKey(ctx, capabilities)
+	var opts []tailscale.CreateKeyOption
+	if hasExpiry {
+		opts = append(opts, tailscale.WithKeyExpiry(time.Duration(expiry.(int))*time.Second))
+	}
+
+	key, err := client.CreateKey(ctx, capabilities, opts...)
 	if err != nil {
 		return diagnosticsError(err, "Failed to create key")
 	}
