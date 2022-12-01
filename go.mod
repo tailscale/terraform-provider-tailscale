@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.24.1
 	github.com/stretchr/testify v1.8.1
 	github.com/tailscale/hujson v0.0.0-20220630195928-54599719472f
-	github.com/tailscale/tailscale-client-go v1.7.0
+	github.com/tailscale/tailscale-client-go v1.8.0
 	golang.org/x/tools v0.3.0
 	tailscale.com v1.32.3
 )
