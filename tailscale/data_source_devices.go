@@ -2,6 +2,7 @@ package tailscale
 
 import (
 	"context"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -19,6 +20,11 @@ func dataSourceDevices() *schema.Resource {
 				Optional:    true,
 				Type:        schema.TypeString,
 				Description: "Filters the device list to elements whose name has the provided prefix",
+			},
+			"name_regexp": {
+				Optional:    true,
+				Type:        schema.TypeString,
+				Description: "Filters the device list to elements whose name matches the provided regexp",
 			},
 			"devices": {
 				Computed:    true,
@@ -73,10 +79,20 @@ func dataSourceDevicesRead(ctx context.Context, d *schema.ResourceData, m interf
 	}
 
 	namePrefix, _ := d.Get("name_prefix").(string)
+	nameRegexp, _ := d.Get("name_regexp").(string)
 	deviceMaps := make([]map[string]interface{}, 0)
 	for _, device := range devices {
 		if namePrefix != "" && !strings.HasPrefix(device.Name, namePrefix) {
 			continue
+		}
+		if nameRegexp != "" {
+			re, err := regexp.Compile(nameRegexp)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			if !re.MatchString(device.Name) {
+				continue
+			}
 		}
 
 		deviceMaps = append(deviceMaps, map[string]interface{}{

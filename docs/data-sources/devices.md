@@ -15,6 +15,7 @@ The devices data source describes a list of devices in a tailnet
 ```terraform
 data "tailscale_devices" "sample_devices" {
   name_prefix = "example-"
+  name_regexp = "-(mobile|laptop)$"
 }
 ```
 
@@ -24,6 +25,7 @@ data "tailscale_devices" "sample_devices" {
 ### Optional
 
 - `name_prefix` (String) Filters the device list to elements whose name has the provided prefix
+- `name_regexp` (String) Filters the device list to elements whose name matches the provided [RE2](https://github.com/google/re2/wiki/Syntax) regexp
 
 ### Read-Only
 
