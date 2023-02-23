@@ -33,7 +33,14 @@ provider "tailscale" {
 ```
 
 In the `provider` block, replace `api_key` and `tailnet` with your own tailnet and API key. Alternatively, use the
-`TAILSCALE_API_KEY` and `TAILSCALE_TAILNET` environment variables.
+`TAILSCALE_API_KEY` and `TAILSCALE_TAILNET` environment variables. The api_key can also take the Terraform file function, e.g if your API key is in a file called `creds/tailscale.key`:
+
+```
+provider "tailscale" {
+  api_key = file("../creds/tailscale.key")
+  tailnet = "example.com"
+}
+```
 
 The default api endpoint is `https://api.tailscale.com`. If your coordination/control server api is at another endpoint, you can pass in `base_url` in the provider block.
 
@@ -44,6 +51,22 @@ provider "tailscale" {
   base_url = "https://api.us.tailscale.com"
 }
 ```
+
+### Common errors
+You may run into the provider telling you:
+
+```
+│ Error: Failed to create key
+│
+│   with module.my_module.tailscale_tailnet_key.default,
+│   on ../modules/gcp_gitlab_runner/[main.tf](http://main.tf/) line 28, in resource "tailscale_tailnet_key" "default":
+│   28: resource "tailscale_tailnet_key" "default" {
+│
+│ user tailnet does not match (403)
+╵
+```
+
+In which case, refer to the [API documentation](https://github.com/tailscale/tailscale/blob/main/api.md#tailnet) to determine your tailnet name. On the free tier, your tailnet name will be the same as your organization name i.e. equivalent to example.com in the docs.
 
 ## Updating an existing installation
 To update an existing terraform deployment currently using the original `davidsbond/tailscale` provider, use:
