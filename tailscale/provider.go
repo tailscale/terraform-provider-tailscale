@@ -89,19 +89,28 @@ func Provider(options ...ProviderOption) *schema.Provider {
 	return provider
 }
 
-func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
+func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 	apiKey := d.Get("api_key").(string)
 	oauthClientID := d.Get("oauth_client_id").(string)
 	oauthClientSecret := d.Get("oauth_client_secret").(string)
 
-	if apiKey == "" && oauthClientID == "" && oauthClientSecret == "" {
-		return nil, diag.Errorf("tailscale provider credentials are empty - set `api_key` or 'oauth_client_id' and 'oauth_client_secret'")
-	} else if apiKey != "" && (oauthClientID != "" || oauthClientSecret != "") {
-		return nil, diag.Errorf("tailscale provider credentials are conflicting - set `api_key` or 'oauth_client_id' and 'oauth_client_secret'")
-	} else if oauthClientID == "" {
-		return nil, diag.Errorf("tailscale provider argument 'oauth_client_id' is empty")
-	} else if oauthClientSecret == "" {
-		return nil, diag.Errorf("tailscale provider argument 'oauth_client_secret' is empty")
+	// this conditional may be verbose but seemed the clearest way to represent the various cases
+	if apiKey == "" {
+		if oauthClientID == "" && oauthClientSecret == "" {
+			return nil, diag.Errorf("tailscale provider credentials are empty - set `api_key` or 'oauth_client_id' and 'oauth_client_secret'")
+		} else if oauthClientID == "" {
+			return nil, diag.Errorf("tailscale provider argument 'oauth_client_id' is empty")
+		} else if oauthClientSecret == "" {
+			return nil, diag.Errorf("tailscale provider argument 'oauth_client_secret' is empty")
+		}
+	} else {
+		if oauthClientID != "" && oauthClientSecret != "" {
+			return nil, diag.Errorf("tailscale provider credentials are conflicting - `api_key` conflicts with 'oauth_client_id' and 'oauth_client_secret'")
+		} else if oauthClientID != "" {
+			return nil, diag.Errorf("tailscale provider credentials are conflicting - `api_key` conflicts with 'oauth_client_id'")
+		} else if oauthClientSecret != "" {
+			return nil, diag.Errorf("tailscale provider credentials are conflicting - `api_key` conflicts with 'oauth_client_secret'")
+		}
 	}
 
 	tailnet := d.Get("tailnet").(string)
@@ -111,7 +120,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 
 	if apiKey == "" {
 		oauthTokenURL := d.Get("oauth_token_url").(string)
-		oauthToken, err := retrieveOAuthToken(ctx, oauthClientID, oauthClientSecret, oauthTokenURL, tailnet)
+		oauthToken, err := retrieveOAuthToken(oauthClientID, oauthClientSecret, oauthTokenURL, tailnet)
 		if err != nil {
 			return nil, diagnosticsError(err, "failed to retrieve api key using OAuth credentials")
 		}
@@ -128,7 +137,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	return client, nil
 }
 
-func retrieveOAuthToken(ctx context.Context, oauthClientID string, oauthClientSecret string, oauthTokenURL string, tailnet string) (*oauth2.Token, error) {
+func retrieveOAuthToken(oauthClientID string, oauthClientSecret string, oauthTokenURL string, tailnet string) (*oauth2.Token, error) {
 	var oauthConfig = &clientcredentials.Config{
 		ClientID:     oauthClientID,
 		ClientSecret: oauthClientSecret,
