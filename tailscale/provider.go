@@ -84,13 +84,25 @@ func Provider(options ...ProviderOption) *schema.Provider {
 }
 
 func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
+	baseURL := d.Get("base_url").(string)
+	tailnet := d.Get("tailnet").(string)
+	if tailnet == "" {
+		return nil, diag.Errorf("tailscale provider argument 'tailnet' is empty")
+	}
+
 	apiKey := d.Get("api_key").(string)
 	oauthClientID := d.Get("oauth_client_id").(string)
 	oauthClientSecret := d.Get("oauth_client_secret").(string)
 
 	// this conditional may be verbose but seemed the clearest way to represent the various cases
 	if apiKey == "" {
-		if oauthClientID == "" && oauthClientSecret == "" {
+		if oauthClientID != "" && oauthClientSecret != "" {
+			oauthToken, err := generateAPIKeyViaOAuth(oauthClientID, oauthClientSecret, baseURL, tailnet)
+			if err != nil {
+				return nil, diagnosticsError(err, "failed to generate api key using OAuth credentials")
+			}
+			apiKey = oauthToken.AccessToken
+		} else if oauthClientID == "" && oauthClientSecret == "" {
 			return nil, diag.Errorf("tailscale provider credentials are empty - set `api_key` or 'oauth_client_id' and 'oauth_client_secret'")
 		} else if oauthClientID == "" {
 			return nil, diag.Errorf("tailscale provider argument 'oauth_client_id' is empty")
@@ -107,21 +119,6 @@ func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, 
 		}
 	}
 
-	tailnet := d.Get("tailnet").(string)
-	if tailnet == "" {
-		return nil, diag.Errorf("tailscale provider argument 'tailnet' is empty")
-	}
-
-	baseURL := d.Get("base_url").(string)
-
-	if apiKey == "" {
-		oauthToken, err := retrieveOAuthToken(oauthClientID, oauthClientSecret, baseURL, tailnet)
-		if err != nil {
-			return nil, diagnosticsError(err, "failed to retrieve api key using OAuth credentials")
-		}
-		apiKey = oauthToken.AccessToken
-	}
-
 	client, err := tailscale.NewClient(apiKey, tailnet, tailscale.WithBaseURL(baseURL))
 	if err != nil {
 		return nil, diagnosticsError(err, "failed to initialise client")
@@ -130,7 +127,7 @@ func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, 
 	return client, nil
 }
 
-func retrieveOAuthToken(oauthClientID string, oauthClientSecret string, baseURL string, tailnet string) (*oauth2.Token, error) {
+func generateAPIKeyViaOAuth(oauthClientID string, oauthClientSecret string, baseURL string, tailnet string) (*oauth2.Token, error) {
 	var oauthConfig = &clientcredentials.Config{
 		ClientID:     oauthClientID,
 		ClientSecret: oauthClientSecret,
