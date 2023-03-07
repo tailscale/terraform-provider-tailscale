@@ -45,12 +45,6 @@ func Provider(options ...ProviderOption) *schema.Provider {
 				Description: "The OAuth application's secret when using OAuth client credentials. Can be set via the OAUTH_CLIENT_SECRET environment variable. Both 'oauth_client_id' and 'oauth_client_secret' must be set. Conflicts with 'api_key'.",
 				Sensitive:   true,
 			},
-			"oauth_token_url": {
-				Type:        schema.TypeString,
-				DefaultFunc: schema.EnvDefaultFunc("OAUTH_TOKEN_URL", "https://api.tailscale.com/api/v2/oauth/token"),
-				Optional:    true,
-				Description: "TokenURL is the resource server's token endpoint URL. Can be set via the OAUTH_TOKEN_URL environment variable.",
-			},
 			"tailnet": {
 				Type:        schema.TypeString,
 				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_TAILNET", ""),
