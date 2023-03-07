@@ -13,6 +13,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/tailscale/tailscale-client-go/tailscale"
+
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
 )
 
 type ProviderOption func(p *schema.Provider)
@@ -28,6 +31,25 @@ func Provider(options ...ProviderOption) *schema.Provider {
 				Optional:    true,
 				Description: "The API key to use for authenticating requests to the API. Can be set via the TAILSCALE_API_KEY environment variable.",
 				Sensitive:   true,
+			},
+			"oauth_client_id": {
+				Type:        schema.TypeString,
+				DefaultFunc: schema.EnvDefaultFunc("OAUTH_CLIENT_ID", ""),
+				Optional:    true,
+				Description: "The OAuth application's ID when using OAuth client credentials. Can be set via the OAUTH_CLIENT_ID environment variable.",
+			},
+			"oauth_client_secret": {
+				Type:        schema.TypeString,
+				DefaultFunc: schema.EnvDefaultFunc("OAUTH_CLIENT_SECRET", ""),
+				Optional:    true,
+				Description: "The OAuth application's secret when using OAuth client credentials. Can be set via the OAUTH_CLIENT_SECRET environment variable.",
+				Sensitive:   true,
+			},
+			"oauth_token_url": {
+				Type:        schema.TypeString,
+				DefaultFunc: schema.EnvDefaultFunc("OAUTH_TOKEN_URL", "https://api.tailscale.com/api/v2/oauth/token"),
+				Optional:    true,
+				Description: "TokenURL is the resource server's token endpoint URL. Can be set via the OAUTH_TOKEN_URL environment variable.",
 			},
 			"tailnet": {
 				Type:        schema.TypeString,
@@ -67,15 +89,33 @@ func Provider(options ...ProviderOption) *schema.Provider {
 	return provider
 }
 
-func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
+func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 	apiKey := d.Get("api_key").(string)
-	if apiKey == "" {
-		return nil, diag.Errorf("tailscale provider argument 'api_key' is empty")
+	oauthClientID := d.Get("oauth_client_id").(string)
+	oauthClientSecret := d.Get("oauth_client_secret").(string)
+
+	if apiKey == "" && oauthClientID == "" && oauthClientSecret == "" {
+		return nil, diag.Errorf("tailscale provider credentials are empty - set `api_key` or 'oauth_client_id' and 'oauth_client_secret'")
+	} else if apiKey != "" && (oauthClientID != "" || oauthClientSecret != "") {
+		return nil, diag.Errorf("tailscale provider credentials are conflicting - set `api_key` or 'oauth_client_id' and 'oauth_client_secret'")
+	} else if oauthClientID == "" {
+		return nil, diag.Errorf("tailscale provider argument 'oauth_client_id' is empty")
+	} else if oauthClientSecret == "" {
+		return nil, diag.Errorf("tailscale provider argument 'oauth_client_secret' is empty")
 	}
 
 	tailnet := d.Get("tailnet").(string)
 	if tailnet == "" {
 		return nil, diag.Errorf("tailscale provider argument 'tailnet' is empty")
+	}
+
+	if apiKey == "" {
+		oauthTokenURL := d.Get("oauth_token_url").(string)
+		oauthToken, err := retrieveOAuthToken(ctx, oauthClientID, oauthClientSecret, oauthTokenURL, tailnet)
+		if err != nil {
+			return nil, diagnosticsError(err, "failed to retrieve api key using OAuth credentials")
+		}
+		apiKey = oauthToken.AccessToken
 	}
 
 	baseURL := d.Get("base_url").(string)
@@ -86,6 +126,21 @@ func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, 
 	}
 
 	return client, nil
+}
+
+func retrieveOAuthToken(ctx context.Context, oauthClientID string, oauthClientSecret string, oauthTokenURL string, tailnet string) (*oauth2.Token, error) {
+	var oauthConfig = &clientcredentials.Config{
+		ClientID:     oauthClientID,
+		ClientSecret: oauthClientSecret,
+		TokenURL:     oauthTokenURL,
+	}
+
+	tokenResponse, err := oauthConfig.Token(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("error getting token: %w", err)
+	}
+
+	return tokenResponse, nil
 }
 
 func diagnosticsError(err error, message string, args ...interface{}) diag.Diagnostics {
