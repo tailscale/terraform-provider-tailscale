@@ -29,20 +29,20 @@ func Provider(options ...ProviderOption) *schema.Provider {
 				Type:        schema.TypeString,
 				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_API_KEY", ""),
 				Optional:    true,
-				Description: "The API key to use for authenticating requests to the API. Can be set via the TAILSCALE_API_KEY environment variable.",
+				Description: "The API key to use for authenticating requests to the API. Can be set via the TAILSCALE_API_KEY environment variable. Conflicts with 'oauth_client_id' and 'oauth_client_secret'.",
 				Sensitive:   true,
 			},
 			"oauth_client_id": {
 				Type:        schema.TypeString,
 				DefaultFunc: schema.EnvDefaultFunc("OAUTH_CLIENT_ID", ""),
 				Optional:    true,
-				Description: "The OAuth application's ID when using OAuth client credentials. Can be set via the OAUTH_CLIENT_ID environment variable.",
+				Description: "The OAuth application's ID when using OAuth client credentials. Can be set via the OAUTH_CLIENT_ID environment variable. Both 'oauth_client_id' and 'oauth_client_secret' must be set. Conflicts with 'api_key'.",
 			},
 			"oauth_client_secret": {
 				Type:        schema.TypeString,
 				DefaultFunc: schema.EnvDefaultFunc("OAUTH_CLIENT_SECRET", ""),
 				Optional:    true,
-				Description: "The OAuth application's secret when using OAuth client credentials. Can be set via the OAUTH_CLIENT_SECRET environment variable.",
+				Description: "The OAuth application's secret when using OAuth client credentials. Can be set via the OAUTH_CLIENT_SECRET environment variable. Both 'oauth_client_id' and 'oauth_client_secret' must be set. Conflicts with 'api_key'.",
 				Sensitive:   true,
 			},
 			"oauth_token_url": {
@@ -118,16 +118,15 @@ func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, 
 		return nil, diag.Errorf("tailscale provider argument 'tailnet' is empty")
 	}
 
+	baseURL := d.Get("base_url").(string)
+
 	if apiKey == "" {
-		oauthTokenURL := d.Get("oauth_token_url").(string)
-		oauthToken, err := retrieveOAuthToken(oauthClientID, oauthClientSecret, oauthTokenURL, tailnet)
+		oauthToken, err := retrieveOAuthToken(oauthClientID, oauthClientSecret, baseURL, tailnet)
 		if err != nil {
 			return nil, diagnosticsError(err, "failed to retrieve api key using OAuth credentials")
 		}
 		apiKey = oauthToken.AccessToken
 	}
-
-	baseURL := d.Get("base_url").(string)
 
 	client, err := tailscale.NewClient(apiKey, tailnet, tailscale.WithBaseURL(baseURL))
 	if err != nil {
@@ -137,11 +136,11 @@ func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, 
 	return client, nil
 }
 
-func retrieveOAuthToken(oauthClientID string, oauthClientSecret string, oauthTokenURL string, tailnet string) (*oauth2.Token, error) {
+func retrieveOAuthToken(oauthClientID string, oauthClientSecret string, baseURL string, tailnet string) (*oauth2.Token, error) {
 	var oauthConfig = &clientcredentials.Config{
 		ClientID:     oauthClientID,
 		ClientSecret: oauthClientSecret,
-		TokenURL:     oauthTokenURL,
+		TokenURL:     fmt.Sprintf("%s/api/v2/oauth/token", baseURL),
 	}
 
 	tokenResponse, err := oauthConfig.Token(context.Background())
