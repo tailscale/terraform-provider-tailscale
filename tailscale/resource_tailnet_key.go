@@ -56,6 +56,15 @@ func resourceTailnetKey() *schema.Resource {
 				Description: "The expiry of the key in seconds",
 				ForceNew:    true,
 			},
+			"rotate_when_changed": {
+				Description: "Arbitrary map of values that, when changed, will trigger rotation of the key.",
+				Type:        schema.TypeMap,
+				Optional:    true,
+				ForceNew:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
