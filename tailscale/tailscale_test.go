@@ -52,8 +52,10 @@ func NewTestHarness(t *testing.T) (*tailscale.Client, *TestServer) {
 	})
 
 	baseURL := fmt.Sprintf("http://localhost:%v", listener.Addr().(*net.TCPAddr).Port)
-	client, err := tailscale.NewClient("", "example.com", tailscale.WithBaseURL(baseURL))
-	assert.NoError(t, err)
+	client, err := tailscale.NewClient("not-a-real-key", "example.com", tailscale.WithBaseURL(baseURL))
+	if err != nil {
+		assert.FailNow(t, "Client initialization failed", err.Error())
+	}
 
 	return client, testServer
 }
