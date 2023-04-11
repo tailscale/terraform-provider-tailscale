@@ -26,8 +26,27 @@ func Provider(options ...ProviderOption) *schema.Provider {
 				Type:        schema.TypeString,
 				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_API_KEY", ""),
 				Optional:    true,
-				Description: "The API key to use for authenticating requests to the API. Can be set via the TAILSCALE_API_KEY environment variable.",
+				Description: "The API key to use for authenticating requests to the API. Can be set via the TAILSCALE_API_KEY environment variable. Conflicts with 'oauth_client_id' and 'oauth_client_secret'.",
 				Sensitive:   true,
+			},
+			"oauth_client_id": {
+				Type:        schema.TypeString,
+				DefaultFunc: schema.EnvDefaultFunc("OAUTH_CLIENT_ID", ""),
+				Optional:    true,
+				Description: "The OAuth application's ID when using OAuth client credentials. Can be set via the OAUTH_CLIENT_ID environment variable. Both 'oauth_client_id' and 'oauth_client_secret' must be set. Conflicts with 'api_key'.",
+			},
+			"oauth_client_secret": {
+				Type:        schema.TypeString,
+				DefaultFunc: schema.EnvDefaultFunc("OAUTH_CLIENT_SECRET", ""),
+				Optional:    true,
+				Description: "The OAuth application's secret when using OAuth client credentials. Can be set via the OAUTH_CLIENT_SECRET environment variable. Both 'oauth_client_id' and 'oauth_client_secret' must be set. Conflicts with 'api_key'.",
+				Sensitive:   true,
+			},
+			"scopes": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Description: "The OAuth 2.0 scopes to request when for the access token generated using the supplied OAuth client credentials. See https://tailscale.com/kb/1215/oauth-clients/#scopes for avialable scopes. Only valid when both 'oauth_client_id' and 'oauth_client_secret' are set.",
 			},
 			"tailnet": {
 				Type:        schema.TypeString,
@@ -68,19 +87,54 @@ func Provider(options ...ProviderOption) *schema.Provider {
 }
 
 func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
-	apiKey := d.Get("api_key").(string)
-	if apiKey == "" {
-		return nil, diag.Errorf("tailscale provider argument 'api_key' is empty")
-	}
-
+	baseURL := d.Get("base_url").(string)
 	tailnet := d.Get("tailnet").(string)
 	if tailnet == "" {
 		return nil, diag.Errorf("tailscale provider argument 'tailnet' is empty")
 	}
 
-	baseURL := d.Get("base_url").(string)
+	apiKey := d.Get("api_key").(string)
+	oauthClientID := d.Get("oauth_client_id").(string)
+	oauthClientSecret := d.Get("oauth_client_secret").(string)
 
-	client, err := tailscale.NewClient(apiKey, tailnet, tailscale.WithBaseURL(baseURL))
+	if apiKey == "" && oauthClientID == "" && oauthClientSecret == "" {
+		return nil, diag.Errorf("tailscale provider credentials are empty - set `api_key` or 'oauth_client_id' and 'oauth_client_secret'")
+	} else if apiKey != "" && (oauthClientID != "" || oauthClientSecret != "") {
+		return nil, diag.Errorf("tailscale provider credentials are conflicting - `api_key` conflicts with 'oauth_client_id' and 'oauth_client_secret'")
+	} else if apiKey == "" && oauthClientID == "" && oauthClientSecret != "" {
+		return nil, diag.Errorf("tailscale provider argument 'oauth_client_id' is empty")
+	} else if apiKey == "" && oauthClientID != "" && oauthClientSecret == "" {
+		return nil, diag.Errorf("tailscale provider argument 'oauth_client_secret' is empty")
+	}
+
+	if oauthClientID != "" && oauthClientSecret != "" {
+		var oauthScopes []string
+		oauthScopesFromConfig := d.Get("scopes").([]interface{})
+		if len(oauthScopesFromConfig) > 0 {
+			oauthScopes = make([]string, len(oauthScopesFromConfig))
+		}
+		for i, scope := range oauthScopesFromConfig {
+			oauthScopes[i] = scope.(string)
+		}
+
+		client, err := tailscale.NewClient(
+			"",
+			tailnet,
+			tailscale.WithBaseURL(baseURL),
+			tailscale.WithOAuthClientCredentials(oauthClientID, oauthClientSecret, oauthScopes),
+		)
+		if err != nil {
+			return nil, diagnosticsError(err, "failed to initialise client")
+		}
+
+		return client, nil
+	}
+
+	client, err := tailscale.NewClient(
+		apiKey,
+		tailnet,
+		tailscale.WithBaseURL(baseURL),
+	)
 	if err != nil {
 		return nil, diagnosticsError(err, "failed to initialise client")
 	}
