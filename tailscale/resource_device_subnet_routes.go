@@ -40,7 +40,7 @@ func resourceDeviceSubnetRoutesRead(ctx context.Context, d *schema.ResourceData,
 
 	routes, err := client.DeviceSubnetRoutes(ctx, deviceID)
 	if err != nil {
-		return diagnosticsError(err, "Failed to fetch dns nameservers")
+		return diagnosticsError(err, "Failed to fetch device subnet routes")
 	}
 
 	if err = d.Set("routes", routes.Enabled); err != nil {
