@@ -52,7 +52,7 @@ func Provider(options ...ProviderOption) *schema.Provider {
 				Type:        schema.TypeString,
 				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_TAILNET", ""),
 				Optional:    true,
-				Description: "The Tailnet to perform actions in. Can be set via the TAILSCALE_TAILNET environment variable.",
+				Description: "The organization name of the Tailnet in which to perform actions. Can be set via the TAILSCALE_TAILNET environment variable.",
 			},
 			"base_url": {
 				Type:        schema.TypeString,
