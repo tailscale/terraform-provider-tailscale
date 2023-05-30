@@ -8,7 +8,7 @@ require (
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hashicorp/terraform-plugin-docs v0.14.1
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.26.1
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.8.4
 	github.com/tailscale/hujson v0.0.0-20220630195928-54599719472f
 	github.com/tailscale/tailscale-client-go v1.9.0
 	golang.org/x/tools v0.7.0
