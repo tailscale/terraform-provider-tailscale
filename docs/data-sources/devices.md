@@ -40,5 +40,3 @@ Read-Only:
 - `name` (String)
 - `tags` (Set of String)
 - `user` (String)
-
-

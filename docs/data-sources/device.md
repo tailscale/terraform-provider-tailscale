@@ -36,5 +36,3 @@ data "tailscale_device" "sample_device" {
 - `id` (String) The ID of this resource.
 - `tags` (Set of String) The tags applied to the device
 - `user` (String) The user associated with the device
-
-

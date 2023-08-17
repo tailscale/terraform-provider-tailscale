@@ -34,5 +34,3 @@ resource "tailscale_device_tags" "sample_tags" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-

@@ -28,5 +28,3 @@ resource "tailscale_dns_preferences" "sample_preferences" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-

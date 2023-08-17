@@ -30,5 +30,3 @@ resource "tailscale_dns_search_paths" "sample_search_paths" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-
