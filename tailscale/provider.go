@@ -19,6 +19,10 @@ type ProviderOption func(p *schema.Provider)
 
 // Provider returns the *schema.Provider instance that implements the terraform provider.
 func Provider(options ...ProviderOption) *schema.Provider {
+	// Support both sets of OAuth Env vars for backwards compatibility
+	oauthClientIDEnvVars := []string{"TAILSCALE_OAUTH_CLIENT_ID", "OAUTH_CLIENT_ID"}
+	oauthClientSecretEnvVars := []string{"TAILSCALE_OAUTH_CLIENT_SECRET", "OAUTH_CLIENT_SECRET"}
+
 	provider := &schema.Provider{
 		ConfigureContextFunc: providerConfigure,
 		Schema: map[string]*schema.Schema{
@@ -31,15 +35,15 @@ func Provider(options ...ProviderOption) *schema.Provider {
 			},
 			"oauth_client_id": {
 				Type:        schema.TypeString,
-				DefaultFunc: schema.EnvDefaultFunc("OAUTH_CLIENT_ID", ""),
+				DefaultFunc: schema.MultiEnvDefaultFunc(oauthClientIDEnvVars, ""),
 				Optional:    true,
-				Description: "The OAuth application's ID when using OAuth client credentials. Can be set via the OAUTH_CLIENT_ID environment variable. Both 'oauth_client_id' and 'oauth_client_secret' must be set. Conflicts with 'api_key'.",
+				Description: "The OAuth application's ID when using OAuth client credentials. Can be set via the TAILSCALE_OAUTH_CLIENT_ID environment variable. Both 'oauth_client_id' and 'oauth_client_secret' must be set. Conflicts with 'api_key'.",
 			},
 			"oauth_client_secret": {
 				Type:        schema.TypeString,
-				DefaultFunc: schema.EnvDefaultFunc("OAUTH_CLIENT_SECRET", ""),
+				DefaultFunc: schema.MultiEnvDefaultFunc(oauthClientSecretEnvVars, ""),
 				Optional:    true,
-				Description: "The OAuth application's secret when using OAuth client credentials. Can be set via the OAUTH_CLIENT_SECRET environment variable. Both 'oauth_client_id' and 'oauth_client_secret' must be set. Conflicts with 'api_key'.",
+				Description: "The OAuth application's secret when using OAuth client credentials. Can be set via the TAILSCALE_OAUTH_CLIENT_SECRET environment variable. Both 'oauth_client_id' and 'oauth_client_secret' must be set. Conflicts with 'api_key'.",
 				Sensitive:   true,
 			},
 			"scopes": {
