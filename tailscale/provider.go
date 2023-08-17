@@ -20,8 +20,8 @@ type ProviderOption func(p *schema.Provider)
 // Provider returns the *schema.Provider instance that implements the terraform provider.
 func Provider(options ...ProviderOption) *schema.Provider {
 	// Support both sets of OAuth Env vars for backwards compatibility
-	oauthClientIDEnvVars := []string{"OAUTH_CLIENT_ID", "TAILSCALE_OAUTH_CLIENT_ID"}
-	oauthClientSecretEnvVars := []string{"OAUTH_CLIENT_SECRET", "TAILSCALE_OAUTH_CLIENT_SECRET"}
+	oauthClientIDEnvVars := []string{"TAILSCALE_OAUTH_CLIENT_ID", "OAUTH_CLIENT_ID"}
+	oauthClientSecretEnvVars := []string{"TAILSCALE_OAUTH_CLIENT_SECRET", "OAUTH_CLIENT_SECRET"}
 
 	provider := &schema.Provider{
 		ConfigureContextFunc: providerConfigure,
