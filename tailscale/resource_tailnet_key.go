@@ -56,6 +56,16 @@ func resourceTailnetKey() *schema.Resource {
 				Description: "The expiry of the key in seconds",
 				ForceNew:    true,
 			},
+			"created_at": {
+				Type:        schema.TypeString,
+				Description: "The creation timestamp of the key in RFC3339 format",
+				Computed:    true,
+			},
+			"expires_at": {
+				Type:        schema.TypeString,
+				Description: "The expiry timestamp of the key in RFC3339 format",
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -91,6 +101,14 @@ func resourceTailnetKeyCreate(ctx context.Context, d *schema.ResourceData, m int
 
 	if err = d.Set("key", key.Key); err != nil {
 		return diagnosticsError(err, "Failed to set key")
+	}
+
+	if err = d.Set("created_at", key.Created.Format(time.RFC3339)); err != nil {
+		return diagnosticsError(err, "Failed to set created_at")
+	}
+
+	if err = d.Set("expires_at", key.Expires.Format(time.RFC3339)); err != nil {
+		return diagnosticsError(err, "Failed to set expires_at")
 	}
 
 	return nil
@@ -132,6 +150,14 @@ func resourceTailnetKeyRead(ctx context.Context, d *schema.ResourceData, m inter
 
 	if err = d.Set("ephemeral", key.Capabilities.Devices.Create.Ephemeral); err != nil {
 		return diagnosticsError(err, "failed to set ephemeral")
+	}
+
+	if err = d.Set("created_at", key.Created.Format(time.RFC3339)); err != nil {
+		return diagnosticsError(err, "Failed to set created_at")
+	}
+
+	if err = d.Set("expires_at", key.Expires.Format(time.RFC3339)); err != nil {
+		return diagnosticsError(err, "Failed to set expires_at")
 	}
 
 	return nil

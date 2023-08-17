@@ -34,5 +34,7 @@ resource "tailscale_tailnet_key" "sample_key" {
 
 ### Read-Only
 
+- `created_at` (String) The creation timestamp of the key in RFC3339 format
+- `expires_at` (String) The expiry timestamp of the key in RFC3339 format
 - `id` (String) The ID of this resource.
 - `key` (String, Sensitive) The authentication key
