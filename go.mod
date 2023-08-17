@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.26.1
 	github.com/stretchr/testify v1.8.4
 	github.com/tailscale/hujson v0.0.0-20221223112325-20486734a56a
-	github.com/tailscale/tailscale-client-go v1.9.0
+	github.com/tailscale/tailscale-client-go v1.10.0
 	golang.org/x/tools v0.12.0
 	tailscale.com v1.48.0
 )
@@ -69,12 +69,12 @@ require (
 	golang.org/x/exp v0.0.0-20230725093048-515e97ebf090 // indirect
 	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/net v0.14.0 // indirect
-	golang.org/x/oauth2 v0.7.0 // indirect
+	golang.org/x/oauth2 v0.11.0 // indirect
 	golang.org/x/sys v0.11.0 // indirect
 	golang.org/x/text v0.12.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
 	google.golang.org/grpc v1.53.0 // indirect
-	google.golang.org/protobuf v1.30.0 // indirect
+	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
