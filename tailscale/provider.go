@@ -54,9 +54,9 @@ func Provider(options ...ProviderOption) *schema.Provider {
 			},
 			"tailnet": {
 				Type:        schema.TypeString,
-				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_TAILNET", ""),
+				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_TAILNET", "-"),
 				Optional:    true,
-				Description: "The organization name of the Tailnet in which to perform actions. Can be set via the TAILSCALE_TAILNET environment variable.",
+				Description: "The organization name of the Tailnet in which to perform actions. Can be set via the TAILSCALE_TAILNET environment variable. Default is the tailnet that owns API credentials passed to the provider.",
 			},
 			"base_url": {
 				Type:        schema.TypeString,

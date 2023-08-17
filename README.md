@@ -1,4 +1,4 @@
-# terraform-provider-tailscale 
+# terraform-provider-tailscale
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/tailscale/terraform-provider-tailscale.svg)](https://pkg.go.dev/github.com/tailscale/terraform-provider-tailscale)
 [![Go Report Card](https://goreportcard.com/badge/github.com/tailscale/terraform-provider-tailscale)](https://goreportcard.com/report/github.com/tailscale/terraform-provider-tailscale)
@@ -21,26 +21,36 @@ terraform {
   required_providers {
     tailscale = {
       source = "tailscale/tailscale"
-      version = "0.13.6"
+      version = "~> 0.13" // Latest 0.13.x
     }
   }
 }
 
 provider "tailscale" {
-  api_key = "my_api_key"
-  tailnet = "example.com"
+  api_key = "tskey-api-..."
 }
 ```
 
-In the `provider` block, replace `api_key` and `tailnet` with your own API key and tailnet organization name. Alternatively, use the
-`TAILSCALE_API_KEY` and `TAILSCALE_TAILNET` environment variables.
+In the `provider` block, set your API key in the `api_key` field. Alternatively, use the `TAILSCALE_API_KEY` environment variable.
 
-The default api endpoint is `https://api.tailscale.com`. If your coordination/control server api is at another endpoint, you can pass in `base_url` in the provider block.
+### Using OAuth client
+
+Instead of using a personal API key, you can configure the provider to use an [OAuth client](https://tailscale.com/kb/1215/oauth-clients/), e.g.:
 
 ```terraform
 provider "tailscale" {
-  api_key = "my_api_key"
-  tailnet = "example.com"
+  oauth_client_id = "..."
+  oauth_client_secret = "tskey-client-..."
+}
+```
+
+### API endpoint
+
+The default api endpoint is `https://api.tailscale.com`. If your coordination/control server API is at another endpoint, you can pass in `base_url` in the provider block.
+
+```terraform
+provider "tailscale" {
+  api_key = "tskey-api-..."
   base_url = "https://api.us.tailscale.com"
 }
 ```
@@ -54,5 +64,5 @@ terraform state replace-provider registry.terraform.io/davidsbond/tailscale regi
 ## Contributing
 
 Please review the [contributing guidelines](./CONTRIBUTING.md) and [code of conduct](.github/CODE_OF_CONDUCT.md) before
-contributing to this codebase. Please create a [new issue](https://github.com/tailscale/terraform-provider-tailscale/issues/new/choose) 
+contributing to this codebase. Please create a [new issue](https://github.com/tailscale/terraform-provider-tailscale/issues/new/choose)
 for bugs and feature requests and fill in as much detail as you can.
