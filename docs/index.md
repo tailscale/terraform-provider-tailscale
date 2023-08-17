@@ -3,7 +3,7 @@
 page_title: "tailscale Provider"
 subcategory: ""
 description: |-
- 
+  
 ---
 
 # tailscale Provider
