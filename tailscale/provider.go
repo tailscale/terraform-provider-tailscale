@@ -50,13 +50,13 @@ func Provider(options ...ProviderOption) *schema.Provider {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "The OAuth 2.0 scopes to request when for the access token generated using the supplied OAuth client credentials. See https://tailscale.com/kb/1215/oauth-clients/#scopes for avialable scopes. Only valid when both 'oauth_client_id' and 'oauth_client_secret' are set.",
+				Description: "The OAuth 2.0 scopes to request when for the access token generated using the supplied OAuth client credentials. See https://tailscale.com/kb/1215/oauth-clients/#scopes for available scopes. Only valid when both 'oauth_client_id' and 'oauth_client_secret' are set.",
 			},
 			"tailnet": {
 				Type:        schema.TypeString,
 				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_TAILNET", ""),
 				Optional:    true,
-				Description: "The Tailnet to perform actions in. Can be set via the TAILSCALE_TAILNET environment variable.",
+				Description: "The organization name of the Tailnet in which to perform actions. Can be set via the TAILSCALE_TAILNET environment variable.",
 			},
 			"base_url": {
 				Type:        schema.TypeString,
@@ -111,6 +111,8 @@ func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, 
 		return nil, diag.Errorf("tailscale provider argument 'oauth_client_secret' is empty")
 	}
 
+	userAgent := d.Get("user_agent").(string)
+
 	if oauthClientID != "" && oauthClientSecret != "" {
 		var oauthScopes []string
 		oauthScopesFromConfig := d.Get("scopes").([]interface{})
@@ -125,6 +127,7 @@ func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, 
 			"",
 			tailnet,
 			tailscale.WithBaseURL(baseURL),
+			tailscale.WithUserAgent(userAgent),
 			tailscale.WithOAuthClientCredentials(oauthClientID, oauthClientSecret, oauthScopes),
 		)
 		if err != nil {
@@ -138,6 +141,7 @@ func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, 
 		apiKey,
 		tailnet,
 		tailscale.WithBaseURL(baseURL),
+		tailscale.WithUserAgent(userAgent),
 	)
 	if err != nil {
 		return nil, diagnosticsError(err, "failed to initialise client")

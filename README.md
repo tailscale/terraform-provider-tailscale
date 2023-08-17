@@ -32,7 +32,7 @@ provider "tailscale" {
 }
 ```
 
-In the `provider` block, replace `api_key` and `tailnet` with your own tailnet and API key. Alternatively, use the
+In the `provider` block, replace `api_key` and `tailnet` with your own API key and tailnet organization name. Alternatively, use the
 `TAILSCALE_API_KEY` and `TAILSCALE_TAILNET` environment variables.
 
 The default api endpoint is `https://api.tailscale.com`. If your coordination/control server api is at another endpoint, you can pass in `base_url` in the provider block.
