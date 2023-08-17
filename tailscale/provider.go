@@ -46,7 +46,7 @@ func Provider(options ...ProviderOption) *schema.Provider {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "The OAuth 2.0 scopes to request when for the access token generated using the supplied OAuth client credentials. See https://tailscale.com/kb/1215/oauth-clients/#scopes for avialable scopes. Only valid when both 'oauth_client_id' and 'oauth_client_secret' are set.",
+				Description: "The OAuth 2.0 scopes to request when for the access token generated using the supplied OAuth client credentials. See https://tailscale.com/kb/1215/oauth-clients/#scopes for available scopes. Only valid when both 'oauth_client_id' and 'oauth_client_secret' are set.",
 			},
 			"tailnet": {
 				Type:        schema.TypeString,
