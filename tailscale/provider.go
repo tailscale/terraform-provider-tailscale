@@ -107,6 +107,8 @@ func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, 
 		return nil, diag.Errorf("tailscale provider argument 'oauth_client_secret' is empty")
 	}
 
+	userAgent := d.Get("user_agent").(string)
+
 	if oauthClientID != "" && oauthClientSecret != "" {
 		var oauthScopes []string
 		oauthScopesFromConfig := d.Get("scopes").([]interface{})
@@ -121,6 +123,7 @@ func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, 
 			"",
 			tailnet,
 			tailscale.WithBaseURL(baseURL),
+			tailscale.WithUserAgent(userAgent),
 			tailscale.WithOAuthClientCredentials(oauthClientID, oauthClientSecret, oauthScopes),
 		)
 		if err != nil {
@@ -134,6 +137,7 @@ func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, 
 		apiKey,
 		tailnet,
 		tailscale.WithBaseURL(baseURL),
+		tailscale.WithUserAgent(userAgent),
 	)
 	if err != nil {
 		return nil, diagnosticsError(err, "failed to initialise client")
