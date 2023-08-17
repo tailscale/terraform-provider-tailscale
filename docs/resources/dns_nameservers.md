@@ -31,5 +31,3 @@ resource "tailscale_dns_nameservers" "sample_nameservers" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-

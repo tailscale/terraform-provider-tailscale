@@ -34,5 +34,3 @@ resource "tailscale_device_authorization" "sample_authorization" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-

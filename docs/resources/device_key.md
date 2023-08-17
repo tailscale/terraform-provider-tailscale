@@ -37,5 +37,3 @@ resource "tailscale_device_key" "example_key" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-

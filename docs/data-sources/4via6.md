@@ -31,5 +31,3 @@ data "tailscale_4via6" "example" {
 
 - `id` (String) The ID of this resource.
 - `ipv6` (String) The 4via6 mapped address
-
-

@@ -36,5 +36,3 @@ resource "tailscale_tailnet_key" "sample_key" {
 
 - `id` (String) The ID of this resource.
 - `key` (String, Sensitive) The authentication key
-
-

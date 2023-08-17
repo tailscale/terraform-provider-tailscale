@@ -36,5 +36,3 @@ resource "tailscale_acl" "sample_acl" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-

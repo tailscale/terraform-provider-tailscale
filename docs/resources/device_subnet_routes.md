@@ -38,5 +38,3 @@ resource "tailscale_device_subnet_routes" "sample_routes" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-
