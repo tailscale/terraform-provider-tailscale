@@ -66,6 +66,12 @@ func resourceTailnetKey() *schema.Resource {
 				Description: "The expiry timestamp of the key in RFC3339 format",
 				Computed:    true,
 			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "A description of the key consisting of alphanumeric characters.",
+				ForceNew:    true,
+			},
 		},
 	}
 }
@@ -76,6 +82,7 @@ func resourceTailnetKeyCreate(ctx context.Context, d *schema.ResourceData, m int
 	ephemeral := d.Get("ephemeral").(bool)
 	preauthorized := d.Get("preauthorized").(bool)
 	expiry, hasExpiry := d.GetOk("expiry")
+	description := d.Get("description").(string)
 	var tags []string
 	for _, tag := range d.Get("tags").(*schema.Set).List() {
 		tags = append(tags, tag.(string))
@@ -90,6 +97,10 @@ func resourceTailnetKeyCreate(ctx context.Context, d *schema.ResourceData, m int
 	var opts []tailscale.CreateKeyOption
 	if hasExpiry {
 		opts = append(opts, tailscale.WithKeyExpiry(time.Duration(expiry.(int))*time.Second))
+	}
+
+	if len(description) > 0 {
+		opts = append(opts, tailscale.WithKeyDescription(description))
 	}
 
 	key, err := client.CreateKey(ctx, capabilities, opts...)
