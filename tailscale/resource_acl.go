@@ -34,7 +34,6 @@ func resourceACL() *schema.Resource {
 				Type:             schema.TypeString,
 				Required:         true,
 				ValidateDiagFunc: validateACL,
-				DiffSuppressFunc: suppressACLDiff,
 				Description:      "The JSON-based policy that defines which devices and users are allowed to connect in your network",
 			},
 		},
@@ -48,10 +47,8 @@ func validateACL(i interface{}, p cty.Path) diag.Diagnostics {
 	return nil
 }
 
-func suppressACLDiff(_, old, new string, _ *schema.ResourceData) bool {
-	oldACL, oldErr := unmarshalACL(old)
-	newACL, newErr := unmarshalACL(new)
-	return oldErr == nil && newErr == nil && cmp.Equal(oldACL, newACL)
+func sameACL(a, b tailscale.ACL) bool {
+	return cmp.Equal(a, b)
 }
 
 func resourceACLRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -61,21 +58,29 @@ func resourceACLRead(ctx context.Context, d *schema.ResourceData, m interface{})
 		return diagnosticsError(err, "Failed to fetch ACL")
 	}
 
+	// If we have ACL content in Terraform state that is equivalent to the ACL
+	// fetched via API, keep the local version. This is to have further changes
+	// diffed against previous version specified by the user, avoiding spurious
+	// diffs caused by potentially different spelling of ACL field names.
+	current := d.Get("acl").(string)
+	if current != "" {
+		cur, err := unmarshalACL(current)
+		if err != nil {
+			return diagnosticsError(err, "Failed to unmarshal current ACL")
+		}
+		if sameACL(cur, *acl) {
+			return nil
+		}
+	}
+
 	aclStr, err := json.MarshalIndent(acl, "", "  ")
 	if err != nil {
 		return diagnosticsError(err, "Failed to marshal ACL for")
 	}
 
-	values := map[string]interface{}{
-		"acl": string(aclStr),
+	if err := d.Set("acl", string(aclStr)); err != nil {
+		return diag.FromErr(err)
 	}
-
-	for k, v := range values {
-		if err = d.Set(k, v); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
 	return nil
 }
 
