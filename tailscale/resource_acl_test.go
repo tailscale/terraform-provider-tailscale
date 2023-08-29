@@ -1,6 +1,8 @@
 package tailscale_test
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -76,6 +78,53 @@ func TestProvider_TailscaleACL(t *testing.T) {
 		Steps: []resource.TestStep{
 			testResourceCreated("tailscale_acl.test_acl", testACL),
 			testResourceDestroyed("tailscale_acl.test_acl", testACL),
+		},
+	})
+}
+
+// TestProvider_TailscaleACLDiffs checks that ACL keys specified with
+// different casing than the one used by the API client do not result
+// in spurious diffs in Terraform plan.
+func TestProvider_TailscaleACLDiffs(t *testing.T) {
+	// policyObject returns a map that, when serialized to JSON,
+	// is a valid Tailscale policy with only the "Hosts" field set.
+	policyObject := func(hostsKey string) map[string]map[string]string {
+		return map[string]map[string]string{
+			hostsKey: {"example": "100.101.102.103"},
+		}
+	}
+	policyHCL := func(hostsKey string) string {
+		j, err := json.MarshalIndent(policyObject(hostsKey), "", " ")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return fmt.Sprintf(
+			`resource "tailscale_acl" "test_acl" {
+				acl = <<EOF
+					%s
+				EOF
+			}`, j)
+	}
+
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:        true,
+		ProviderFactories: testProviderFactories(t),
+		PreCheck: func() {
+			testServer.ResponseCode = http.StatusOK
+		},
+		Steps: []resource.TestStep{
+			testResourceCreated("tailscale_acl.test_acl", policyHCL("hosts")),
+
+			// Now we check that, whatever spelling of "hosts" we use, the
+			// Terraform plan will be empty.
+			{ResourceName: "tailscale_acl.test_acl", Config: policyHCL("hosts"),
+				PreConfig: func() {
+					testServer.ResponseBody = policyObject("HOSTS")
+				},
+			},
+			{ResourceName: "tailscale_acl.test_acl", Config: policyHCL("Hosts")},
+			{ResourceName: "tailscale_acl.test_acl", Config: policyHCL("HoStS")},
+			{ResourceName: "tailscale_acl.test_acl", Config: policyHCL("HOSTS")},
 		},
 	})
 }
