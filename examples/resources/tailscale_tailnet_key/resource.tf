@@ -3,4 +3,5 @@ resource "tailscale_tailnet_key" "sample_key" {
   ephemeral     = false
   preauthorized = true
   expiry        = 3600
+  description   = "Sample key"
 }

@@ -16,6 +16,7 @@ const testTailnetKey = `
 		preauthorized = true
 		tags = ["tag:server"]
 		expiry = 3600
+		description = "Example key"
 	}
 `
 

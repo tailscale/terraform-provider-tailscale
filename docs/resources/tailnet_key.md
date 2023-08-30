@@ -18,6 +18,7 @@ resource "tailscale_tailnet_key" "sample_key" {
   ephemeral     = false
   preauthorized = true
   expiry        = 3600
+  description   = "Sample key"
 }
 ```
 
@@ -26,6 +27,7 @@ resource "tailscale_tailnet_key" "sample_key" {
 
 ### Optional
 
+- `description` (String) A description of the key consisting of alphanumeric characters.
 - `ephemeral` (Boolean) Indicates if the key is ephemeral.
 - `expiry` (Number) The expiry of the key in seconds
 - `preauthorized` (Boolean) Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default.
