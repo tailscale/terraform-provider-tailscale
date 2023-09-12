@@ -144,11 +144,9 @@ func resourceTailnetKeyRead(ctx context.Context, d *schema.ResourceData, m inter
 	client := m.(*tailscale.Client)
 	key, err := client.GetKey(ctx, d.Id())
 
-	reusable := d.Get("reusable").(bool)
-
 	switch {
-	case tailscale.IsNotFound(err) && !reusable:
-		// If we get a 404 on a one-off key, don't return an error here.
+	case tailscale.IsNotFound(err):
+		d.SetId("")
 		return nil
 	case err != nil:
 		return diagnosticsError(err, "Failed to fetch key")
@@ -167,7 +165,11 @@ func resourceTailnetKeyRead(ctx context.Context, d *schema.ResourceData, m inter
 		return diagnosticsError(err, "Failed to set created_at")
 	}
 
-	if err = d.Set("expires_at", key.Expires.Format(time.RFC3339)); err != nil {
+	if key.Expires.Before(time.Now().UTC()) {
+		// The Tailscale API continues to return keys for some time after they've expired. Assueme the key has been deleted if it's expired.
+		d.SetId("")
+		return nil
+	} else if err = d.Set("expires_at", key.Expires.Format(time.RFC3339)); err != nil {
 		return diagnosticsError(err, "Failed to set expires_at")
 	}
 
