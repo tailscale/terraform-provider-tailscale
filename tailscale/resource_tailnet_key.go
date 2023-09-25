@@ -144,14 +144,19 @@ func resourceTailnetKeyRead(ctx context.Context, d *schema.ResourceData, m inter
 	client := m.(*tailscale.Client)
 	key, err := client.GetKey(ctx, d.Id())
 
-	reusable := d.Get("reusable").(bool)
-
 	switch {
-	case tailscale.IsNotFound(err) && !reusable:
-		// If we get a 404 on a one-off key, don't return an error here.
+	case tailscale.IsNotFound(err):
+		d.SetId("")
 		return nil
 	case err != nil:
 		return diagnosticsError(err, "Failed to fetch key")
+	}
+
+	if key.Invalid == true {
+		// The Tailscale API continues to return keys for some time after they've expired.
+		// Use `invalid` key property to determine if key should be removed from state.
+		d.SetId("")
+		return nil
 	}
 
 	d.SetId(key.ID)
