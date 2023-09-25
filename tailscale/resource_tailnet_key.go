@@ -152,6 +152,13 @@ func resourceTailnetKeyRead(ctx context.Context, d *schema.ResourceData, m inter
 		return diagnosticsError(err, "Failed to fetch key")
 	}
 
+	if key.Invalid == true {
+		// The Tailscale API continues to return keys for some time after they've expired.
+		// Use `invalid` key property to determine if key should be removed from state.
+		d.SetId("")
+		return nil
+	}
+
 	d.SetId(key.ID)
 	if err = d.Set("reusable", key.Capabilities.Devices.Create.Reusable); err != nil {
 		return diagnosticsError(err, "Failed to set reusable")
@@ -165,11 +172,7 @@ func resourceTailnetKeyRead(ctx context.Context, d *schema.ResourceData, m inter
 		return diagnosticsError(err, "Failed to set created_at")
 	}
 
-	if key.Expires.Before(time.Now().UTC()) {
-		// The Tailscale API continues to return keys for some time after they've expired. Assueme the key has been deleted if it's expired.
-		d.SetId("")
-		return nil
-	} else if err = d.Set("expires_at", key.Expires.Format(time.RFC3339)); err != nil {
+	if err = d.Set("expires_at", key.Expires.Format(time.RFC3339)); err != nil {
 		return diagnosticsError(err, "Failed to set expires_at")
 	}
 
