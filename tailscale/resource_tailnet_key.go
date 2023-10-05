@@ -20,13 +20,13 @@ func resourceTailnetKey() *schema.Resource {
 			"reusable": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Indicates if the key is reusable or single-use.",
+				Description: "Indicates if the key is reusable or single-use. Defaults to `false`.",
 				ForceNew:    true,
 			},
 			"ephemeral": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Indicates if the key is ephemeral.",
+				Description: "Indicates if the key is ephemeral. Defaults to `false`.",
 				ForceNew:    true,
 			},
 			"tags": {
@@ -41,7 +41,7 @@ func resourceTailnetKey() *schema.Resource {
 			"preauthorized": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default.",
+				Description: "Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default. Defaults to `false`.",
 				ForceNew:    true,
 			},
 			"key": {
@@ -53,7 +53,7 @@ func resourceTailnetKey() *schema.Resource {
 			"expiry": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Description: "The expiry of the key in seconds",
+				Description: "The expiry of the key in seconds. Defaults to `7776000` (90 days).",
 				ForceNew:    true,
 			},
 			"created_at": {
@@ -69,7 +69,7 @@ func resourceTailnetKey() *schema.Resource {
 			"description": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "A description of the key consisting of alphanumeric characters.",
+				Description: "A description of the key consisting of alphanumeric characters. Defaults to `\"\"`.",
 				ForceNew:    true,
 			},
 		},
