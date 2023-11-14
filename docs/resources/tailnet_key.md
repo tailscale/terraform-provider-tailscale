@@ -27,11 +27,11 @@ resource "tailscale_tailnet_key" "sample_key" {
 
 ### Optional
 
-- `description` (String) A description of the key consisting of alphanumeric characters.
-- `ephemeral` (Boolean) Indicates if the key is ephemeral.
-- `expiry` (Number) The expiry of the key in seconds
-- `preauthorized` (Boolean) Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default.
-- `reusable` (Boolean) Indicates if the key is reusable or single-use.
+- `description` (String) A description of the key consisting of alphanumeric characters. Defaults to `""`.
+- `ephemeral` (Boolean) Indicates if the key is ephemeral. Defaults to `false`.
+- `expiry` (Number) The expiry of the key in seconds. Defaults to `7776000` (90 days).
+- `preauthorized` (Boolean) Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default. Defaults to `false`.
+- `reusable` (Boolean) Indicates if the key is reusable or single-use. Defaults to `false`.
 - `tags` (Set of String) List of tags to apply to the machines authenticated by the key.
 
 ### Read-Only

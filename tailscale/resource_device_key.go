@@ -25,7 +25,7 @@ func resourceDeviceKey() *schema.Resource {
 			"key_expiry_disabled": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Determines whether or not the device's key will expire",
+				Description: "Determines whether or not the device's key will expire. Defaults to `false`.",
 			},
 		},
 	}
