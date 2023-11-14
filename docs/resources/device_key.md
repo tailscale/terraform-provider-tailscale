@@ -32,7 +32,7 @@ resource "tailscale_device_key" "example_key" {
 
 ### Optional
 
-- `key_expiry_disabled` (Boolean) Determines whether or not the device's key will expire
+- `key_expiry_disabled` (Boolean) Determines whether or not the device's key will expire. Defaults to `false`.
 
 ### Read-Only
 
