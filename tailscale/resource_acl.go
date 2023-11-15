@@ -40,6 +40,11 @@ func resourceACL() *schema.Resource {
 				ValidateDiagFunc: validateACL,
 				Description:      "The JSON-based policy that defines which devices and users are allowed to connect in your network",
 			},
+			"overwrite_existing_content": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "If true, will skip requirement to import acl before allowing changes. Be careful, can cause ACL to be overwritten",
+			},
 		},
 	}
 }
@@ -99,7 +104,12 @@ func resourceACLCreate(ctx context.Context, d *schema.ResourceData, m interface{
 
 	// Setting the `ts-default` ETag will make this operation succeed only if
 	// ACL contents has never been changed from its default value.
-	if err := client.SetACL(ctx, acl, tailscale.WithETag("ts-default")); err != nil {
+	var opts []tailscale.SetACLOption
+	if !d.Get("overwrite_existing_content").(bool) {
+		opts = append(opts, tailscale.WithETag("ts-default"))
+	}
+
+	if err := client.SetACL(ctx, acl, opts...); err != nil {
 		if strings.HasSuffix(err.Error(), "(412)") {
 			err = fmt.Errorf(
 				"! You seem to be trying to overwrite a non-default ACL with a tailscale_acl resource.\n"+
