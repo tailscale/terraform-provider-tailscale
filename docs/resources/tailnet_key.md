@@ -31,6 +31,7 @@ resource "tailscale_tailnet_key" "sample_key" {
 - `ephemeral` (Boolean) Indicates if the key is ephemeral. Defaults to `false`.
 - `expiry` (Number) The expiry of the key in seconds. Defaults to `7776000` (90 days).
 - `preauthorized` (Boolean) Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default. Defaults to `false`.
+- `recreate_if_invalid` (String) Determines whether the key should be created again if it becomes invalid. By default, reusable keys will be recreated, but single-use keys will not. Possible values: 'always', 'never'.
 - `reusable` (Boolean) Indicates if the key is reusable or single-use. Defaults to `false`.
 - `tags` (Set of String) List of tags to apply to the machines authenticated by the key.
 
@@ -39,4 +40,5 @@ resource "tailscale_tailnet_key" "sample_key" {
 - `created_at` (String) The creation timestamp of the key in RFC3339 format
 - `expires_at` (String) The expiry timestamp of the key in RFC3339 format
 - `id` (String) The ID of this resource.
+- `invalid` (Boolean) Indicates whether the key is invalid (e.g. expired, revoked or has been deleted).
 - `key` (String, Sensitive) The authentication key
