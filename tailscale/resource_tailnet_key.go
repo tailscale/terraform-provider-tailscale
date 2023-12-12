@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -16,6 +17,8 @@ func resourceTailnetKey() *schema.Resource {
 		ReadContext:   resourceTailnetKeyRead,
 		CreateContext: resourceTailnetKeyCreate,
 		DeleteContext: resourceTailnetKeyDelete,
+		UpdateContext: schema.NoopContext,
+		CustomizeDiff: resourceTailnetKeyDiff,
 		Schema: map[string]*schema.Schema{
 			"reusable": {
 				Type:        schema.TypeBool,
@@ -72,6 +75,24 @@ func resourceTailnetKey() *schema.Resource {
 				Description: "A description of the key consisting of alphanumeric characters. Defaults to `\"\"`.",
 				ForceNew:    true,
 			},
+			"invalid": {
+				Type:        schema.TypeBool,
+				Description: "Indicates whether the key is invalid (e.g. expired, revoked or has been deleted).",
+				Computed:    true,
+			},
+			"recreate_if_invalid": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Determines whether the key should be created again if it becomes invalid. By default, reusable keys will be recreated, but single-use keys will not. Possible values: 'always', 'never'.",
+				ValidateDiagFunc: func(i interface{}, p cty.Path) diag.Diagnostics {
+					switch i.(string) {
+					case "", "always", "never":
+						return nil
+					default:
+						return diagnosticsError(nil, "unexpected value of recreate_if_invalid: %s", i)
+					}
+				},
+			},
 		},
 	}
 }
@@ -122,6 +143,10 @@ func resourceTailnetKeyCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diagnosticsError(err, "Failed to set expires_at")
 	}
 
+	if err = d.Set("invalid", key.Invalid); err != nil {
+		return diagnosticsError(err, "Failed to set 'invalid'")
+	}
+
 	return nil
 }
 
@@ -140,21 +165,61 @@ func resourceTailnetKeyDelete(ctx context.Context, d *schema.ResourceData, m int
 	}
 }
 
+// shouldRecreateIfInvalid determines if a resource should be recreated when
+// it's invalid, based on the values of `reusable` and `recreate_if_invalid` fields.
+// By default, we automatically recreate reusable keys, but ignore invalid single-use
+// keys, assuming they have successfully been used, and recreating them might trigger
+// unnecessary updates of other Terraform resources that depend on the key.
+func shouldRecreateIfInvalid(reusable bool, recreateIfInvalid string) bool {
+	if recreateIfInvalid == "always" {
+		return true
+	}
+	if recreateIfInvalid == "never" {
+		return false
+	}
+	return reusable
+}
+
+// resourceTailnetKeyDiff makes sure a resource is recreated when a `recreate_if_invalid`
+// field changes in a way that requires it.
+func resourceTailnetKeyDiff(ctx context.Context, d *schema.ResourceDiff, m interface{}) error {
+	old, new := d.GetChange("recreate_if_invalid")
+	if old == new {
+		return nil
+	}
+
+	recreateIfInvalid := shouldRecreateIfInvalid(d.Get("reusable").(bool), d.Get("recreate_if_invalid").(string))
+	if !recreateIfInvalid {
+		return nil
+	}
+
+	client := m.(*tailscale.Client)
+	key, err := client.GetKey(ctx, d.Id())
+	if tailscale.IsNotFound(err) || (err == nil && key.Invalid) {
+		d.ForceNew("recreate_if_invalid")
+	}
+	return nil
+}
+
 func resourceTailnetKeyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	recreateIfInvalid := shouldRecreateIfInvalid(d.Get("reusable").(bool), d.Get("recreate_if_invalid").(string))
+
 	client := m.(*tailscale.Client)
 	key, err := client.GetKey(ctx, d.Id())
 
 	switch {
 	case tailscale.IsNotFound(err):
-		d.SetId("")
+		if recreateIfInvalid {
+			d.SetId("")
+		}
 		return nil
 	case err != nil:
 		return diagnosticsError(err, "Failed to fetch key")
 	}
 
-	if key.Invalid == true {
-		// The Tailscale API continues to return keys for some time after they've expired.
-		// Use `invalid` key property to determine if key should be removed from state.
+	// The Tailscale API continues to return keys for some time after they've expired.
+	// Use `invalid` key property to determine if key should be recreated.
+	if key.Invalid && recreateIfInvalid {
 		d.SetId("")
 		return nil
 	}
@@ -178,6 +243,10 @@ func resourceTailnetKeyRead(ctx context.Context, d *schema.ResourceData, m inter
 
 	if err = d.Set("description", key.Description); err != nil {
 		return diagnosticsError(err, "Failed to set description")
+	}
+
+	if err = d.Set("invalid", key.Invalid); err != nil {
+		return diagnosticsError(err, "Failed to set 'invalid'")
 	}
 
 	return nil
