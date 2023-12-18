@@ -303,5 +303,5 @@ gopkg.in/yaml.v2 v2.3.0/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
-tailscale.com v1.54.1 h1:YBY6789Fo7dKS8s51YLvs/dwOMtsv2howVa/iZGRKcg=
-tailscale.com v1.54.1/go.mod h1:MnLFoCRwzFWr3qtkSW2nZdQpK7wQRZEk1KtcEGAuZYw=
+tailscale.com v1.56.1 h1:V3HBDJai3u7xo22Xlv7ioqKNZQdxOJebLYCNqCXVwZg=
+tailscale.com v1.56.1/go.mod h1:XQk6fCN8oMJ+qbCmW+2WS/VM3jTA9nIHT6O19t0hZeQ=
