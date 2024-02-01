@@ -28,7 +28,12 @@ func dataSourceDevices() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"name": {
 							Type:        schema.TypeString,
-							Description: "The name of the device",
+							Description: "The full name of the device (e.g. `hostname.domain.ts.net`)",
+							Computed:    true,
+						},
+						"hostname": {
+							Type:        schema.TypeString,
+							Description: "The short hostname of the device",
 							Computed:    true,
 						},
 						"user": {
@@ -82,6 +87,7 @@ func dataSourceDevicesRead(ctx context.Context, d *schema.ResourceData, m interf
 		deviceMaps = append(deviceMaps, map[string]interface{}{
 			"addresses": device.Addresses,
 			"name":      device.Name,
+			"hostname":  device.Hostname,
 			"user":      device.User,
 			"id":        device.ID,
 			"tags":      device.Tags,
