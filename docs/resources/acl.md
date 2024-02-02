@@ -4,11 +4,14 @@ page_title: "tailscale_acl Resource - terraform-provider-tailscale"
 subcategory: ""
 description: |-
   The acl resource allows you to configure a Tailscale ACL. See https://tailscale.com/kb/1018/acls for more information. Note that this resource will completely overwrite existing ACL contents for a given tailnet.
+  If tests are defined in the ACL (the top-level "tests" section), ACL validation will occur before creation and update operations are applied.
 ---
 
 # tailscale_acl (Resource)
 
 The acl resource allows you to configure a Tailscale ACL. See https://tailscale.com/kb/1018/acls for more information. Note that this resource will completely overwrite existing ACL contents for a given tailnet.
+
+If tests are defined in the ACL (the top-level "tests" section), ACL validation will occur before creation and update operations are applied.
 
 ## Example Usage
 
