@@ -36,6 +36,10 @@ resource "tailscale_acl" "sample_acl" {
 
 - `acl` (String) The JSON-based policy that defines which devices and users are allowed to connect in your network
 
+### Optional
+
+- `overwrite_existing_content` (Boolean) If true, will skip requirement to import acl before allowing changes. Be careful, can cause ACL to be overwritten
+
 ### Read-Only
 
 - `id` (String) The ID of this resource.
