@@ -2,11 +2,11 @@ package tailscale
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/tailscale/hujson"
 	"github.com/tailscale/tailscale-client-go/tailscale"
 )
 
@@ -18,7 +18,12 @@ func dataSourceACL() *schema.Resource {
 			"json": {
 				Computed:    true,
 				Type:        schema.TypeString,
-				Description: "The contents of Tailscale ACL as JSON",
+				Description: "The contents of Tailscale ACL as a JSON string",
+			},
+			"hujson": {
+				Computed:    true,
+				Type:        schema.TypeString,
+				Description: "The contents of Tailscale ACL as a HuJSON string",
 			},
 		},
 	}
@@ -27,17 +32,21 @@ func dataSourceACL() *schema.Resource {
 func dataSourceACLRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*tailscale.Client)
 
-	acl, err := client.ACL(ctx)
+	acl, err := client.RawACL(ctx)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch ACL")
 	}
-
-	aclJson, err := json.Marshal(acl)
+	huj, err := hujson.Parse([]byte(acl))
 	if err != nil {
-		return diag.FromErr(err)
+		return diagnosticsError(err, "Failed to parse ACL as HuJSON")
 	}
-	if err := d.Set("json", string(aclJson)); err != nil {
-		return diag.Errorf("setting json: %s", err)
+	if err := d.Set("hujson", huj.String()); err != nil {
+		return diagnosticsError(err, "Failed to set 'hujson'")
+	}
+
+	huj.Minimize()
+	if err := d.Set("json", huj.String()); err != nil {
+		return diagnosticsError(err, "Failed to set 'json'")
 	}
 
 	d.SetId(createUUID())

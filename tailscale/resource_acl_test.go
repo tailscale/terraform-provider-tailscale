@@ -82,28 +82,28 @@ func TestProvider_TailscaleACL(t *testing.T) {
 	})
 }
 
-// TestProvider_TailscaleACLDiffs checks that ACL keys specified with
-// different casing than the one used by the API client do not result
-// in spurious diffs in Terraform plan.
+// TestProvider_TailscaleACLDiffs checks that changes in whitespace
+// do not cause diffs in the Terraform plan.
 func TestProvider_TailscaleACLDiffs(t *testing.T) {
-	// policyObject returns a map that, when serialized to JSON,
-	// is a valid Tailscale policy with only the "Hosts" field set.
-	policyObject := func(hostsKey string) map[string]map[string]string {
-		return map[string]map[string]string{
-			hostsKey: {"example": "100.101.102.103"},
-		}
-	}
-	policyHCL := func(hostsKey string) string {
-		j, err := json.MarshalIndent(policyObject(hostsKey), "", " ")
+	policyJSON := func(indent string) []byte {
+		j, err := json.MarshalIndent(map[string]map[string]string{
+			"hosts": {"example": "100.101.102.103"},
+		}, "", indent)
 		if err != nil {
 			t.Fatal(err)
 		}
+		return j
+	}
+	toHuJSON := func(j []byte) []byte {
+		return []byte(fmt.Sprintf("// This is a HuJSON policy\n%s", j))
+	}
+	toHCL := func(policy []byte) string {
 		return fmt.Sprintf(
 			`resource "tailscale_acl" "test_acl" {
 				acl = <<EOF
 					%s
 				EOF
-			}`, j)
+			}`, policy)
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -111,20 +111,31 @@ func TestProvider_TailscaleACLDiffs(t *testing.T) {
 		ProviderFactories: testProviderFactories(t),
 		PreCheck: func() {
 			testServer.ResponseCode = http.StatusOK
+			testServer.ResponseBody = []byte("{}")
 		},
 		Steps: []resource.TestStep{
-			testResourceCreated("tailscale_acl.test_acl", policyHCL("hosts")),
+			testResourceCreated("tailscale_acl.test_acl", toHCL(policyJSON(" "))),
 
-			// Now we check that, whatever spelling of "hosts" we use, the
-			// Terraform plan will be empty.
-			{ResourceName: "tailscale_acl.test_acl", Config: policyHCL("hosts"),
+			// Now we check that whitespace changes result in empty plan.
+			{ResourceName: "tailscale_acl.test_acl", Config: toHCL(policyJSON(" ")),
 				PreConfig: func() {
-					testServer.ResponseBody = policyObject("HOSTS")
+					testServer.ResponseBody = policyJSON(" ")
 				},
 			},
-			{ResourceName: "tailscale_acl.test_acl", Config: policyHCL("Hosts")},
-			{ResourceName: "tailscale_acl.test_acl", Config: policyHCL("HoStS")},
-			{ResourceName: "tailscale_acl.test_acl", Config: policyHCL("HOSTS")},
+			{ResourceName: "tailscale_acl.test_acl", Config: toHCL(policyJSON("\t"))},
+			{ResourceName: "tailscale_acl.test_acl", Config: toHCL(policyJSON("      "))},
+
+			// The same policy in HuJSON will result in a diff.
+			{
+				ResourceName: "tailscale_acl.test_acl", Config: toHCL(toHuJSON(policyJSON("  "))),
+				ExpectNonEmptyPlan: true,
+			},
+			// Further changes in whitespace are not causing a diff.
+			{ResourceName: "tailscale_acl.test_acl", Config: toHCL(toHuJSON(policyJSON("\t"))),
+				PreConfig: func() {
+					testServer.ResponseBody = toHuJSON(policyJSON("  "))
+				},
+			},
 		},
 	})
 }

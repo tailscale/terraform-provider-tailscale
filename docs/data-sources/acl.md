@@ -17,5 +17,6 @@ The acl data source gets the Tailscale ACL for a tailnet
 
 ### Read-Only
 
+- `hujson` (String) The contents of Tailscale ACL as a HuJSON string
 - `id` (String) The ID of this resource.
-- `json` (String) The contents of Tailscale ACL as JSON
+- `json` (String) The contents of Tailscale ACL as a JSON string
