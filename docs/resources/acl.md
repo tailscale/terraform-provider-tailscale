@@ -16,7 +16,7 @@ If tests are defined in the ACL (the top-level "tests" section), ACL validation 
 ## Example Usage
 
 ```terraform
-resource "tailscale_acl" "sample_acl" {
+resource "tailscale_acl" "as_json" {
   acl = jsonencode({
     acls : [
       {
@@ -24,8 +24,25 @@ resource "tailscale_acl" "sample_acl" {
         action = "accept",
         users  = ["*"],
         ports  = ["*:*"],
-    }],
+      },
+    ],
   })
+}
+
+resource "tailscale_acl" "as_hujson" {
+  acl = <<EOF
+  {
+    // Comments in HuJSON policy are preserved when the policy is applied.
+    "acls": [
+      {
+        // Allow all users access to all ports.
+        action = "accept",
+        users  = ["*"],
+        ports  = ["*:*"],
+      },
+    ],
+  }
+  EOF
 }
 ```
 
@@ -34,7 +51,7 @@ resource "tailscale_acl" "sample_acl" {
 
 ### Required
 
-- `acl` (String) The JSON-based policy that defines which devices and users are allowed to connect in your network
+- `acl` (String) The policy that defines which devices and users are allowed to connect in your network. Can be either a JSON or a HuJSON string.
 
 ### Optional
 
