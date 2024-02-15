@@ -1,9 +1,6 @@
 module github.com/tailscale/terraform-provider-tailscale
 
 go 1.21
-
-toolchain go1.21.0
-
 require (
 	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/go-cty v1.4.1-0.20200414143053-d3edf31b6320
@@ -12,7 +9,7 @@ require (
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.32.0
 	github.com/stretchr/testify v1.8.4
 	github.com/tailscale/hujson v0.0.0-20221223112325-20486734a56a
-	github.com/tailscale/tailscale-client-go v1.15.0
+	github.com/tailscale/tailscale-client-go v1.16.0
 	golang.org/x/tools v0.17.0
 	tailscale.com v1.58.2
 )
@@ -75,12 +72,12 @@ require (
 	github.com/zclconf/go-cty v1.14.2 // indirect
 	go4.org/mem v0.0.0-20220726221520-4f986261bf13 // indirect
 	go4.org/netipx v0.0.0-20230824141953-6213f710f925 // indirect
-	golang.org/x/crypto v0.18.0 // indirect
+	golang.org/x/crypto v0.19.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/mod v0.14.0 // indirect
-	golang.org/x/net v0.20.0 // indirect
-	golang.org/x/oauth2 v0.14.0 // indirect
-	golang.org/x/sys v0.16.0 // indirect
+	golang.org/x/net v0.21.0 // indirect
+	golang.org/x/oauth2 v0.17.0 // indirect
+	golang.org/x/sys v0.17.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231106174013-bbf56f31fb17 // indirect
