@@ -10,3 +10,12 @@ resource "tailscale_device_subnet_routes" "sample_routes" {
     "2.0.0.0/24"
   ]
 }
+
+resource "tailscale_device_subnet_routes" "sample_exit_node" {
+  device_id = data.tailscale_device.sample_device.id
+  routes = [
+    # Configure as an exit node
+    "0.0.0.0/0",
+    "::/0"
+  ]
+}

@@ -1,13 +1,10 @@
 package tailscale
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -17,9 +14,13 @@ import (
 	"github.com/tailscale/tailscale-client-go/tailscale"
 )
 
+const resourceACLDescription = `The acl resource allows you to configure a Tailscale ACL. See https://tailscale.com/kb/1018/acls for more information. Note that this resource will completely overwrite existing ACL contents for a given tailnet.
+
+If tests are defined in the ACL (the top-level "tests" section), ACL validation will occur before creation and update operations are applied.`
+
 func resourceACL() *schema.Resource {
 	return &schema.Resource{
-		Description:   "The acl resource allows you to configure a Tailscale ACL. See https://tailscale.com/kb/1018/acls for more information. Note that this resource will completely overwrite existing ACL contents for a given tailnet.",
+		Description:   resourceACLDescription,
 		ReadContext:   resourceACLRead,
 		CreateContext: resourceACLCreate,
 		UpdateContext: resourceACLUpdate,
@@ -29,56 +30,67 @@ func resourceACL() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
+		CustomizeDiff: func(ctx context.Context, rd *schema.ResourceDiff, m interface{}) error {
+			client := m.(*tailscale.Client)
+			return client.ValidateACL(ctx, rd.Get("acl").(string))
+		},
 		Schema: map[string]*schema.Schema{
 			"acl": {
-				Type:             schema.TypeString,
-				Required:         true,
-				ValidateDiagFunc: validateACL,
-				Description:      "The JSON-based policy that defines which devices and users are allowed to connect in your network",
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The policy that defines which devices and users are allowed to connect in your network. Can be either a JSON or a HuJSON string.",
+
+				// Field-level validation just checks that it's valid JSON or HuJSON.
+				// Actual contents of the policy is validated by calling the API when
+				// the whole resource is validated in CustomizeDiff.
+				ValidateDiagFunc: func(i interface{}, p cty.Path) diag.Diagnostics {
+					_, err := hujson.Parse([]byte(i.(string)))
+					if err != nil {
+						return diagnosticsErrorWithPath(err, "ACL is not a valid HuJSON string", p)
+					}
+					return nil
+				},
+
+				// Do not show a diff if canonical HuJSON representation of the policy did not
+				// change. Note that a policy that is valid JSON will not be formatted as HuJSON
+				// (see hujson.Format docs), so a diff is expected when switching from JSON to
+				// HuJSON (or back), even if there are no semantic changes.
+				DiffSuppressFunc: func(k, oldValue, newValue string, d *schema.ResourceData) bool {
+					old, oldErr := hujson.Format([]byte(oldValue))
+					new, newErr := hujson.Format([]byte(newValue))
+					if oldErr != nil || newErr != nil {
+						return false
+					}
+					return string(old) == string(new)
+				},
+				DiffSuppressOnRefresh: true,
+
+				// Use the canonical HuJSON representation of the policy in Terraform state.
+				StateFunc: func(i interface{}) string {
+					value, err := hujson.Format([]byte(i.(string)))
+					if err != nil {
+						panic(fmt.Errorf("could not parse ACL as HuJSON: %s", err))
+					}
+					return string(value)
+				},
+			},
+			"overwrite_existing_content": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "If true, will skip requirement to import acl before allowing changes. Be careful, can cause ACL to be overwritten",
 			},
 		},
 	}
 }
 
-func validateACL(i interface{}, p cty.Path) diag.Diagnostics {
-	if _, err := unmarshalACL(i.(string)); err != nil {
-		return diagnosticsErrorWithPath(err, "Invalid ACL", p)
-	}
-	return nil
-}
-
-func sameACL(a, b tailscale.ACL) bool {
-	return cmp.Equal(a, b)
-}
-
 func resourceACLRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*tailscale.Client)
-	acl, err := client.ACL(ctx)
+	acl, err := client.RawACL(ctx)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch ACL")
 	}
 
-	// If we have ACL content in Terraform state that is equivalent to the ACL
-	// fetched via API, keep the local version. This is to have further changes
-	// diffed against previous version specified by the user, avoiding spurious
-	// diffs caused by potentially different spelling of ACL field names.
-	current := d.Get("acl").(string)
-	if current != "" {
-		cur, err := unmarshalACL(current)
-		if err != nil {
-			return diagnosticsError(err, "Failed to unmarshal current ACL")
-		}
-		if sameACL(cur, *acl) {
-			return nil
-		}
-	}
-
-	aclStr, err := json.MarshalIndent(acl, "", "  ")
-	if err != nil {
-		return diagnosticsError(err, "Failed to marshal ACL for")
-	}
-
-	if err := d.Set("acl", string(aclStr)); err != nil {
+	if err := d.Set("acl", acl); err != nil {
 		return diag.FromErr(err)
 	}
 	return nil
@@ -86,16 +98,16 @@ func resourceACLRead(ctx context.Context, d *schema.ResourceData, m interface{})
 
 func resourceACLCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*tailscale.Client)
-	aclStr := d.Get("acl").(string)
-
-	acl, err := unmarshalACL(aclStr)
-	if err != nil {
-		return diagnosticsError(err, "Failed to unmarshal ACL")
-	}
+	acl := d.Get("acl").(string)
 
 	// Setting the `ts-default` ETag will make this operation succeed only if
 	// ACL contents has never been changed from its default value.
-	if err := client.SetACL(ctx, acl, tailscale.WithETag("ts-default")); err != nil {
+	var opts []tailscale.SetACLOption
+	if !d.Get("overwrite_existing_content").(bool) {
+		opts = append(opts, tailscale.WithETag("ts-default"))
+	}
+
+	if err := client.SetACL(ctx, acl, opts...); err != nil {
 		if strings.HasSuffix(err.Error(), "(412)") {
 			err = fmt.Errorf(
 				"! You seem to be trying to overwrite a non-default ACL with a tailscale_acl resource.\n"+
@@ -112,39 +124,14 @@ func resourceACLCreate(ctx context.Context, d *schema.ResourceData, m interface{
 
 func resourceACLUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*tailscale.Client)
-	aclStr := d.Get("acl").(string)
 
 	if !d.HasChange("acl") {
 		return nil
 	}
 
-	acl, err := unmarshalACL(aclStr)
-	if err != nil {
-		return diagnosticsError(err, "Failed to unmarshal ACL")
-	}
-
-	if err := client.SetACL(ctx, acl); err != nil {
+	if err := client.SetACL(ctx, d.Get("acl").(string)); err != nil {
 		return diagnosticsError(err, "Failed to set ACL")
 	}
 
 	return nil
-}
-
-func unmarshalACL(s string) (tailscale.ACL, error) {
-	b, err := hujson.Standardize([]byte(s))
-	if err != nil {
-		return tailscale.ACL{}, err
-	}
-
-	decoder := json.NewDecoder(bytes.NewBuffer(b))
-	decoder.DisallowUnknownFields()
-
-	var acl tailscale.ACL
-	if err = decoder.Decode(&acl); err != nil {
-		return acl, fmt.Errorf("%w. (This error may be caused by a new ACL feature that is not yet supported by "+
-			"this terraform provider. If you're using a valid ACL field, please raise an issue at "+
-			"https://github.com/tailscale/terraform-provider-tailscale/issues/new/choose)", err)
-	}
-
-	return acl, nil
 }

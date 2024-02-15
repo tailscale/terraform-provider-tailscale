@@ -4,16 +4,19 @@ page_title: "tailscale_acl Resource - terraform-provider-tailscale"
 subcategory: ""
 description: |-
   The acl resource allows you to configure a Tailscale ACL. See https://tailscale.com/kb/1018/acls for more information. Note that this resource will completely overwrite existing ACL contents for a given tailnet.
+  If tests are defined in the ACL (the top-level "tests" section), ACL validation will occur before creation and update operations are applied.
 ---
 
 # tailscale_acl (Resource)
 
 The acl resource allows you to configure a Tailscale ACL. See https://tailscale.com/kb/1018/acls for more information. Note that this resource will completely overwrite existing ACL contents for a given tailnet.
 
+If tests are defined in the ACL (the top-level "tests" section), ACL validation will occur before creation and update operations are applied.
+
 ## Example Usage
 
 ```terraform
-resource "tailscale_acl" "sample_acl" {
+resource "tailscale_acl" "as_json" {
   acl = jsonencode({
     acls : [
       {
@@ -21,8 +24,25 @@ resource "tailscale_acl" "sample_acl" {
         action = "accept",
         users  = ["*"],
         ports  = ["*:*"],
-    }],
+      },
+    ],
   })
+}
+
+resource "tailscale_acl" "as_hujson" {
+  acl = <<EOF
+  {
+    // Comments in HuJSON policy are preserved when the policy is applied.
+    "acls": [
+      {
+        // Allow all users access to all ports.
+        action = "accept",
+        users  = ["*"],
+        ports  = ["*:*"],
+      },
+    ],
+  }
+  EOF
 }
 ```
 
@@ -31,7 +51,11 @@ resource "tailscale_acl" "sample_acl" {
 
 ### Required
 
-- `acl` (String) The JSON-based policy that defines which devices and users are allowed to connect in your network
+- `acl` (String) The policy that defines which devices and users are allowed to connect in your network. Can be either a JSON or a HuJSON string.
+
+### Optional
+
+- `overwrite_existing_content` (Boolean) If true, will skip requirement to import acl before allowing changes. Be careful, can cause ACL to be overwritten
 
 ### Read-Only
 

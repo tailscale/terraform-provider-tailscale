@@ -2,6 +2,7 @@ package tailscale_test
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"testing"
@@ -41,6 +42,84 @@ func TestProvider_TailscaleTailnetKey(t *testing.T) {
 	})
 }
 
+func testTailnetKeyStruct(reusable bool) tailscale.Key {
+	var keyCapabilities tailscale.KeyCapabilities
+	json.Unmarshal([]byte(`
+		{
+			"devices": {
+				"create": {
+					"ephemeral": true,
+					"preauthorized": true,
+					"tags": [
+						"tag:server"
+					]
+				}
+			}
+		}`), &keyCapabilities)
+	keyCapabilities.Devices.Create.Reusable = reusable
+	return tailscale.Key{
+		ID:           "test",
+		Key:          "thisisatestkey",
+		Description:  "Example key",
+		Capabilities: keyCapabilities,
+	}
+}
+
+func setKeyStep(reusable bool, recreateIfInvalid string) resource.TestStep {
+	return resource.TestStep{
+		ResourceName: "tailscale_tailnet_key.example_key",
+		Config: fmt.Sprintf(`
+			resource "tailscale_tailnet_key" "example_key" {
+				reusable = %v
+				recreate_if_invalid = "%s"
+				ephemeral = true
+				preauthorized = true
+				tags = ["tag:server"]
+				expiry = 3600
+				description = "Example key"
+			}
+		`, reusable, recreateIfInvalid),
+		Check: func(s *terraform.State) error {
+			rs, ok := s.RootModule().Resources["tailscale_tailnet_key.example_key"]
+
+			if !ok {
+				return errors.New("key not found")
+			}
+
+			if rs.Primary.ID == "" {
+				return errors.New("no ID set")
+			}
+
+			// Make sure the next API call to the test server returns the key
+			// matching the one we have just set.
+			testServer.ResponseBody = testTailnetKeyStruct(reusable)
+
+			return nil
+		},
+	}
+}
+
+func checkInvalidKeyRecreated(reusable, wantRecreated bool) resource.TestStep {
+	return resource.TestStep{
+		RefreshState:       true,
+		ExpectNonEmptyPlan: true,
+		PreConfig: func() {
+			testServer.ResponseCode = http.StatusOK
+			key := testTailnetKeyStruct(reusable)
+			key.Invalid = true
+			testServer.ResponseBody = key
+		},
+		Check: func(s *terraform.State) error {
+			_, ok := s.RootModule().Resources["tailscale_tailnet_key.example_key"]
+
+			if ok == wantRecreated {
+				return fmt.Errorf("found=%v, wantRecreated=%v", ok, wantRecreated)
+			}
+
+			return nil
+		},
+	}
+}
 func TestProvider_TailscaleTailnetKeyInvalid(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		IsUnitTest: true,
@@ -53,48 +132,31 @@ func TestProvider_TailscaleTailnetKeyInvalid(t *testing.T) {
 		},
 		ProviderFactories: testProviderFactories(t),
 		Steps: []resource.TestStep{
-			testResourceCreated("tailscale_tailnet_key.example_key", testTailnetKey),
-			{
-				// expect Invalid tailnet key to be re-created
-				RefreshState:       true,
-				ExpectNonEmptyPlan: true,
-				PreConfig: func() {
-					var keyCapabilities tailscale.KeyCapabilities
-					json.Unmarshal([]byte(`
-					{
-						"devices": {
-							"create": {
-								"reusable": true,
-								"ephemeral": true,
-								"preauthorized": true,
-								"tags": [
-									"tag:server"
-								]
-							}
-						}
-					}`), &keyCapabilities)
+			// Create a reusable key.
+			setKeyStep(true, ""),
+			// Confirm that the reusable key will be recreated when invalid.
+			checkInvalidKeyRecreated(true, true),
 
-					testServer.ResponseCode = http.StatusOK
-					testServer.ResponseBody = tailscale.Key{
-						ID:           "test",
-						Key:          "thisisatestkey",
-						Description:  "Example key",
-						Capabilities: keyCapabilities,
-						Invalid:      true, // causes replacement
-					}
-				},
-				Check: func(s *terraform.State) error {
-					_, ok := s.RootModule().Resources["tailscale_tailnet_key.example_key"]
+			// Now make it a single-use key.
+			setKeyStep(false, ""),
+			// Confirm that the single-use key is not recreated.
+			checkInvalidKeyRecreated(false, false),
 
-					// an Invalid tailnet key will have be removed from terraform state during the Read operation
-					if ok {
-						// fail here if the resource still exists in state
-						return fmt.Errorf("found: %s", "tailscale_tailnet_key.example_key")
-					}
+			// A single-use key with recreate=always, should be recreated.
+			setKeyStep(false, "always"),
+			checkInvalidKeyRecreated(false, true),
 
-					return nil
-				},
-			},
+			// A single-use key with recreate=never, should not be recreated.
+			setKeyStep(false, "never"),
+			checkInvalidKeyRecreated(false, false),
+
+			// A reusable key with recreate=always, should be recreated.
+			setKeyStep(true, "always"),
+			checkInvalidKeyRecreated(true, true),
+
+			// A reusable key with recreate=always, should be recreated.
+			setKeyStep(true, "always"),
+			checkInvalidKeyRecreated(true, true),
 		},
 	})
 }

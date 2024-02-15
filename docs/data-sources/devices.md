@@ -36,6 +36,7 @@ data "tailscale_devices" "sample_devices" {
 Read-Only:
 
 - `addresses` (List of String)
+- `hostname` (String)
 - `id` (String)
 - `name` (String)
 - `tags` (Set of String)
