@@ -74,6 +74,12 @@ func resourceTailnetKey() *schema.Resource {
 				Optional:    true,
 				Description: "A description of the key consisting of alphanumeric characters. Defaults to `\"\"`.",
 				ForceNew:    true,
+				ValidateDiagFunc: func(i interface{}, p cty.Path) diag.Diagnostics {
+					if len(i.(string)) > 50 {
+						return diagnosticsError(nil, "description must be 50 characters or less")
+					}
+					return nil
+				},
 			},
 			"invalid": {
 				Type:        schema.TypeBool,
