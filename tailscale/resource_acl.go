@@ -18,7 +18,8 @@ const resourceACLDescription = `The acl resource allows you to configure a Tails
 
 If tests are defined in the ACL (the top-level "tests" section), ACL validation will occur before creation and update operations are applied.`
 
-// from https://github.com/hashicorp/terraform-plugin-sdk/blob/34d8a9ebca6bed68fddb983123d6fda72481752c/internal/configs/hcl2shim/values.go#L19
+// From https://github.com/hashicorp/terraform-plugin-sdk/blob/34d8a9ebca6bed68fddb983123d6fda72481752c/internal/configs/hcl2shim/values.go#L19
+// TODO: use an exported variable when https://github.com/hashicorp/terraform-plugin-sdk/issues/803 has been addressed.
 const UnknownVariableValue = "74D93920-ED26-11E3-AC10-0800200C9A66"
 
 func resourceACL() *schema.Resource {
