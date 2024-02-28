@@ -18,6 +18,10 @@ const resourceACLDescription = `The acl resource allows you to configure a Tails
 
 If tests are defined in the ACL (the top-level "tests" section), ACL validation will occur before creation and update operations are applied.`
 
+// From https://github.com/hashicorp/terraform-plugin-sdk/blob/34d8a9ebca6bed68fddb983123d6fda72481752c/internal/configs/hcl2shim/values.go#L19
+// TODO: use an exported variable when https://github.com/hashicorp/terraform-plugin-sdk/issues/803 has been addressed.
+const UnknownVariableValue = "74D93920-ED26-11E3-AC10-0800200C9A66"
+
 func resourceACL() *schema.Resource {
 	return &schema.Resource{
 		Description:   resourceACLDescription,
@@ -32,6 +36,11 @@ func resourceACL() *schema.Resource {
 		},
 		CustomizeDiff: func(ctx context.Context, rd *schema.ResourceDiff, m interface{}) error {
 			client := m.(*tailscale.Client)
+
+			//if the acl is only known after apply, then acl will be an empty string and validation will fail
+			if rd.Get("acl").(string) == "" {
+				return nil
+			}
 			return client.ValidateACL(ctx, rd.Get("acl").(string))
 		},
 		Schema: map[string]*schema.Schema{
@@ -67,6 +76,10 @@ func resourceACL() *schema.Resource {
 
 				// Use the canonical HuJSON representation of the policy in Terraform state.
 				StateFunc: func(i interface{}) string {
+					//if the acl is only known after apply, then it will be the magic UUID `UnknownVariableValue` and not valid json, and formatting will fail
+					if i.(string) == UnknownVariableValue {
+						return i.(string)
+					}
 					value, err := hujson.Format([]byte(i.(string)))
 					if err != nil {
 						panic(fmt.Errorf("could not parse ACL as HuJSON: %s", err))
