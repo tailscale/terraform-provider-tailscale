@@ -18,8 +18,8 @@ func dataSource4Via6() *schema.Resource {
 			"site": {
 				Type:         schema.TypeInt,
 				Required:     true,
-				Description:  "Site ID (between 0 and 255)",
-				ValidateFunc: validation.IntBetween(0, 255),
+				Description:  "Site ID (between 0 and 65535)",
+				ValidateFunc: validation.IntBetween(0, 65535),
 			},
 			"cidr": {
 				Type:         schema.TypeString,
