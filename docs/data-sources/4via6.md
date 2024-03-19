@@ -25,7 +25,7 @@ data "tailscale_4via6" "example" {
 ### Required
 
 - `cidr` (String) The IPv4 CIDR to map
-- `site` (Number) Site ID (between 0 and 255)
+- `site` (Number) Site ID (between 0 and 65535)
 
 ### Read-Only
 

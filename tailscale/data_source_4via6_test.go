@@ -3,6 +3,7 @@ package tailscale_test
 import (
 	"fmt"
 	"net/netip"
+	"regexp"
 	"strconv"
 	"testing"
 
@@ -18,6 +19,13 @@ data "tailscale_4via6" "example" {
 }
 `
 
+const testDataSource4Via6InvalidSite = `
+data "tailscale_4via6" "invalid" {
+	site = 70000
+	cidr = "10.1.1.0/24"
+}
+`
+
 func TestProvider_DataSourceTailscale4Via6(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		IsUnitTest:        true,
@@ -26,6 +34,19 @@ func TestProvider_DataSourceTailscale4Via6(t *testing.T) {
 			{
 				Config: testDataSource4Via6,
 				Check:  check4Via6Result("data.tailscale_4via6.example"),
+			},
+		},
+	})
+}
+
+func TestProvider_DataSourceTailscale4Via6_InvalidSite(t *testing.T) {
+	resource.ParallelTest(t, resource.TestCase{
+		IsUnitTest:        true,
+		ProviderFactories: testProviderFactories(t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testDataSource4Via6InvalidSite,
+				ExpectError: regexp.MustCompile(`expected site to be in the range \(0 - 65535\), got 70000`),
 			},
 		},
 	})
@@ -50,6 +71,10 @@ func check4Via6Result(n string) resource.TestCheckFunc {
 		site, err := strconv.ParseUint(siteAttr, 10, 32)
 		if err != nil {
 			return fmt.Errorf("invalid site ID %q: %s", siteAttr, err)
+		}
+
+		if site > 65535 {
+			return fmt.Errorf("site ID %d is higher than the maximum allowed value of 65535", site)
 		}
 
 		cidrAttr := rs.Primary.Attributes["cidr"]
