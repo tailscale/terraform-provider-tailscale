@@ -3,7 +3,7 @@
 page_title: "tailscale_device_subnet_routes Resource - terraform-provider-tailscale"
 subcategory: ""
 description: |-
-  The devicesubnetroutes resource allows you to configure subnet routes for your Tailscale devices. See https://tailscale.com/kb/1019/subnets for more information.
+  The device_subnet_routes resource allows you to configure subnet routes for your Tailscale devices. See https://tailscale.com/kb/1019/subnets for more information.
 ---
 
 # tailscale_device_subnet_routes (Resource)
