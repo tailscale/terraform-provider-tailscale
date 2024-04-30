@@ -15,6 +15,9 @@ import (
 	"github.com/tailscale/tailscale-client-go/tailscale"
 )
 
+// providerVersion is filled by goreleaser at build time.
+var providerVersion = "dev"
+
 type ProviderOption func(p *schema.Provider)
 
 // Provider returns the *schema.Provider instance that implements the terraform provider.
@@ -24,7 +27,6 @@ func Provider(options ...ProviderOption) *schema.Provider {
 	oauthClientSecretEnvVars := []string{"TAILSCALE_OAUTH_CLIENT_SECRET", "OAUTH_CLIENT_SECRET"}
 
 	provider := &schema.Provider{
-		ConfigureContextFunc: providerConfigure,
 		Schema: map[string]*schema.Schema{
 			"api_key": {
 				Type:        schema.TypeString,
@@ -64,6 +66,11 @@ func Provider(options ...ProviderOption) *schema.Provider {
 				Optional:    true,
 				Description: "The base URL of the Tailscale API. Defaults to https://api.tailscale.com. Can be set via the TAILSCALE_BASE_URL environment variable.",
 			},
+			"user_agent": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "User-Agent header for API requests.",
+			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"tailscale_acl":                   resourceACL(),
@@ -85,6 +92,10 @@ func Provider(options ...ProviderOption) *schema.Provider {
 		},
 	}
 
+	provider.ConfigureContextFunc = func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
+		return providerConfigure(ctx, provider, d)
+	}
+
 	for _, option := range options {
 		option(provider)
 	}
@@ -92,7 +103,7 @@ func Provider(options ...ProviderOption) *schema.Provider {
 	return provider
 }
 
-func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
+func providerConfigure(_ context.Context, provider *schema.Provider, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 	baseURL := d.Get("base_url").(string)
 	tailnet := d.Get("tailnet").(string)
 	if tailnet == "" {
@@ -114,6 +125,9 @@ func providerConfigure(_ context.Context, d *schema.ResourceData) (interface{}, 
 	}
 
 	userAgent := d.Get("user_agent").(string)
+	if userAgent == "" {
+		userAgent = provider.UserAgent("terraform-provider-tailscale", providerVersion)
+	}
 
 	if oauthClientID != "" && oauthClientSecret != "" {
 		var oauthScopes []string
