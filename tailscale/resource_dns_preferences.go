@@ -56,7 +56,7 @@ func resourceDNSPreferencesCreate(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	d.SetId(createUUID())
-	return nil
+	return resourceDNSPreferencesRead(ctx, d, m)
 }
 
 func resourceDNSPreferencesUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -75,7 +75,7 @@ func resourceDNSPreferencesUpdate(ctx context.Context, d *schema.ResourceData, m
 		return diagnosticsError(err, "Failed to set dns preferences")
 	}
 
-	return nil
+	return resourceDNSPreferencesRead(ctx, d, m)
 }
 
 func resourceDNSPreferencesDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

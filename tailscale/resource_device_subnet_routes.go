@@ -65,7 +65,7 @@ func resourceDeviceSubnetRoutesCreate(ctx context.Context, d *schema.ResourceDat
 	}
 
 	d.SetId(createUUID())
-	return nil
+	return resourceDeviceSubnetRoutesRead(ctx, d, m)
 }
 
 func resourceDeviceSubnetRoutesUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -82,7 +82,7 @@ func resourceDeviceSubnetRoutesUpdate(ctx context.Context, d *schema.ResourceDat
 		return diagnosticsError(err, "Failed to set device subnet routes")
 	}
 
-	return nil
+	return resourceDeviceSubnetRoutesRead(ctx, d, m)
 }
 
 func resourceDeviceSubnetRoutesDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

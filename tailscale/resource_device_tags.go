@@ -77,7 +77,7 @@ func resourceDeviceTagsCreate(ctx context.Context, d *schema.ResourceData, m int
 	}
 
 	d.SetId(deviceID)
-	return nil
+	return resourceDeviceTagsRead(ctx, d, m)
 }
 
 func resourceDeviceTagsUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -95,7 +95,7 @@ func resourceDeviceTagsUpdate(ctx context.Context, d *schema.ResourceData, m int
 	}
 
 	d.SetId(deviceID)
-	return nil
+	return resourceDeviceTagsRead(ctx, d, m)
 }
 
 func resourceDeviceTagsDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

@@ -67,6 +67,9 @@ func testTailnetKeyStruct(reusable bool) tailscale.Key {
 
 func setKeyStep(reusable bool, recreateIfInvalid string) resource.TestStep {
 	return resource.TestStep{
+		PreConfig: func() {
+			testServer.ResponseBody = testTailnetKeyStruct(reusable)
+		},
 		ResourceName: "tailscale_tailnet_key.example_key",
 		Config: fmt.Sprintf(`
 			resource "tailscale_tailnet_key" "example_key" {

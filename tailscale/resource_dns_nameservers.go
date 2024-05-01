@@ -58,7 +58,7 @@ func resourceDNSNameserversCreate(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	d.SetId(createUUID())
-	return nil
+	return resourceDNSNameserversRead(ctx, d, m)
 }
 
 func resourceDNSNameserversUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -78,7 +78,7 @@ func resourceDNSNameserversUpdate(ctx context.Context, d *schema.ResourceData, m
 		return diagnosticsError(err, "Failed to set dns nameservers")
 	}
 
-	return nil
+	return resourceDNSNameserversRead(ctx, d, m)
 }
 
 func resourceDNSNameserversDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
