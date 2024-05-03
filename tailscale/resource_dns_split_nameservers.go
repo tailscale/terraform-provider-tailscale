@@ -44,6 +44,12 @@ func resourceSplitDNSNameserversRead(ctx context.Context, d *schema.ResourceData
 		return diagnosticsError(err, "Failed to fetch split DNS configs")
 	}
 
+	domain := d.Id()
+
+	if err = d.Set("domain", domain); err != nil {
+		return diag.FromErr(err)
+	}
+
 	nameservers := splitDNS[d.Id()]
 
 	if err = d.Set("nameservers", nameservers); err != nil {
