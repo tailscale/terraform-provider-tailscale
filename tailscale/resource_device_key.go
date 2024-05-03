@@ -46,7 +46,7 @@ func resourceDeviceKeyCreate(ctx context.Context, d *schema.ResourceData, m inte
 	}
 
 	d.SetId(deviceID)
-	return nil
+	return resourceDeviceKeyRead(ctx, d, m)
 }
 
 func resourceDeviceKeyDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -106,5 +106,5 @@ func resourceDeviceKeyUpdate(ctx context.Context, d *schema.ResourceData, m inte
 		return diagnosticsError(err, "failed to update device key")
 	}
 
-	return nil
+	return resourceDeviceKeyRead(ctx, d, m)
 }

@@ -73,7 +73,7 @@ func resourceSplitDNSNameserversCreate(ctx context.Context, d *schema.ResourceDa
 	}
 
 	d.SetId(domain)
-	return nil
+	return resourceSplitDNSNameserversRead(ctx, d, m)
 }
 
 func resourceSplitDNSNameserversUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

@@ -153,7 +153,7 @@ func resourceTailnetKeyCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diagnosticsError(err, "Failed to set 'invalid'")
 	}
 
-	return nil
+	return resourceTailnetKeyRead(ctx, d, m)
 }
 
 func resourceTailnetKeyDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

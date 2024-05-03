@@ -57,7 +57,7 @@ func resourceDNSSearchPathsCreate(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	d.SetId(createUUID())
-	return nil
+	return resourceDNSSearchPathsRead(ctx, d, m)
 }
 
 func resourceDNSSearchPathsUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -77,7 +77,7 @@ func resourceDNSSearchPathsUpdate(ctx context.Context, d *schema.ResourceData, m
 		return diagnosticsError(err, "Failed to fetch set search paths")
 	}
 
-	return nil
+	return resourceDNSSearchPathsRead(ctx, d, m)
 }
 
 func resourceDNSSearchPathsDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

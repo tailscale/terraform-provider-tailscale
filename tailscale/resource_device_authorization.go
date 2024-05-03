@@ -71,7 +71,7 @@ func resourceDeviceAuthorizationCreate(ctx context.Context, d *schema.ResourceDa
 	}
 
 	d.SetId(deviceID)
-	return nil
+	return resourceDeviceAuthorizationRead(ctx, d, m)
 }
 
 func resourceDeviceAuthorizationUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -109,7 +109,7 @@ func resourceDeviceAuthorizationUpdate(ctx context.Context, d *schema.ResourceDa
 	}
 
 	d.Set("authorized", true)
-	return nil
+	return resourceDeviceAuthorizationRead(ctx, d, m)
 }
 
 func resourceDeviceAuthorizationDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
