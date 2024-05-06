@@ -132,7 +132,7 @@ func resourceACLCreate(ctx context.Context, d *schema.ResourceData, m interface{
 	}
 
 	d.SetId(createUUID())
-	return nil
+	return resourceACLRead(ctx, d, m)
 }
 
 func resourceACLUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -146,5 +146,5 @@ func resourceACLUpdate(ctx context.Context, d *schema.ResourceData, m interface{
 		return diagnosticsError(err, "Failed to set ACL")
 	}
 
-	return nil
+	return resourceACLRead(ctx, d, m)
 }
