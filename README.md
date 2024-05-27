@@ -66,3 +66,28 @@ terraform state replace-provider registry.terraform.io/davidsbond/tailscale regi
 Please review the [contributing guidelines](./CONTRIBUTING.md) and [code of conduct](.github/CODE_OF_CONDUCT.md) before
 contributing to this codebase. Please create a [new issue](https://github.com/tailscale/terraform-provider-tailscale/issues/new/choose)
 for bugs and feature requests and fill in as much detail as you can.
+
+### Local Provider Development
+
+The [Terraform plugin documentation on debugging](https://developer.hashicorp.com/terraform/plugin/debugging)
+provides helpful strategies for debugging while developing plugins.
+
+Namely, adding a [development override](https://developer.hashicorp.com/terraform/cli/config/config-file#development-overrides-for-provider-developers)
+for the `tailscale/tailscale` provider allows for using your local copy of the provider instead of a published version.
+
+Your `terraformrc` should look something like the following:
+
+```hcl
+provider_installation {
+  # This disables the version and checksum verifications for this
+  # provider and forces Terraform to look for the tailscale/tailscale
+  # provider plugin in the given directory.
+  dev_overrides {
+    "tailscale/tailscale" = "/path/to/this/repo/on/disk"
+  }
+  # For all other providers, install them directly from their origin provider
+  # registries as normal. If you omit this, Terraform will _only_ use
+  # the dev_overrides block, and so no other providers will be available.
+  direct {}
+}
+```
