@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -17,6 +18,40 @@ import (
 
 var testClient *ts.Client
 var testServer *TestServer
+var testAccProvider = tailscale.Provider()
+
+// testAccPreCheck ensures that the TAILSCALE_API_KEY and TAILSCALE_BASE_URL variables
+// are set and configures the provider. This must be called before running acceptance
+// tests.
+func testAccPreCheck(t *testing.T) {
+	t.Helper()
+
+	if v := os.Getenv("TAILSCALE_API_KEY"); v == "" {
+		t.Fatal("TAILSCALE_API_KEY must be set for acceptance tests")
+	}
+
+	if v := os.Getenv("TAILSCALE_BASE_URL"); v == "" {
+		t.Fatal("TAILSCALE_BASE_URL must be set for acceptance tests")
+	}
+
+	if diags := testAccProvider.Configure(context.Background(), &terraform.ResourceConfig{}); diags.HasError() {
+		for _, d := range diags {
+			if d.Severity == diag.Error {
+				t.Fatalf("Failed to configure provider: %s", d.Summary)
+			}
+		}
+	}
+}
+
+func testAccProviderFactories(t *testing.T) map[string]func() (*schema.Provider, error) {
+	t.Helper()
+
+	return map[string]func() (*schema.Provider, error){
+		"tailscale": func() (*schema.Provider, error) {
+			return tailscale.Provider(), nil
+		},
+	}
+}
 
 func TestProvider(t *testing.T) {
 	if err := tailscale.Provider().InternalValidate(); err != nil {

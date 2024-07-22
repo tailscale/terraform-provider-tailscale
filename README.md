@@ -91,3 +91,15 @@ provider_installation {
   direct {}
 }
 ```
+
+#### Acceptance Tests
+
+Tests in this repo that are prefixed with `TestAcc` are acceptance tests which run against a real instance of the tailscale control plane.
+These tests are skipped unless the `TF_ACC` environment variable is set.
+Running `make testacc` sets the `TF_ACC` variable and runs the tests.
+
+The `TF_ACC` environment variable is handled by [Terraform core code](https://developer.hashicorp.com/terraform/plugin/sdkv2/testing/acceptance-tests#requirements-and-recommendations)
+and is not directly referenced in provider code.
+
+The `TAILSCALE_BASE_URL` and `TAILSCALE_API_KEY` environment variables must also be set for these tests.
+Tests will be performed against the tailnet which `TAILSCALE_API_KEY` belongs to.
