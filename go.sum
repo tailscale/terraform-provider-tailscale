@@ -188,10 +188,8 @@ github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsT
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 github.com/tailscale/hujson v0.0.0-20221223112325-20486734a56a h1:SJy1Pu0eH1C29XwJucQo73FrleVK6t4kYz4NVhp34Yw=
 github.com/tailscale/hujson v0.0.0-20221223112325-20486734a56a/go.mod h1:DFSS3NAGHthKo1gTlmEcSBiZrRJXi28rLNd/1udP1c8=
-github.com/tailscale/tailscale-client-go v1.17.1-0.20240718200212-ff9b01c0d472 h1:BLqo/AEtgxdsqPC/WU0lNDwMLjQwvkXappShYmZrZ34=
-github.com/tailscale/tailscale-client-go v1.17.1-0.20240718200212-ff9b01c0d472/go.mod h1:jbwJyHniK3nyLttwcDTXnfdDQEnADvc4VMOP8hZWnR0=
-github.com/tailscale/tailscale-client-go v1.17.1-0.20240724064152-5d834701bd85 h1:F6nQg/GLWZDx27RPiAkJwCR3LYKYxBquUuiPcnuLesA=
-github.com/tailscale/tailscale-client-go v1.17.1-0.20240724064152-5d834701bd85/go.mod h1:jbwJyHniK3nyLttwcDTXnfdDQEnADvc4VMOP8hZWnR0=
+github.com/tailscale/tailscale-client-go v1.17.1-0.20240729175651-90a1e935cc19 h1:fRLv1yZH1ueL1cnpLhOnOymoBfMCIviCn0e0VkAjkK4=
+github.com/tailscale/tailscale-client-go v1.17.1-0.20240729175651-90a1e935cc19/go.mod h1:jbwJyHniK3nyLttwcDTXnfdDQEnADvc4VMOP8hZWnR0=
 github.com/vmihailenco/msgpack v3.3.3+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=
 github.com/vmihailenco/msgpack v4.0.4+incompatible h1:dSLoQfGFAo3F6OoNhwUmLwVgaUXK79GlxNBwueZn0xI=
 github.com/vmihailenco/msgpack v4.0.4+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=
