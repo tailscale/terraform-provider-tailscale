@@ -190,8 +190,8 @@ github.com/tailscale/hujson v0.0.0-20221223112325-20486734a56a h1:SJy1Pu0eH1C29X
 github.com/tailscale/hujson v0.0.0-20221223112325-20486734a56a/go.mod h1:DFSS3NAGHthKo1gTlmEcSBiZrRJXi28rLNd/1udP1c8=
 github.com/tailscale/tailscale-client-go v1.17.1-0.20240729175651-90a1e935cc19 h1:fRLv1yZH1ueL1cnpLhOnOymoBfMCIviCn0e0VkAjkK4=
 github.com/tailscale/tailscale-client-go v1.17.1-0.20240729175651-90a1e935cc19/go.mod h1:jbwJyHniK3nyLttwcDTXnfdDQEnADvc4VMOP8hZWnR0=
-github.com/tailscale/tailscale-client-go/v2 v2.0.0-20240801195603-6096900af9df h1:XjHI0pFxhttM1nEn/WNGOO3wrJYEJSZarJm0i5WFXgY=
-github.com/tailscale/tailscale-client-go/v2 v2.0.0-20240801195603-6096900af9df/go.mod h1:i/MSgQ71kdyh1Wdp50XxrIgtsyO4uZ2SZSPd83lGKHM=
+github.com/tailscale/tailscale-client-go/v2 v2.0.0-20240802162120-6b9dd0c993f7 h1:+TDfp+C1iJfFA835NnP2yzrlwK1NneYFVoEG07bocmM=
+github.com/tailscale/tailscale-client-go/v2 v2.0.0-20240802162120-6b9dd0c993f7/go.mod h1:i/MSgQ71kdyh1Wdp50XxrIgtsyO4uZ2SZSPd83lGKHM=
 github.com/vmihailenco/msgpack v3.3.3+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=
 github.com/vmihailenco/msgpack v4.0.4+incompatible h1:dSLoQfGFAo3F6OoNhwUmLwVgaUXK79GlxNBwueZn0xI=
 github.com/vmihailenco/msgpack v4.0.4+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=

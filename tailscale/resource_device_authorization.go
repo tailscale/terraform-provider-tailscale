@@ -5,8 +5,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
-	"github.com/tailscale/tailscale-client-go/tailscale"
 )
 
 func resourceDeviceAuthorization() *schema.Resource {
@@ -32,30 +30,16 @@ func resourceDeviceAuthorization() *schema.Resource {
 }
 
 func resourceDeviceAuthorizationRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 	deviceID := d.Get("device_id").(string)
 
-	devices, err := client.Devices(ctx)
+	device, err := client.Devices().Get(ctx, deviceID)
 	if err != nil {
-		return diagnosticsError(err, "Failed to fetch devices")
+		return diagnosticsError(err, "Failed to fetch device")
 	}
 
-	var selected *tailscale.Device
-	for _, device := range devices {
-		if device.ID != deviceID {
-			continue
-		}
-
-		selected = &device
-		break
-	}
-
-	if selected == nil {
-		return diag.Errorf("Could not find device with id %s", deviceID)
-	}
-
-	d.SetId(selected.ID)
-	d.Set("authorized", selected.Authorized)
+	d.SetId(device.ID)
+	d.Set("authorized", device.Authorized)
 	return nil
 }
 
@@ -75,36 +59,22 @@ func resourceDeviceAuthorizationCreate(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceDeviceAuthorizationUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 	deviceID := d.Get("device_id").(string)
 
-	devices, err := client.Devices(ctx)
+	device, err := client.Devices().Get(ctx, deviceID)
 	if err != nil {
-		return diagnosticsError(err, "Failed to fetch devices")
-	}
-
-	var selected *tailscale.Device
-	for _, device := range devices {
-		if device.ID != deviceID {
-			continue
-		}
-
-		selected = &device
-		break
-	}
-
-	if selected == nil {
-		return diag.Errorf("Could not find device with id %s", deviceID)
+		return diagnosticsError(err, "Failed to fetch device")
 	}
 
 	// Currently, the Tailscale API only supports authorizing a device, but not un-authorizing one. So if the device
 	// data from the API states it is authorized then we can't do anything else here.
-	if selected.Authorized {
+	if device.Authorized {
 		d.Set("authorized", true)
 		return nil
 	}
 
-	if err = client.AuthorizeDevice(ctx, deviceID); err != nil {
+	if err = client.Devices().SetAuthorized(ctx, deviceID, true); err != nil {
 		return diagnosticsError(err, "Failed to authorize device")
 	}
 
