@@ -35,7 +35,7 @@ func resourceDeviceTags() *schema.Resource {
 }
 
 func resourceDeviceTagsRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 	deviceID := d.Get("device_id").(string)
 
 	devices, err := client.Devices(ctx)
@@ -63,7 +63,7 @@ func resourceDeviceTagsRead(ctx context.Context, d *schema.ResourceData, m inter
 }
 
 func resourceDeviceTagsCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 	deviceID := d.Get("device_id").(string)
 	set := d.Get("tags").(*schema.Set)
 
@@ -81,7 +81,7 @@ func resourceDeviceTagsCreate(ctx context.Context, d *schema.ResourceData, m int
 }
 
 func resourceDeviceTagsUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 	deviceID := d.Get("device_id").(string)
 	set := d.Get("tags").(*schema.Set)
 
@@ -99,7 +99,7 @@ func resourceDeviceTagsUpdate(ctx context.Context, d *schema.ResourceData, m int
 }
 
 func resourceDeviceTagsDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 	deviceID := d.Get("device_id").(string)
 
 	if err := client.SetDeviceTags(ctx, deviceID, []string{}); err != nil {

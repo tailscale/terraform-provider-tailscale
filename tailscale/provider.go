@@ -5,6 +5,7 @@ package tailscale
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/hashicorp/go-cty/cty"
@@ -13,12 +14,19 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/tailscale/tailscale-client-go/tailscale"
+	tailscalev2 "github.com/tailscale/tailscale-client-go/v2"
 )
 
 // providerVersion is filled by goreleaser at build time.
 var providerVersion = "dev"
 
 type ProviderOption func(p *schema.Provider)
+
+// Clients contains both v1 and v2 Tailscale Clients
+type Clients struct {
+	V1 *tailscale.Client
+	V2 *tailscalev2.Client
+}
 
 // Provider returns the *schema.Provider instance that implements the terraform provider.
 func Provider(options ...ProviderOption) *schema.Provider {
@@ -107,6 +115,11 @@ func Provider(options ...ProviderOption) *schema.Provider {
 
 func providerConfigure(_ context.Context, provider *schema.Provider, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 	baseURL := d.Get("base_url").(string)
+	parsedBaseURL, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, diag.Errorf("could not parse baseURL %q: %s", baseURL, err)
+	}
+
 	tailnet := d.Get("tailnet").(string)
 	if tailnet == "" {
 		return nil, diag.Errorf("tailscale provider argument 'tailnet' is empty")
@@ -152,7 +165,14 @@ func providerConfigure(_ context.Context, provider *schema.Provider, d *schema.R
 			return nil, diagnosticsError(err, "failed to initialise client")
 		}
 
-		return client, nil
+		clientV2 := &tailscalev2.Client{
+			BaseURL:   parsedBaseURL,
+			UserAgent: userAgent,
+			Tailnet:   tailnet,
+		}
+		clientV2.UseOAuth(oauthClientID, oauthClientSecret, oauthScopes)
+
+		return &Clients{client, clientV2}, nil
 	}
 
 	client, err := tailscale.NewClient(
@@ -165,7 +185,14 @@ func providerConfigure(_ context.Context, provider *schema.Provider, d *schema.R
 		return nil, diagnosticsError(err, "failed to initialise client")
 	}
 
-	return client, nil
+	clientV2 := &tailscalev2.Client{
+		BaseURL:   parsedBaseURL,
+		UserAgent: userAgent,
+		APIKey:    apiKey,
+		Tailnet:   tailnet,
+	}
+
+	return &Clients{client, clientV2}, nil
 }
 
 func diagnosticsError(err error, message string, args ...interface{}) diag.Diagnostics {

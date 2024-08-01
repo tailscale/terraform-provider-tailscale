@@ -35,7 +35,7 @@ func resourceACL() *schema.Resource {
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 		CustomizeDiff: func(ctx context.Context, rd *schema.ResourceDiff, m interface{}) error {
-			client := m.(*tailscale.Client)
+			client := m.(*Clients).V1
 
 			//if the acl is only known after apply, then acl will be an empty string and validation will fail
 			if rd.Get("acl").(string) == "" {
@@ -97,7 +97,7 @@ func resourceACL() *schema.Resource {
 }
 
 func resourceACLRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 	acl, err := client.RawACL(ctx)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch ACL")
@@ -110,7 +110,7 @@ func resourceACLRead(ctx context.Context, d *schema.ResourceData, m interface{})
 }
 
 func resourceACLCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 	acl := d.Get("acl").(string)
 
 	// Setting the `ts-default` ETag will make this operation succeed only if
@@ -136,7 +136,7 @@ func resourceACLCreate(ctx context.Context, d *schema.ResourceData, m interface{
 }
 
 func resourceACLUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 
 	if !d.HasChange("acl") {
 		return nil

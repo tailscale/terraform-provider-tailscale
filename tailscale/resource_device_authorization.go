@@ -32,7 +32,7 @@ func resourceDeviceAuthorization() *schema.Resource {
 }
 
 func resourceDeviceAuthorizationRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 	deviceID := d.Get("device_id").(string)
 
 	devices, err := client.Devices(ctx)
@@ -60,7 +60,7 @@ func resourceDeviceAuthorizationRead(ctx context.Context, d *schema.ResourceData
 }
 
 func resourceDeviceAuthorizationCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 	deviceID := d.Get("device_id").(string)
 	authorized := d.Get("authorized").(bool)
 
@@ -75,7 +75,7 @@ func resourceDeviceAuthorizationCreate(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceDeviceAuthorizationUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 	deviceID := d.Get("device_id").(string)
 
 	devices, err := client.Devices(ctx)

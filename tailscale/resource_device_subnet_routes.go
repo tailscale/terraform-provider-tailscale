@@ -5,8 +5,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
-	"github.com/tailscale/tailscale-client-go/tailscale"
 )
 
 func resourceDeviceSubnetRoutes() *schema.Resource {
@@ -35,7 +33,7 @@ func resourceDeviceSubnetRoutes() *schema.Resource {
 }
 
 func resourceDeviceSubnetRoutesRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 	deviceID := d.Get("device_id").(string)
 
 	routes, err := client.DeviceSubnetRoutes(ctx, deviceID)
@@ -51,7 +49,7 @@ func resourceDeviceSubnetRoutesRead(ctx context.Context, d *schema.ResourceData,
 }
 
 func resourceDeviceSubnetRoutesCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 	deviceID := d.Get("device_id").(string)
 	routes := d.Get("routes").(*schema.Set).List()
 
@@ -69,7 +67,7 @@ func resourceDeviceSubnetRoutesCreate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourceDeviceSubnetRoutesUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 	deviceID := d.Get("device_id").(string)
 	routes := d.Get("routes").(*schema.Set).List()
 
@@ -86,7 +84,7 @@ func resourceDeviceSubnetRoutesUpdate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourceDeviceSubnetRoutesDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 	deviceID := d.Get("device_id").(string)
 
 	if err := client.SetDeviceSubnetRoutes(ctx, deviceID, []string{}); err != nil {
