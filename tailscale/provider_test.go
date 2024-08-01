@@ -34,6 +34,10 @@ func testAccPreCheck(t *testing.T) {
 		t.Fatal("TAILSCALE_BASE_URL must be set for acceptance tests")
 	}
 
+	if v := os.Getenv("TAILSCALE_TEST_DEVICE_NAME"); v == "" {
+		t.Fatal("TAILSCALE_TEST_DEVICE_NAME must be set for acceptance tests")
+	}
+
 	if diags := testAccProvider.Configure(context.Background(), &terraform.ResourceConfig{}); diags.HasError() {
 		for _, d := range diags {
 			if d.Severity == diag.Error {
