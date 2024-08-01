@@ -104,7 +104,7 @@ func resourceTailnetKey() *schema.Resource {
 }
 
 func resourceTailnetKeyCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 	reusable := d.Get("reusable").(bool)
 	ephemeral := d.Get("ephemeral").(bool)
 	preauthorized := d.Get("preauthorized").(bool)
@@ -157,7 +157,7 @@ func resourceTailnetKeyCreate(ctx context.Context, d *schema.ResourceData, m int
 }
 
 func resourceTailnetKeyDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 
 	err := client.DeleteKey(ctx, d.Id())
 	switch {
@@ -199,7 +199,7 @@ func resourceTailnetKeyDiff(ctx context.Context, d *schema.ResourceDiff, m inter
 		return nil
 	}
 
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 	key, err := client.GetKey(ctx, d.Id())
 	if tailscale.IsNotFound(err) || (err == nil && key.Invalid) {
 		d.ForceNew("recreate_if_invalid")
@@ -210,7 +210,7 @@ func resourceTailnetKeyDiff(ctx context.Context, d *schema.ResourceDiff, m inter
 func resourceTailnetKeyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	recreateIfInvalid := shouldRecreateIfInvalid(d.Get("reusable").(bool), d.Get("recreate_if_invalid").(string))
 
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 	key, err := client.GetKey(ctx, d.Id())
 
 	switch {

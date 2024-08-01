@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/tailscale/hujson"
-	"github.com/tailscale/tailscale-client-go/tailscale"
 )
 
 func dataSourceACL() *schema.Resource {
@@ -30,7 +29,7 @@ func dataSourceACL() *schema.Resource {
 }
 
 func dataSourceACLRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 
 	acl, err := client.RawACL(ctx)
 	if err != nil {

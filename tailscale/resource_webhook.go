@@ -83,7 +83,7 @@ func resourceWebhook() *schema.Resource {
 }
 
 func resourceWebhookCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 
 	endpointURL := d.Get("endpoint_url").(string)
 	providerType := tailscale.WebhookProviderType(d.Get("provider_type").(string))
@@ -113,7 +113,7 @@ func resourceWebhookCreate(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceWebhookRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 
 	webhook, err := client.Webhook(ctx, d.Id())
 	if err != nil {
@@ -144,7 +144,7 @@ func resourceWebhookUpdate(ctx context.Context, d *schema.ResourceData, m interf
 		return resourceWebhookRead(ctx, d, m)
 	}
 
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 	subscriptions := d.Get("subscriptions").(*schema.Set).List()
 
 	var requestSubscriptions []tailscale.WebhookSubscriptionType
@@ -161,7 +161,7 @@ func resourceWebhookUpdate(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceWebhookDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 
 	err := client.DeleteWebhook(ctx, d.Id())
 	if err != nil {

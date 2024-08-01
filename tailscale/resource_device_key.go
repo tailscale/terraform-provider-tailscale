@@ -32,7 +32,7 @@ func resourceDeviceKey() *schema.Resource {
 }
 
 func resourceDeviceKeyCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 
 	deviceID := d.Get("device_id").(string)
 	keyExpiryDisabled := d.Get("key_expiry_disabled").(bool)
@@ -50,7 +50,7 @@ func resourceDeviceKeyCreate(ctx context.Context, d *schema.ResourceData, m inte
 }
 
 func resourceDeviceKeyDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 
 	deviceID := d.Get("device_id").(string)
 	key := tailscale.DeviceKey{}
@@ -63,7 +63,7 @@ func resourceDeviceKeyDelete(ctx context.Context, d *schema.ResourceData, m inte
 }
 
 func resourceDeviceKeyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 	deviceID := d.Get("device_id").(string)
 
 	devices, err := client.Devices(ctx)
@@ -93,7 +93,7 @@ func resourceDeviceKeyRead(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceDeviceKeyUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 
 	deviceID := d.Get("device_id").(string)
 	keyExpiryDisabled := d.Get("key_expiry_disabled").(bool)

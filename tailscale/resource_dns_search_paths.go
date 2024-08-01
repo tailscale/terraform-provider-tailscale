@@ -5,8 +5,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
-	"github.com/tailscale/tailscale-client-go/tailscale"
 )
 
 func resourceDNSSearchPaths() *schema.Resource {
@@ -30,7 +28,7 @@ func resourceDNSSearchPaths() *schema.Resource {
 }
 
 func resourceDNSSearchPathsRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 	paths, err := client.DNSSearchPaths(ctx)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch dns search paths")
@@ -44,7 +42,7 @@ func resourceDNSSearchPathsRead(ctx context.Context, d *schema.ResourceData, m i
 }
 
 func resourceDNSSearchPathsCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 	paths := d.Get("search_paths").([]interface{})
 
 	searchPaths := make([]string, len(paths))
@@ -65,7 +63,7 @@ func resourceDNSSearchPathsUpdate(ctx context.Context, d *schema.ResourceData, m
 		return resourceDNSSearchPathsRead(ctx, d, m)
 	}
 
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 	paths := d.Get("search_paths").([]interface{})
 
 	searchPaths := make([]string, len(paths))
@@ -81,7 +79,7 @@ func resourceDNSSearchPathsUpdate(ctx context.Context, d *schema.ResourceData, m
 }
 
 func resourceDNSSearchPathsDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 
 	if err := client.SetDNSSearchPaths(ctx, []string{}); err != nil {
 		return diagnosticsError(err, "Failed to fetch set search paths")

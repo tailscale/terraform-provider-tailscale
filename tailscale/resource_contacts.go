@@ -75,7 +75,7 @@ func resourceContacts() *schema.Resource {
 }
 
 func resourceContactsCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 
 	if diagErr := updateContact(ctx, client, d, tailscale.ContactAccount); diagErr != nil {
 		return diagErr
@@ -94,7 +94,7 @@ func resourceContactsCreate(ctx context.Context, d *schema.ResourceData, m inter
 }
 
 func resourceContactsRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 
 	contacts, err := client.Contacts(ctx)
 	if err != nil {
@@ -117,7 +117,7 @@ func resourceContactsRead(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceContactsUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 
 	if d.HasChange("account") {
 		if diagErr := updateContact(ctx, client, d, tailscale.ContactAccount); diagErr != nil {

@@ -12,11 +12,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	ts "github.com/tailscale/tailscale-client-go/tailscale"
 	"github.com/tailscale/terraform-provider-tailscale/tailscale"
 )
 
-var testClient *ts.Client
+var testClients *tailscale.Clients
 var testServer *TestServer
 var testAccProvider = tailscale.Provider()
 
@@ -70,13 +69,13 @@ func TestProvider_Implemented(t *testing.T) {
 func testProviderFactories(t *testing.T) map[string]func() (*schema.Provider, error) {
 	t.Helper()
 
-	testClient, testServer = NewTestHarness(t)
+	testClients, testServer = NewTestHarness(t)
 	return map[string]func() (*schema.Provider, error){
 		"tailscale": func() (*schema.Provider, error) {
 			return tailscale.Provider(func(p *schema.Provider) {
 				// Set up a test harness for the provider
 				p.ConfigureContextFunc = func(ctx context.Context, data *schema.ResourceData) (interface{}, diag.Diagnostics) {
-					return testClient, nil
+					return testClients, nil
 				}
 
 				// Don't require any of the global configuration

@@ -71,7 +71,7 @@ func dataSourceDevice() *schema.Resource {
 }
 
 func dataSourceDeviceRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+	client := m.(*Clients).V1
 
 	var filter func(d tailscale.Device) bool
 	var filterDesc string
