@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	"github.com/tailscale/tailscale-client-go/tailscale"
+	"github.com/tailscale/terraform-provider-tailscale/tailscale"
 )
 
 const testDeviceAuthorization = `
@@ -59,27 +59,15 @@ func testAccCheckDeviceAuthorized(resourceName string) resource.TestCheckFunc {
 			return fmt.Errorf("resource has no ID set")
 		}
 
-		client := testAccProvider.Meta().(*tailscale.Client)
+		client := testAccProvider.Meta().(*tailscale.Clients).V2
 		// Devices are not currently deauthorized when this resource is deleted,
 		// expect that the device both exists and is still authorized.
-		devices, err := client.Devices(context.Background())
+		device, err := client.Devices().Get(context.Background(), rs.Primary.ID)
 		if err != nil {
 			return err
 		}
 
-		var selected *tailscale.Device
-		for _, device := range devices {
-			if device.ID == rs.Primary.ID {
-				selected = &device
-				break
-			}
-		}
-
-		if selected == nil {
-			return fmt.Errorf("expected device with id %q to exist", rs.Primary.ID)
-		}
-
-		if selected.Authorized != true {
+		if device.Authorized != true {
 			return fmt.Errorf("device with id %q is not authorized", rs.Primary.ID)
 		}
 
@@ -88,7 +76,7 @@ func testAccCheckDeviceAuthorized(resourceName string) resource.TestCheckFunc {
 }
 
 func testAccCheckDeviceAuthorizationDestroy(s *terraform.State) error {
-	client := testAccProvider.Meta().(*tailscale.Client)
+	client := testAccProvider.Meta().(*tailscale.Clients).V2
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "tailscale_device_authorization" {
@@ -101,24 +89,12 @@ func testAccCheckDeviceAuthorizationDestroy(s *terraform.State) error {
 
 		// Devices are not currently deauthorized when this resource is deleted,
 		// expect that the device both exists and is still authorized.
-		devices, err := client.Devices(context.Background())
+		device, err := client.Devices().Get(context.Background(), rs.Primary.ID)
 		if err != nil {
 			return err
 		}
 
-		var selected *tailscale.Device
-		for _, device := range devices {
-			if device.ID == rs.Primary.ID {
-				selected = &device
-				break
-			}
-		}
-
-		if selected == nil {
-			return fmt.Errorf("expected device with id %q to exist", rs.Primary.ID)
-		}
-
-		if selected.Authorized != true {
+		if device.Authorized != true {
 			return fmt.Errorf("device with id %q is not authorized", rs.Primary.ID)
 		}
 	}
