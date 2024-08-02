@@ -7,11 +7,15 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
-	"github.com/tailscale/tailscale-client-go/tailscale"
+	tsclient "github.com/tailscale/tailscale-client-go/tailscale"
+	tsclientv2 "github.com/tailscale/tailscale-client-go/v2"
+	"github.com/tailscale/terraform-provider-tailscale/tailscale"
 )
 
 type TestServer struct {
@@ -25,7 +29,7 @@ type TestServer struct {
 	ResponseBody interface{}
 }
 
-func NewTestHarness(t *testing.T) (*tailscale.Client, *TestServer) {
+func NewTestHarness(t *testing.T) (*tailscale.Clients, *TestServer) {
 	t.Helper()
 
 	testServer := &TestServer{
@@ -52,12 +56,20 @@ func NewTestHarness(t *testing.T) (*tailscale.Client, *TestServer) {
 	})
 
 	baseURL := fmt.Sprintf("http://localhost:%v", listener.Addr().(*net.TCPAddr).Port)
-	client, err := tailscale.NewClient("not-a-real-key", "example.com", tailscale.WithBaseURL(baseURL))
+	client, err := tsclient.NewClient("not-a-real-key", "example.com", tsclient.WithBaseURL(baseURL))
 	if err != nil {
 		assert.FailNow(t, "Client initialization failed", err.Error())
 	}
 
-	return client, testServer
+	parsedBaseURL, err := url.Parse(baseURL)
+	require.NoError(t, err)
+	clientV2 := &tsclientv2.Client{
+		BaseURL: parsedBaseURL,
+		APIKey:  "not-a-real-key",
+		Tailnet: "example.com",
+	}
+
+	return &tailscale.Clients{client, clientV2}, testServer
 }
 
 func (t *TestServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {

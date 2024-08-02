@@ -8,7 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	"github.com/tailscale/tailscale-client-go/tailscale"
+	tsclient "github.com/tailscale/tailscale-client-go/tailscale"
+	"github.com/tailscale/terraform-provider-tailscale/tailscale"
 )
 
 const testContactsBasic = `
@@ -41,32 +42,32 @@ const testContactsUpdated = `
 		}
 	}`
 
-var expectedContactsBasic = &tailscale.Contacts{
-	Account: tailscale.Contact{
+var expectedContactsBasic = &tsclient.Contacts{
+	Account: tsclient.Contact{
 		Email: "account@example.com",
 	},
-	Support: tailscale.Contact{
+	Support: tsclient.Contact{
 		Email: "support@example.com",
 	},
-	Security: tailscale.Contact{
+	Security: tsclient.Contact{
 		Email: "security@example.com",
 	},
 }
 
-var expectedContactsUpdated = &tailscale.Contacts{
-	Account: tailscale.Contact{
+var expectedContactsUpdated = &tsclient.Contacts{
+	Account: tsclient.Contact{
 		Email: "otheraccount@example.com",
 	},
-	Support: tailscale.Contact{
+	Support: tsclient.Contact{
 		Email: "support@example.com",
 	},
-	Security: tailscale.Contact{
+	Security: tsclient.Contact{
 		Email: "security2@example.com",
 	},
 }
 
 func TestAccTailscaleContacts_Basic(t *testing.T) {
-	contacts := &tailscale.Contacts{}
+	contacts := &tsclient.Contacts{}
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -93,7 +94,7 @@ func TestAccTailscaleContacts_Basic(t *testing.T) {
 }
 
 func TestAccTailscaleContacts_Update(t *testing.T) {
-	contacts := &tailscale.Contacts{}
+	contacts := &tsclient.Contacts{}
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -129,7 +130,7 @@ func TestAccTailscaleContacts_Update(t *testing.T) {
 	})
 }
 
-func testAccCheckContactsExists(resourceName string, contacts *tailscale.Contacts) resource.TestCheckFunc {
+func testAccCheckContactsExists(resourceName string, contacts *tsclient.Contacts) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
@@ -140,7 +141,7 @@ func testAccCheckContactsExists(resourceName string, contacts *tailscale.Contact
 			return fmt.Errorf("resource has no ID set")
 		}
 
-		client := testAccProvider.Meta().(*tailscale.Client)
+		client := testAccProvider.Meta().(*tailscale.Clients).V1
 		out, err := client.Contacts(context.Background())
 		if err != nil {
 			return err
@@ -151,7 +152,7 @@ func testAccCheckContactsExists(resourceName string, contacts *tailscale.Contact
 	}
 }
 
-func testAccCheckContactsPropertiesBasic(contacts *tailscale.Contacts) resource.TestCheckFunc {
+func testAccCheckContactsPropertiesBasic(contacts *tsclient.Contacts) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if err := checkContacts(contacts, expectedContactsBasic); err != nil {
 			return err
@@ -161,7 +162,7 @@ func testAccCheckContactsPropertiesBasic(contacts *tailscale.Contacts) resource.
 	}
 }
 
-func testAccCheckContactsPropertiesUpdated(contacts *tailscale.Contacts) resource.TestCheckFunc {
+func testAccCheckContactsPropertiesUpdated(contacts *tsclient.Contacts) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if err := checkContacts(contacts, expectedContactsUpdated); err != nil {
 			return err
@@ -179,8 +180,8 @@ func testAccCheckContactsDestroyUpdated(s *terraform.State) error {
 	return testAccCheckContactsDestroy(s, expectedContactsUpdated)
 }
 
-func testAccCheckContactsDestroy(s *terraform.State, expectedContacts *tailscale.Contacts) error {
-	client := testAccProvider.Meta().(*tailscale.Client)
+func testAccCheckContactsDestroy(s *terraform.State, expectedContacts *tsclient.Contacts) error {
+	client := testAccProvider.Meta().(*tailscale.Clients).V1
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "tailscale_contacts" {
@@ -203,7 +204,7 @@ func testAccCheckContactsDestroy(s *terraform.State, expectedContacts *tailscale
 	return nil
 }
 
-func checkContacts(contacts *tailscale.Contacts, expectedContacts *tailscale.Contacts) error {
+func checkContacts(contacts *tsclient.Contacts, expectedContacts *tsclient.Contacts) error {
 	if contacts.Account.Email != expectedContacts.Account.Email {
 		return fmt.Errorf("bad account email, expected %q, got %q", expectedContacts.Account.Email, contacts.Account.Email)
 	}

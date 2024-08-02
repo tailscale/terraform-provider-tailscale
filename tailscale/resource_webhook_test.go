@@ -11,7 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	"github.com/tailscale/tailscale-client-go/tailscale"
+	tsclient "github.com/tailscale/tailscale-client-go/tailscale"
+	"github.com/tailscale/terraform-provider-tailscale/tailscale"
 )
 
 const testWebhook = `
@@ -33,7 +34,7 @@ func TestProvider_TailscaleWebhook(t *testing.T) {
 		IsUnitTest: true,
 		PreCheck: func() {
 			testServer.ResponseCode = http.StatusOK
-			testServer.ResponseBody = tailscale.Webhook{
+			testServer.ResponseBody = tsclient.Webhook{
 				EndpointID: "12345",
 			}
 		},
@@ -46,7 +47,7 @@ func TestProvider_TailscaleWebhook(t *testing.T) {
 }
 
 func TestAccTailscaleWebhook_Basic(t *testing.T) {
-	webhook := &tailscale.Webhook{}
+	webhook := &tsclient.Webhook{}
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -76,7 +77,7 @@ func TestAccTailscaleWebhook_Basic(t *testing.T) {
 }
 
 func TestAccTailscaleWebhook_Update(t *testing.T) {
-	webhook := &tailscale.Webhook{}
+	webhook := &tsclient.Webhook{}
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -118,7 +119,7 @@ func TestAccTailscaleWebhook_Update(t *testing.T) {
 	})
 }
 
-func testAccCheckWebhookExists(resourceName string, webhook *tailscale.Webhook) resource.TestCheckFunc {
+func testAccCheckWebhookExists(resourceName string, webhook *tsclient.Webhook) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
@@ -129,7 +130,7 @@ func testAccCheckWebhookExists(resourceName string, webhook *tailscale.Webhook) 
 			return fmt.Errorf("resource has no ID set")
 		}
 
-		client := testAccProvider.Meta().(*tailscale.Client)
+		client := testAccProvider.Meta().(*tailscale.Clients).V1
 		out, err := client.Webhook(context.Background(), rs.Primary.ID)
 		if err != nil {
 			return err
@@ -141,7 +142,7 @@ func testAccCheckWebhookExists(resourceName string, webhook *tailscale.Webhook) 
 }
 
 func testAccCheckWebhookDestroy(s *terraform.State) error {
-	client := testAccProvider.Meta().(*tailscale.Client)
+	client := testAccProvider.Meta().(*tailscale.Clients).V1
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "tailscale_webhook" {
@@ -160,7 +161,7 @@ func testAccCheckWebhookDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccCheckWebhookProperties(webhook *tailscale.Webhook) resource.TestCheckFunc {
+func testAccCheckWebhookProperties(webhook *tsclient.Webhook) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if webhook.EndpointURL != "https://example.com/endpoint" {
 			return fmt.Errorf("bad webhook.endpoint_url: %s", webhook.EndpointURL)
@@ -169,9 +170,9 @@ func testAccCheckWebhookProperties(webhook *tailscale.Webhook) resource.TestChec
 			return fmt.Errorf("bad webhook.provider_type: %s", webhook.ProviderType)
 		}
 
-		expectedSubscriptions := []tailscale.WebhookSubscriptionType{
-			tailscale.WebhookNodeCreated,
-			tailscale.WebhookUserNeedsApproval,
+		expectedSubscriptions := []tsclient.WebhookSubscriptionType{
+			tsclient.WebhookNodeCreated,
+			tsclient.WebhookUserNeedsApproval,
 		}
 
 		slices.Sort(expectedSubscriptions)
@@ -184,7 +185,7 @@ func testAccCheckWebhookProperties(webhook *tailscale.Webhook) resource.TestChec
 	}
 }
 
-func testAccCheckWebhookPropertiesUpdated(webhook *tailscale.Webhook) resource.TestCheckFunc {
+func testAccCheckWebhookPropertiesUpdated(webhook *tsclient.Webhook) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if webhook.EndpointURL != "https://example.com/endpoint" {
 			return fmt.Errorf("bad webhook.endpoint_url: %s", webhook.EndpointURL)
@@ -193,10 +194,10 @@ func testAccCheckWebhookPropertiesUpdated(webhook *tailscale.Webhook) resource.T
 			return fmt.Errorf("bad webhook.provider_type: %s", webhook.ProviderType)
 		}
 
-		expectedSubscriptions := []tailscale.WebhookSubscriptionType{
-			tailscale.WebhookNodeCreated,
-			tailscale.WebhookUserRoleUpdated,
-			tailscale.WebhookUserSuspended,
+		expectedSubscriptions := []tsclient.WebhookSubscriptionType{
+			tsclient.WebhookNodeCreated,
+			tsclient.WebhookUserRoleUpdated,
+			tsclient.WebhookUserSuspended,
 		}
 
 		slices.Sort(expectedSubscriptions)
