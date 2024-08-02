@@ -34,3 +34,12 @@ resource "tailscale_device_authorization" "sample_authorization" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+## Import
+
+Import is supported using the following syntax:
+
+```shell
+# Device authorization can be imported using the device id, e.g.,
+terraform import tailscale_device_authorization.sample_authorization 123456789
+```

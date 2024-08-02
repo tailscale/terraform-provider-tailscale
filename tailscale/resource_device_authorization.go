@@ -16,6 +16,9 @@ func resourceDeviceAuthorization() *schema.Resource {
 		CreateContext: resourceDeviceAuthorizationCreate,
 		UpdateContext: resourceDeviceAuthorizationUpdate,
 		DeleteContext: resourceDeviceAuthorizationDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 		Schema: map[string]*schema.Schema{
 			"device_id": {
 				Type:        schema.TypeString,
@@ -33,7 +36,7 @@ func resourceDeviceAuthorization() *schema.Resource {
 
 func resourceDeviceAuthorizationRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*tailscale.Client)
-	deviceID := d.Get("device_id").(string)
+	deviceID := d.Id()
 
 	devices, err := client.Devices(ctx)
 	if err != nil {
@@ -55,6 +58,7 @@ func resourceDeviceAuthorizationRead(ctx context.Context, d *schema.ResourceData
 	}
 
 	d.SetId(selected.ID)
+	d.Set("device_id", selected.ID)
 	d.Set("authorized", selected.Authorized)
 	return nil
 }

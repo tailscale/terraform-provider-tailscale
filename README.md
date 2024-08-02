@@ -101,5 +101,10 @@ Running `make testacc` sets the `TF_ACC` variable and runs the tests.
 The `TF_ACC` environment variable is handled by [Terraform core code](https://developer.hashicorp.com/terraform/plugin/sdkv2/testing/acceptance-tests#requirements-and-recommendations)
 and is not directly referenced in provider code.
 
-The `TAILSCALE_BASE_URL` and `TAILSCALE_API_KEY` environment variables must also be set for these tests.
-Tests will be performed against the tailnet which `TAILSCALE_API_KEY` belongs to.
+The following tailscale specific environment variables must also be set:
+- `TAILSCALE_BASE_URL`
+  - URL of the control plane
+- `TAILSCALE_API_KEY`
+  - Tests will be performed against the tailnet which the key belongs to
+- `TAILSCALE_TEST_DEVICE_NAME`
+  - The FQDN of a device owned by the owner of the API key in use
