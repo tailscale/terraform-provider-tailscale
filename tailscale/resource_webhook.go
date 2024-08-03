@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
-	"github.com/tailscale/tailscale-client-go/tailscale"
+	"github.com/tailscale/tailscale-client-go/v2"
 )
 
 func resourceWebhook() *schema.Resource {
@@ -83,7 +83,7 @@ func resourceWebhook() *schema.Resource {
 }
 
 func resourceWebhookCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 
 	endpointURL := d.Get("endpoint_url").(string)
 	providerType := tailscale.WebhookProviderType(d.Get("provider_type").(string))
@@ -100,7 +100,7 @@ func resourceWebhookCreate(ctx context.Context, d *schema.ResourceData, m interf
 		Subscriptions: requestSubscriptions,
 	}
 
-	webhook, err := client.CreateWebhook(ctx, request)
+	webhook, err := client.Webhooks().Create(ctx, request)
 	if err != nil {
 		return diagnosticsError(err, "Failed to create webhook")
 	}
@@ -113,9 +113,9 @@ func resourceWebhookCreate(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceWebhookRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 
-	webhook, err := client.Webhook(ctx, d.Id())
+	webhook, err := client.Webhooks().Get(ctx, d.Id())
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch webhook")
 	}
@@ -144,7 +144,7 @@ func resourceWebhookUpdate(ctx context.Context, d *schema.ResourceData, m interf
 		return resourceWebhookRead(ctx, d, m)
 	}
 
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 	subscriptions := d.Get("subscriptions").(*schema.Set).List()
 
 	var requestSubscriptions []tailscale.WebhookSubscriptionType
@@ -152,7 +152,7 @@ func resourceWebhookUpdate(ctx context.Context, d *schema.ResourceData, m interf
 		requestSubscriptions = append(requestSubscriptions, tailscale.WebhookSubscriptionType(subscription.(string)))
 	}
 
-	_, err := client.UpdateWebhook(ctx, d.Id(), requestSubscriptions)
+	_, err := client.Webhooks().Update(ctx, d.Id(), requestSubscriptions)
 	if err != nil {
 		return diagnosticsError(err, "Failed to update webhook")
 	}
@@ -161,9 +161,9 @@ func resourceWebhookUpdate(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceWebhookDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 
-	err := client.DeleteWebhook(ctx, d.Id())
+	err := client.Webhooks().Delete(ctx, d.Id())
 	if err != nil {
 		return diagnosticsError(err, "Failed to delete webhook")
 	}

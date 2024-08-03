@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	tsclient "github.com/tailscale/tailscale-client-go/tailscale"
+	tsclient "github.com/tailscale/tailscale-client-go/v2"
 	"github.com/tailscale/terraform-provider-tailscale/tailscale"
 )
 
@@ -130,8 +130,8 @@ func testAccCheckWebhookExists(resourceName string, webhook *tsclient.Webhook) r
 			return fmt.Errorf("resource has no ID set")
 		}
 
-		client := testAccProvider.Meta().(*tailscale.Clients).V1
-		out, err := client.Webhook(context.Background(), rs.Primary.ID)
+		client := testAccProvider.Meta().(*tailscale.Clients).V2
+		out, err := client.Webhooks().Get(context.Background(), rs.Primary.ID)
 		if err != nil {
 			return err
 		}
@@ -142,7 +142,7 @@ func testAccCheckWebhookExists(resourceName string, webhook *tsclient.Webhook) r
 }
 
 func testAccCheckWebhookDestroy(s *terraform.State) error {
-	client := testAccProvider.Meta().(*tailscale.Clients).V1
+	client := testAccProvider.Meta().(*tailscale.Clients).V2
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "tailscale_webhook" {
@@ -153,7 +153,7 @@ func testAccCheckWebhookDestroy(s *terraform.State) error {
 			return fmt.Errorf("resource has no ID set")
 		}
 
-		_, err := client.Webhook(context.Background(), rs.Primary.ID)
+		_, err := client.Webhooks().Get(context.Background(), rs.Primary.ID)
 		if err == nil {
 			return fmt.Errorf("webhook %s still exists", rs.Primary.ID)
 		}
