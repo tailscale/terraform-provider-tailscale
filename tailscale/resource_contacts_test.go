@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	tsclient "github.com/tailscale/tailscale-client-go/tailscale"
+	tsclient "github.com/tailscale/tailscale-client-go/v2"
 	"github.com/tailscale/terraform-provider-tailscale/tailscale"
 )
 
@@ -141,8 +141,8 @@ func testAccCheckContactsExists(resourceName string, contacts *tsclient.Contacts
 			return fmt.Errorf("resource has no ID set")
 		}
 
-		client := testAccProvider.Meta().(*tailscale.Clients).V1
-		out, err := client.Contacts(context.Background())
+		client := testAccProvider.Meta().(*tailscale.Clients).V2
+		out, err := client.Contacts().Get(context.Background())
 		if err != nil {
 			return err
 		}
@@ -181,7 +181,7 @@ func testAccCheckContactsDestroyUpdated(s *terraform.State) error {
 }
 
 func testAccCheckContactsDestroy(s *terraform.State, expectedContacts *tsclient.Contacts) error {
-	client := testAccProvider.Meta().(*tailscale.Clients).V1
+	client := testAccProvider.Meta().(*tailscale.Clients).V2
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "tailscale_contacts" {
@@ -194,7 +194,7 @@ func testAccCheckContactsDestroy(s *terraform.State, expectedContacts *tsclient.
 
 		// Contacts are not destroyed in the control plane upon resource deletion since
 		// contacts cannot be empty.
-		contacts, err := client.Contacts(context.Background())
+		contacts, err := client.Contacts().Get(context.Background())
 		if err != nil {
 			return fmt.Errorf("expected contacts to still exist")
 		}
