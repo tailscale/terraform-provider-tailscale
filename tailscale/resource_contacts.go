@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	"github.com/tailscale/tailscale-client-go/tailscale"
+	"github.com/tailscale/tailscale-client-go/v2"
 )
 
 const resourceContactsDescription = `The contacts resource allows you to configure contact details for your Tailscale network. See https://tailscale.com/kb/1224/contact-preferences for more information.
@@ -75,7 +75,7 @@ func resourceContacts() *schema.Resource {
 }
 
 func resourceContactsCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 
 	if diagErr := updateContact(ctx, client, d, tailscale.ContactAccount); diagErr != nil {
 		return diagErr
@@ -94,9 +94,9 @@ func resourceContactsCreate(ctx context.Context, d *schema.ResourceData, m inter
 }
 
 func resourceContactsRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 
-	contacts, err := client.Contacts(ctx)
+	contacts, err := client.Contacts().Get(ctx)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch contacts")
 	}
@@ -117,7 +117,7 @@ func resourceContactsRead(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceContactsUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 
 	if d.HasChange("account") {
 		if diagErr := updateContact(ctx, client, d, tailscale.ContactAccount); diagErr != nil {
@@ -173,7 +173,7 @@ func updateContact(ctx context.Context, client *tailscale.Client, d *schema.Reso
 	contact := d.Get(string(contactType)).(*schema.Set).List()
 	contactEmail := contact[0].(map[string]interface{})["email"].(string)
 
-	if err := client.UpdateContact(ctx, contactType, tailscale.UpdateContactRequest{Email: &contactEmail}); err != nil {
+	if err := client.Contacts().Update(ctx, contactType, tailscale.UpdateContactRequest{Email: &contactEmail}); err != nil {
 		return diagnosticsError(err, "Failed to create contacts")
 	}
 
