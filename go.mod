@@ -10,7 +10,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/tailscale/hujson v0.0.0-20221223112325-20486734a56a
 	github.com/tailscale/tailscale-client-go v1.17.1-0.20240729175651-90a1e935cc19
-	github.com/tailscale/tailscale-client-go/v2 v2.0.0-20240801195603-6096900af9df
+	github.com/tailscale/tailscale-client-go/v2 v2.0.0-20240802213233-7518e6604513
 	golang.org/x/tools v0.23.0
 	tailscale.com v1.70.0
 )
