@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
-	"github.com/tailscale/tailscale-client-go/v2"
+	tsclient "github.com/tailscale/tailscale-client-go/v2"
 )
 
 func resourceWebhook() *schema.Resource {
@@ -34,11 +34,11 @@ func resourceWebhook() *schema.Resource {
 				ForceNew:    true,
 				ValidateFunc: validation.StringInSlice(
 					[]string{
-						string(tailscale.WebhookEmptyProviderType),
-						string(tailscale.WebhookSlackProviderType),
-						string(tailscale.WebhookMattermostProviderType),
-						string(tailscale.WebhookGoogleChatProviderType),
-						string(tailscale.WebhookDiscordProviderType),
+						string(tsclient.WebhookEmptyProviderType),
+						string(tsclient.WebhookSlackProviderType),
+						string(tsclient.WebhookMattermostProviderType),
+						string(tsclient.WebhookGoogleChatProviderType),
+						string(tsclient.WebhookDiscordProviderType),
 					},
 					false,
 				),
@@ -51,22 +51,22 @@ func resourceWebhook() *schema.Resource {
 					Type: schema.TypeString,
 					ValidateFunc: validation.StringInSlice(
 						[]string{
-							string(tailscale.WebhookNodeCreated),
-							string(tailscale.WebhookNodeNeedsApproval),
-							string(tailscale.WebhookNodeApproved),
-							string(tailscale.WebhookNodeKeyExpiringInOneDay),
-							string(tailscale.WebhookNodeKeyExpired),
-							string(tailscale.WebhookNodeDeleted),
-							string(tailscale.WebhookPolicyUpdate),
-							string(tailscale.WebhookUserCreated),
-							string(tailscale.WebhookUserNeedsApproval),
-							string(tailscale.WebhookUserSuspended),
-							string(tailscale.WebhookUserRestored),
-							string(tailscale.WebhookUserDeleted),
-							string(tailscale.WebhookUserApproved),
-							string(tailscale.WebhookUserRoleUpdated),
-							string(tailscale.WebhookSubnetIPForwardingNotEnabled),
-							string(tailscale.WebhookExitNodeIPForwardingNotEnabled),
+							string(tsclient.WebhookNodeCreated),
+							string(tsclient.WebhookNodeNeedsApproval),
+							string(tsclient.WebhookNodeApproved),
+							string(tsclient.WebhookNodeKeyExpiringInOneDay),
+							string(tsclient.WebhookNodeKeyExpired),
+							string(tsclient.WebhookNodeDeleted),
+							string(tsclient.WebhookPolicyUpdate),
+							string(tsclient.WebhookUserCreated),
+							string(tsclient.WebhookUserNeedsApproval),
+							string(tsclient.WebhookUserSuspended),
+							string(tsclient.WebhookUserRestored),
+							string(tsclient.WebhookUserDeleted),
+							string(tsclient.WebhookUserApproved),
+							string(tsclient.WebhookUserRoleUpdated),
+							string(tsclient.WebhookSubnetIPForwardingNotEnabled),
+							string(tsclient.WebhookExitNodeIPForwardingNotEnabled),
 						},
 						false,
 					),
@@ -86,15 +86,15 @@ func resourceWebhookCreate(ctx context.Context, d *schema.ResourceData, m interf
 	client := m.(*Clients).V2
 
 	endpointURL := d.Get("endpoint_url").(string)
-	providerType := tailscale.WebhookProviderType(d.Get("provider_type").(string))
+	providerType := tsclient.WebhookProviderType(d.Get("provider_type").(string))
 	subscriptions := d.Get("subscriptions").(*schema.Set).List()
 
-	var requestSubscriptions []tailscale.WebhookSubscriptionType
+	var requestSubscriptions []tsclient.WebhookSubscriptionType
 	for _, subscription := range subscriptions {
-		requestSubscriptions = append(requestSubscriptions, tailscale.WebhookSubscriptionType(subscription.(string)))
+		requestSubscriptions = append(requestSubscriptions, tsclient.WebhookSubscriptionType(subscription.(string)))
 	}
 
-	request := tailscale.CreateWebhookRequest{
+	request := tsclient.CreateWebhookRequest{
 		EndpointURL:   endpointURL,
 		ProviderType:  providerType,
 		Subscriptions: requestSubscriptions,
@@ -147,9 +147,9 @@ func resourceWebhookUpdate(ctx context.Context, d *schema.ResourceData, m interf
 	client := m.(*Clients).V2
 	subscriptions := d.Get("subscriptions").(*schema.Set).List()
 
-	var requestSubscriptions []tailscale.WebhookSubscriptionType
+	var requestSubscriptions []tsclient.WebhookSubscriptionType
 	for _, subscription := range subscriptions {
-		requestSubscriptions = append(requestSubscriptions, tailscale.WebhookSubscriptionType(subscription.(string)))
+		requestSubscriptions = append(requestSubscriptions, tsclient.WebhookSubscriptionType(subscription.(string)))
 	}
 
 	_, err := client.Webhooks().Update(ctx, d.Id(), requestSubscriptions)

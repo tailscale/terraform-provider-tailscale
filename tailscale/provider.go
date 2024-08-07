@@ -13,8 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	"github.com/tailscale/tailscale-client-go/tailscale"
-	tailscalev2 "github.com/tailscale/tailscale-client-go/v2"
+	tsclientv1 "github.com/tailscale/tailscale-client-go/tailscale"
+	tsclient "github.com/tailscale/tailscale-client-go/v2"
 )
 
 // providerVersion is filled by goreleaser at build time.
@@ -24,8 +24,8 @@ type ProviderOption func(p *schema.Provider)
 
 // Clients contains both v1 and v2 Tailscale Clients
 type Clients struct {
-	V1 *tailscale.Client
-	V2 *tailscalev2.Client
+	V1 *tsclientv1.Client
+	V2 *tsclient.Client
 }
 
 // Provider returns the *schema.Provider instance that implements the terraform provider.
@@ -154,18 +154,18 @@ func providerConfigure(_ context.Context, provider *schema.Provider, d *schema.R
 			oauthScopes[i] = scope.(string)
 		}
 
-		client, err := tailscale.NewClient(
+		client, err := tsclientv1.NewClient(
 			"",
 			tailnet,
-			tailscale.WithBaseURL(baseURL),
-			tailscale.WithUserAgent(userAgent),
-			tailscale.WithOAuthClientCredentials(oauthClientID, oauthClientSecret, oauthScopes),
+			tsclientv1.WithBaseURL(baseURL),
+			tsclientv1.WithUserAgent(userAgent),
+			tsclientv1.WithOAuthClientCredentials(oauthClientID, oauthClientSecret, oauthScopes),
 		)
 		if err != nil {
 			return nil, diagnosticsError(err, "failed to initialise client")
 		}
 
-		clientV2 := &tailscalev2.Client{
+		clientV2 := &tsclient.Client{
 			BaseURL:   parsedBaseURL,
 			UserAgent: userAgent,
 			Tailnet:   tailnet,
@@ -175,17 +175,17 @@ func providerConfigure(_ context.Context, provider *schema.Provider, d *schema.R
 		return &Clients{client, clientV2}, nil
 	}
 
-	client, err := tailscale.NewClient(
+	client, err := tsclientv1.NewClient(
 		apiKey,
 		tailnet,
-		tailscale.WithBaseURL(baseURL),
-		tailscale.WithUserAgent(userAgent),
+		tsclientv1.WithBaseURL(baseURL),
+		tsclientv1.WithUserAgent(userAgent),
 	)
 	if err != nil {
 		return nil, diagnosticsError(err, "failed to initialise client")
 	}
 
-	clientV2 := &tailscalev2.Client{
+	clientV2 := &tsclient.Client{
 		BaseURL:   parsedBaseURL,
 		UserAgent: userAgent,
 		APIKey:    apiKey,
@@ -209,7 +209,7 @@ func diagnosticsError(err error, message string, args ...interface{}) diag.Diagn
 		},
 	}
 
-	if details := tailscale.ErrorData(err); len(details) > 0 {
+	if details := tsclientv1.ErrorData(err); len(details) > 0 {
 		for _, dt := range details {
 			for _, e := range dt.Errors {
 				diags = append(diags, diag.Diagnostic{
