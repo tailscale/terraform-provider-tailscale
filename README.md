@@ -108,3 +108,9 @@ The following tailscale specific environment variables must also be set:
   - Tests will be performed against the tailnet which the key belongs to
 - `TAILSCALE_TEST_DEVICE_NAME`
   - The FQDN of a device owned by the owner of the API key in use
+
+## Releasing
+
+Pushing a tag of the format `vX.Y.Z` will trigger the [release workflow](./.github/workflows/release.yml) which uses [goreleaser](https://github.com/goreleaser/goreleaser) to build and sign artifacts and generate a [GitHub release](https://github.com/tailscale/terraform-provider-tailscale/releases).
+
+GitHub releases are pulled in and served by the [HashiCorp Terrafrom](https://registry.terraform.io/providers/tailscale/tailscale/latest) and [OpenTofu](https://github.com/opentofu/registry/blob/main/providers/t/tailscale/tailscale.json) registries for usage of the provider via Terraform or OpenTofu.
