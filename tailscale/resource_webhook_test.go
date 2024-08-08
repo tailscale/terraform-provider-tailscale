@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
 	tsclient "github.com/tailscale/tailscale-client-go/v2"
-	"github.com/tailscale/terraform-provider-tailscale/tailscale"
 )
 
 const testWebhook = `
@@ -46,166 +45,82 @@ func TestProvider_TailscaleWebhook(t *testing.T) {
 	})
 }
 
-func TestAccTailscaleWebhook_Basic(t *testing.T) {
-	webhook := &tsclient.Webhook{}
+func TestAccTailscaleWebhook(t *testing.T) {
+	const resourceName = "tailscale_webhook.test_webhook"
+
+	checkProperties := func(expectedSubscriptions []tsclient.WebhookSubscriptionType) func(client *tsclient.Client, rs *terraform.ResourceState) error {
+		return func(client *tsclient.Client, rs *terraform.ResourceState) error {
+			webhook, err := client.Webhooks().Get(context.Background(), rs.Primary.ID)
+			if err != nil {
+				return err
+			}
+
+			if webhook.EndpointURL != "https://example.com/endpoint" {
+				return fmt.Errorf("bad webhook.endpoint_url: %s", webhook.EndpointURL)
+			}
+			if webhook.ProviderType != "slack" {
+				return fmt.Errorf("bad webhook.provider_type: %s", webhook.ProviderType)
+			}
+
+			slices.Sort(expectedSubscriptions)
+			slices.Sort(webhook.Subscriptions)
+
+			if !reflect.DeepEqual(webhook.Subscriptions, expectedSubscriptions) {
+				return fmt.Errorf("bad webhook.subscriptions: %#v", webhook.Subscriptions)
+			}
+			return nil
+		}
+	}
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy:      testAccCheckWebhookDestroy,
+		CheckDestroy: checkResourceDestroyed(resourceName, func(client *tsclient.Client, rs *terraform.ResourceState) (*tsclient.Webhook, error) {
+			return client.Webhooks().Get(context.Background(), rs.Primary.ID)
+		}),
 		Steps: []resource.TestStep{
 			{
 				Config: testWebhook,
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckWebhookExists("tailscale_webhook.test_webhook", webhook),
-					testAccCheckWebhookProperties(webhook),
-					resource.TestCheckResourceAttr("tailscale_webhook.test_webhook", "endpoint_url", "https://example.com/endpoint"),
-					resource.TestCheckResourceAttr("tailscale_webhook.test_webhook", "provider_type", "slack"),
-					resource.TestCheckTypeSetElemAttr("tailscale_webhook.test_webhook", "subscriptions.*", "userNeedsApproval"),
-					resource.TestCheckTypeSetElemAttr("tailscale_webhook.test_webhook", "subscriptions.*", "nodeCreated"),
-					resource.TestCheckResourceAttrSet("tailscale_webhook.test_webhook", "secret"),
-				),
-			},
-			{
-				ResourceName:            "tailscale_webhook.test_webhook",
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"secret"},
-			},
-		},
-	})
-}
-
-func TestAccTailscaleWebhook_Update(t *testing.T) {
-	webhook := &tsclient.Webhook{}
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy:      testAccCheckWebhookDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testWebhook,
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckWebhookExists("tailscale_webhook.test_webhook", webhook),
-					testAccCheckWebhookProperties(webhook),
-					resource.TestCheckResourceAttr("tailscale_webhook.test_webhook", "endpoint_url", "https://example.com/endpoint"),
-					resource.TestCheckResourceAttr("tailscale_webhook.test_webhook", "provider_type", "slack"),
-					resource.TestCheckTypeSetElemAttr("tailscale_webhook.test_webhook", "subscriptions.*", "userNeedsApproval"),
-					resource.TestCheckTypeSetElemAttr("tailscale_webhook.test_webhook", "subscriptions.*", "nodeCreated"),
-					resource.TestCheckResourceAttrSet("tailscale_webhook.test_webhook", "secret"),
+					checkResourceRemoteProperties(
+						resourceName,
+						checkProperties([]tsclient.WebhookSubscriptionType{
+							tsclient.WebhookNodeCreated,
+							tsclient.WebhookUserNeedsApproval,
+						}),
+					),
+					resource.TestCheckResourceAttr(resourceName, "endpoint_url", "https://example.com/endpoint"),
+					resource.TestCheckResourceAttr(resourceName, "provider_type", "slack"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "subscriptions.*", "userNeedsApproval"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "subscriptions.*", "nodeCreated"),
+					resource.TestCheckResourceAttrSet(resourceName, "secret"),
 				),
 			},
 			{
 				Config: testWebhookUpdate,
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckWebhookExists("tailscale_webhook.test_webhook", webhook),
-					testAccCheckWebhookPropertiesUpdated(webhook),
-					resource.TestCheckResourceAttr("tailscale_webhook.test_webhook", "endpoint_url", "https://example.com/endpoint"),
-					resource.TestCheckResourceAttr("tailscale_webhook.test_webhook", "provider_type", "slack"),
-					resource.TestCheckTypeSetElemAttr("tailscale_webhook.test_webhook", "subscriptions.*", "nodeCreated"),
-					resource.TestCheckTypeSetElemAttr("tailscale_webhook.test_webhook", "subscriptions.*", "userSuspended"),
-					resource.TestCheckTypeSetElemAttr("tailscale_webhook.test_webhook", "subscriptions.*", "userRoleUpdated"),
-					resource.TestCheckResourceAttrSet("tailscale_webhook.test_webhook", "secret"),
+					checkResourceRemoteProperties(
+						resourceName,
+						checkProperties([]tsclient.WebhookSubscriptionType{
+							tsclient.WebhookNodeCreated,
+							tsclient.WebhookUserRoleUpdated,
+							tsclient.WebhookUserSuspended,
+						}),
+					),
+					resource.TestCheckResourceAttr(resourceName, "endpoint_url", "https://example.com/endpoint"),
+					resource.TestCheckResourceAttr(resourceName, "provider_type", "slack"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "subscriptions.*", "nodeCreated"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "subscriptions.*", "userSuspended"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "subscriptions.*", "userRoleUpdated"),
+					resource.TestCheckResourceAttrSet(resourceName, "secret"),
 				),
 			},
 			{
-				ResourceName:            "tailscale_webhook.test_webhook",
+				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"secret"},
 			},
 		},
 	})
-}
-
-func testAccCheckWebhookExists(resourceName string, webhook *tsclient.Webhook) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[resourceName]
-		if !ok {
-			return fmt.Errorf("resource not found: %s", resourceName)
-		}
-
-		if rs.Primary.ID == "" {
-			return fmt.Errorf("resource has no ID set")
-		}
-
-		client := testAccProvider.Meta().(*tailscale.Clients).V2
-		out, err := client.Webhooks().Get(context.Background(), rs.Primary.ID)
-		if err != nil {
-			return err
-		}
-
-		*webhook = *out
-		return nil
-	}
-}
-
-func testAccCheckWebhookDestroy(s *terraform.State) error {
-	client := testAccProvider.Meta().(*tailscale.Clients).V2
-
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "tailscale_webhook" {
-			continue
-		}
-
-		if rs.Primary.ID == "" {
-			return fmt.Errorf("resource has no ID set")
-		}
-
-		_, err := client.Webhooks().Get(context.Background(), rs.Primary.ID)
-		if err == nil {
-			return fmt.Errorf("webhook %s still exists", rs.Primary.ID)
-		}
-	}
-	return nil
-}
-
-func testAccCheckWebhookProperties(webhook *tsclient.Webhook) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		if webhook.EndpointURL != "https://example.com/endpoint" {
-			return fmt.Errorf("bad webhook.endpoint_url: %s", webhook.EndpointURL)
-		}
-		if webhook.ProviderType != "slack" {
-			return fmt.Errorf("bad webhook.provider_type: %s", webhook.ProviderType)
-		}
-
-		expectedSubscriptions := []tsclient.WebhookSubscriptionType{
-			tsclient.WebhookNodeCreated,
-			tsclient.WebhookUserNeedsApproval,
-		}
-
-		slices.Sort(expectedSubscriptions)
-		slices.Sort(webhook.Subscriptions)
-
-		if !reflect.DeepEqual(webhook.Subscriptions, expectedSubscriptions) {
-			return fmt.Errorf("bad webhook.subscriptions: %#v", webhook.Subscriptions)
-		}
-		return nil
-	}
-}
-
-func testAccCheckWebhookPropertiesUpdated(webhook *tsclient.Webhook) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		if webhook.EndpointURL != "https://example.com/endpoint" {
-			return fmt.Errorf("bad webhook.endpoint_url: %s", webhook.EndpointURL)
-		}
-		if webhook.ProviderType != "slack" {
-			return fmt.Errorf("bad webhook.provider_type: %s", webhook.ProviderType)
-		}
-
-		expectedSubscriptions := []tsclient.WebhookSubscriptionType{
-			tsclient.WebhookNodeCreated,
-			tsclient.WebhookUserRoleUpdated,
-			tsclient.WebhookUserSuspended,
-		}
-
-		slices.Sort(expectedSubscriptions)
-		slices.Sort(webhook.Subscriptions)
-
-		if !reflect.DeepEqual(webhook.Subscriptions, expectedSubscriptions) {
-			return fmt.Errorf("bad webhook.subscriptions: %#v", webhook.Subscriptions)
-		}
-		return nil
-	}
 }
