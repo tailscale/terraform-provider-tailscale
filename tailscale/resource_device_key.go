@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	"github.com/tailscale/tailscale-client-go/tailscale"
+	tsclient "github.com/tailscale/tailscale-client-go/v2"
 )
 
 func resourceDeviceKey() *schema.Resource {
@@ -32,16 +32,16 @@ func resourceDeviceKey() *schema.Resource {
 }
 
 func resourceDeviceKeyCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 
 	deviceID := d.Get("device_id").(string)
 	keyExpiryDisabled := d.Get("key_expiry_disabled").(bool)
 
-	key := tailscale.DeviceKey{
+	key := tsclient.DeviceKey{
 		KeyExpiryDisabled: keyExpiryDisabled,
 	}
 
-	if err := client.SetDeviceKey(ctx, deviceID, key); err != nil {
+	if err := client.Devices().SetKey(ctx, deviceID, key); err != nil {
 		return diagnosticsError(err, "failed to update device key")
 	}
 
@@ -50,12 +50,12 @@ func resourceDeviceKeyCreate(ctx context.Context, d *schema.ResourceData, m inte
 }
 
 func resourceDeviceKeyDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 
 	deviceID := d.Get("device_id").(string)
-	key := tailscale.DeviceKey{}
+	key := tsclient.DeviceKey{}
 
-	if err := client.SetDeviceKey(ctx, deviceID, key); err != nil {
+	if err := client.Devices().SetKey(ctx, deviceID, key); err != nil {
 		return diagnosticsError(err, "failed to update device key")
 	}
 
@@ -63,29 +63,15 @@ func resourceDeviceKeyDelete(ctx context.Context, d *schema.ResourceData, m inte
 }
 
 func resourceDeviceKeyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 	deviceID := d.Get("device_id").(string)
 
-	devices, err := client.Devices(ctx)
+	device, err := client.Devices().Get(ctx, deviceID)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch devices")
 	}
 
-	var selected *tailscale.Device
-	for _, device := range devices {
-		if device.ID != deviceID {
-			continue
-		}
-
-		selected = &device
-		break
-	}
-
-	if selected == nil {
-		return diag.Errorf("Could not find device with id %s", deviceID)
-	}
-
-	if err = d.Set("key_expiry_disabled", selected.KeyExpiryDisabled); err != nil {
+	if err = d.Set("key_expiry_disabled", device.KeyExpiryDisabled); err != nil {
 		return diagnosticsError(err, "failed to set key_expiry_disabled field")
 	}
 
@@ -93,16 +79,16 @@ func resourceDeviceKeyRead(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceDeviceKeyUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 
 	deviceID := d.Get("device_id").(string)
 	keyExpiryDisabled := d.Get("key_expiry_disabled").(bool)
 
-	key := tailscale.DeviceKey{
+	key := tsclient.DeviceKey{
 		KeyExpiryDisabled: keyExpiryDisabled,
 	}
 
-	if err := client.SetDeviceKey(ctx, deviceID, key); err != nil {
+	if err := client.Devices().SetKey(ctx, deviceID, key); err != nil {
 		return diagnosticsError(err, "failed to update device key")
 	}
 
