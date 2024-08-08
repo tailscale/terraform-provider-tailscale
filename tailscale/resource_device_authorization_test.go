@@ -12,18 +12,18 @@ import (
 	tsclient "github.com/tailscale/tailscale-client-go/v2"
 )
 
-func TestAccTailscaleDeviceAuthorization_Basic(t *testing.T) {
+func TestAccTailscaleDeviceAuthorization(t *testing.T) {
 	const resourceName = "tailscale_device_authorization.test_authorization"
 
 	const testDeviceAuthorization = `
-	data "tailscale_device" "test_device" {
-		name = "%s"
-	}
-	
-	resource "tailscale_device_authorization" "test_authorization" {
-		device_id = data.tailscale_device.test_device.id
-		authorized = true
-	}`
+		data "tailscale_device" "test_device" {
+			name = "%s"
+		}
+		
+		resource "tailscale_device_authorization" "test_authorization" {
+			device_id = data.tailscale_device.test_device.id
+			authorized = true
+		}`
 
 	checkAuthorized := func(client *tsclient.Client, rs *terraform.ResourceState) error {
 		// Check that the device both exists and is still authorized.
