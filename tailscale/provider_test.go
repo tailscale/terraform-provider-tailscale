@@ -128,7 +128,7 @@ func testResourceDestroyed(name string, hcl string) resource.TestStep {
 	}
 }
 
-func checkResourceRemoteProperties(resourceName string, fn func(client *tsclient.Client, rs *terraform.ResourceState) error) resource.TestCheckFunc {
+func checkResourceRemoteProperties(resourceName string, check func(client *tsclient.Client, rs *terraform.ResourceState) error) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
@@ -140,11 +140,11 @@ func checkResourceRemoteProperties(resourceName string, fn func(client *tsclient
 		}
 
 		client := testAccProvider.Meta().(*tailscale.Clients).V2
-		return fn(client, rs)
+		return check(client, rs)
 	}
 }
 
-func checkResourceDestroyed[T any](resourceName string, get func(client *tsclient.Client, rs *terraform.ResourceState) (T, error)) resource.TestCheckFunc {
+func checkResourceDestroyed(resourceName string, check func(client *tsclient.Client, rs *terraform.ResourceState) error) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
@@ -156,11 +156,6 @@ func checkResourceDestroyed[T any](resourceName string, get func(client *tsclien
 		}
 
 		client := testAccProvider.Meta().(*tailscale.Clients).V2
-		_, err := get(client, rs)
-		if err == nil {
-			return fmt.Errorf("%q still exists on server", resourceName)
-		}
-
-		return nil
+		return check(client, rs)
 	}
 }

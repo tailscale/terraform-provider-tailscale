@@ -75,8 +75,12 @@ func TestAccTailscaleWebhook(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy: checkResourceDestroyed(resourceName, func(client *tsclient.Client, rs *terraform.ResourceState) (*tsclient.Webhook, error) {
-			return client.Webhooks().Get(context.Background(), rs.Primary.ID)
+		CheckDestroy: checkResourceDestroyed(resourceName, func(client *tsclient.Client, rs *terraform.ResourceState) error {
+			_, err := client.Webhooks().Get(context.Background(), rs.Primary.ID)
+			if err == nil {
+				return fmt.Errorf("webhook %q still exists on server", resourceName)
+			}
+			return nil
 		}),
 		Steps: []resource.TestStep{
 			{
