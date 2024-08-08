@@ -33,10 +33,10 @@ func resourceDeviceSubnetRoutes() *schema.Resource {
 }
 
 func resourceDeviceSubnetRoutesRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 	deviceID := d.Get("device_id").(string)
 
-	routes, err := client.DeviceSubnetRoutes(ctx, deviceID)
+	routes, err := client.Devices().SubnetRoutes(ctx, deviceID)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch device subnet routes")
 	}
@@ -49,7 +49,7 @@ func resourceDeviceSubnetRoutesRead(ctx context.Context, d *schema.ResourceData,
 }
 
 func resourceDeviceSubnetRoutesCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 	deviceID := d.Get("device_id").(string)
 	routes := d.Get("routes").(*schema.Set).List()
 
@@ -58,7 +58,7 @@ func resourceDeviceSubnetRoutesCreate(ctx context.Context, d *schema.ResourceDat
 		subnetRoutes[i] = route.(string)
 	}
 
-	if err := client.SetDeviceSubnetRoutes(ctx, deviceID, subnetRoutes); err != nil {
+	if err := client.Devices().SetSubnetRoutes(ctx, deviceID, subnetRoutes); err != nil {
 		return diagnosticsError(err, "Failed to set device subnet routes")
 	}
 
@@ -67,7 +67,7 @@ func resourceDeviceSubnetRoutesCreate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourceDeviceSubnetRoutesUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 	deviceID := d.Get("device_id").(string)
 	routes := d.Get("routes").(*schema.Set).List()
 
@@ -76,7 +76,7 @@ func resourceDeviceSubnetRoutesUpdate(ctx context.Context, d *schema.ResourceDat
 		subnetRoutes[i] = route.(string)
 	}
 
-	if err := client.SetDeviceSubnetRoutes(ctx, deviceID, subnetRoutes); err != nil {
+	if err := client.Devices().SetSubnetRoutes(ctx, deviceID, subnetRoutes); err != nil {
 		return diagnosticsError(err, "Failed to set device subnet routes")
 	}
 
@@ -84,10 +84,10 @@ func resourceDeviceSubnetRoutesUpdate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourceDeviceSubnetRoutesDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 	deviceID := d.Get("device_id").(string)
 
-	if err := client.SetDeviceSubnetRoutes(ctx, deviceID, []string{}); err != nil {
+	if err := client.Devices().SetSubnetRoutes(ctx, deviceID, []string{}); err != nil {
 		return diagnosticsError(err, "Failed to set device subnet routes")
 	}
 

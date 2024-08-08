@@ -1,46 +1,86 @@
 package tailscale_test
 
 import (
-	"net/http"
+	"context"
+	"fmt"
+	"os"
+	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	"github.com/tailscale/tailscale-client-go/tailscale"
+	tsclient "github.com/tailscale/tailscale-client-go/v2"
 )
 
-const testDeviceSubnetRoutes = `
-	data "tailscale_device" "test_device" {
-		name = "device.example.com"
-	}
-	
-	resource "tailscale_device_subnet_routes" "test_subnet_routes" {
-		device_id = data.tailscale_device.test_device.id
-		routes = [
-			"10.0.1.0/24", 
-			"1.2.0.0/16", 
-			"2.0.0.0/24",
-		]
-	}`
+func TestAccTailscaleDeviceSubnetRoutes(t *testing.T) {
+	const resourceName = "tailscale_device_subnet_routes.test_subnet_routes"
 
-func TestProvider_TailscaleDeviceSubnetRoutes(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		IsUnitTest: true,
-		PreCheck: func() {
-			testServer.ResponseCode = http.StatusOK
-			testServer.ResponseBody = map[string][]tailscale.Device{
-				"devices": {
-					{
-						Name: "device.example.com",
-						ID:   "123",
-					},
-				},
+	const testDeviceSubnetRoutesCreate = `
+		data "tailscale_device" "test_device" {
+			name = "%s"
+		}
+		
+		resource "tailscale_device_subnet_routes" "test_subnet_routes" {
+			device_id = data.tailscale_device.test_device.id
+			routes = [
+				"10.0.1.0/24", 
+				"2.0.0.0/24",
+			]
+		}`
+
+	const testDeviceSubnetRoutesUpdate = `
+		data "tailscale_device" "test_device" {
+			name = "%s"
+		}
+		
+		resource "tailscale_device_subnet_routes" "test_subnet_routes" {
+			device_id = data.tailscale_device.test_device.id
+			routes = [
+				"10.0.1.0/24", 
+				"1.2.0.0/16", 
+				"2.0.0.0/24",
+			]
+		}`
+
+	checkProperties := func(expectedRoutes []string) func(client *tsclient.Client, rs *terraform.ResourceState) error {
+		return func(client *tsclient.Client, rs *terraform.ResourceState) error {
+			deviceID := rs.Primary.Attributes["device_id"]
+
+			routes, err := client.Devices().SubnetRoutes(context.Background(), deviceID)
+			if err != nil {
+				return err
 			}
-		},
-		ProviderFactories: testProviderFactories(t),
+
+			if !reflect.DeepEqual(routes.Enabled, expectedRoutes) {
+				return fmt.Errorf("bad enabled subnet routes: %#v", routes)
+			}
+			return nil
+		}
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories(t),
+		CheckDestroy:      checkResourceDestroyed(resourceName, checkProperties([]string{})),
 		Steps: []resource.TestStep{
-			testResourceCreated("tailscale_device_subnet_routes.test_subnet_routes", testDeviceSubnetRoutes),
-			testResourceDestroyed("tailscale_device_subnet_routes.test_subnet_routes", testDeviceSubnetRoutes),
+			{
+				Config: fmt.Sprintf(testDeviceSubnetRoutesCreate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName, checkProperties([]string{"2.0.0.0/24", "10.0.1.0/24"})),
+					resource.TestCheckTypeSetElemAttr(resourceName, "routes.*", "10.0.1.0/24"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "routes.*", "2.0.0.0/24"),
+				),
+			},
+			{
+				Config: fmt.Sprintf(testDeviceSubnetRoutesUpdate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName, checkProperties([]string{"1.2.0.0/16", "2.0.0.0/24", "10.0.1.0/24"})),
+					resource.TestCheckTypeSetElemAttr(resourceName, "routes.*", "10.0.1.0/24"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "routes.*", "1.2.0.0/16"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "routes.*", "2.0.0.0/24"),
+				),
+			},
 		},
 	})
 }
