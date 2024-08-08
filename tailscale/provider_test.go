@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	tsclient "github.com/tailscale/tailscale-client-go/v2"
 	"github.com/tailscale/terraform-provider-tailscale/tailscale"
 )
 
@@ -124,5 +125,42 @@ func testResourceDestroyed(name string, hcl string) resource.TestStep {
 
 			return nil
 		},
+	}
+}
+
+func checkResourceRemoteProperties(resourceName string, fn func(client *tsclient.Client, rs *terraform.ResourceState) error) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", resourceName)
+		}
+
+		if rs.Primary.ID == "" {
+			return fmt.Errorf("resource has no ID set")
+		}
+
+		client := testAccProvider.Meta().(*tailscale.Clients).V2
+		return fn(client, rs)
+	}
+}
+
+func checkResourceDestroyed[T any](resourceName string, get func(client *tsclient.Client, rs *terraform.ResourceState) (T, error)) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", resourceName)
+		}
+
+		if rs.Primary.ID == "" {
+			return fmt.Errorf("resource has no ID set")
+		}
+
+		client := testAccProvider.Meta().(*tailscale.Clients).V2
+		_, err := get(client, rs)
+		if err == nil {
+			return fmt.Errorf("%q still exists on server", resourceName)
+		}
+
+		return nil
 	}
 }
