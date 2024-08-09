@@ -93,6 +93,7 @@ func Provider(options ...ProviderOption) *schema.Provider {
 			"tailscale_device_key":            resourceDeviceKey(),
 			"tailscale_webhook":               resourceWebhook(),
 			"tailscale_contacts":              resourceContacts(),
+			"tailscale_posture_integration":   resourcePostureIntegration(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"tailscale_device":  dataSourceDevice(),
