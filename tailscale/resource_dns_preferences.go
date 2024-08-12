@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	"github.com/tailscale/tailscale-client-go/tailscale"
+	tsclient "github.com/tailscale/tailscale-client-go/v2"
 )
 
 func resourceDNSPreferences() *schema.Resource {
@@ -30,9 +30,9 @@ func resourceDNSPreferences() *schema.Resource {
 }
 
 func resourceDNSPreferencesRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 
-	preferences, err := client.DNSPreferences(ctx)
+	preferences, err := client.DNS().Preferences(ctx)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch dns preferences")
 	}
@@ -45,13 +45,13 @@ func resourceDNSPreferencesRead(ctx context.Context, d *schema.ResourceData, m i
 }
 
 func resourceDNSPreferencesCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 	magicDNS := d.Get("magic_dns").(bool)
-	preferences := tailscale.DNSPreferences{
+	preferences := tsclient.DNSPreferences{
 		MagicDNS: magicDNS,
 	}
 
-	if err := client.SetDNSPreferences(ctx, preferences); err != nil {
+	if err := client.DNS().SetPreferences(ctx, preferences); err != nil {
 		return diagnosticsError(err, "Failed to set dns preferences")
 	}
 
@@ -64,14 +64,14 @@ func resourceDNSPreferencesUpdate(ctx context.Context, d *schema.ResourceData, m
 		return resourceDNSPreferencesRead(ctx, d, m)
 	}
 
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 	magicDNS := d.Get("magic_dns").(bool)
 
-	preferences := tailscale.DNSPreferences{
+	preferences := tsclient.DNSPreferences{
 		MagicDNS: magicDNS,
 	}
 
-	if err := client.SetDNSPreferences(ctx, preferences); err != nil {
+	if err := client.DNS().SetPreferences(ctx, preferences); err != nil {
 		return diagnosticsError(err, "Failed to set dns preferences")
 	}
 
@@ -79,9 +79,9 @@ func resourceDNSPreferencesUpdate(ctx context.Context, d *schema.ResourceData, m
 }
 
 func resourceDNSPreferencesDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 
-	if err := client.SetDNSPreferences(ctx, tailscale.DNSPreferences{}); err != nil {
+	if err := client.DNS().SetPreferences(ctx, tsclient.DNSPreferences{}); err != nil {
 		return diagnosticsError(err, "Failed to set dns preferences")
 	}
 
