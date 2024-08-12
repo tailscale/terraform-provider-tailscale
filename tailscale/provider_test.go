@@ -159,3 +159,35 @@ func checkResourceDestroyed(resourceName string, check func(client *tsclient.Cli
 		return check(client, rs)
 	}
 }
+
+// checkPropertiesMatch compares the properties on a named resource to the
+// expected values in a map. All values in the [terraform.ResourceState] will
+// be strings, while the map may contain strings, booleans or ints.
+// This function returns an error if the resource is not found, or if any of
+// the properties don't match.
+func checkPropertiesMatch(resourceName string, s *terraform.State, expected map[string]any) error {
+	rs := s.RootModule().Resources[resourceName]
+	if rs == nil {
+		return fmt.Errorf("no resource found for user %s", resourceName)
+	}
+
+	actual := rs.Primary.Attributes
+	for k, v := range expected {
+		switch t := v.(type) {
+		case int:
+			if actual[k] != fmt.Sprint(t) {
+				return fmt.Errorf("wrong value for property %s of user %s, want %d, got %s", k, resourceName, t, actual[k])
+			}
+		case bool:
+			if actual[k] != fmt.Sprint(t) {
+				return fmt.Errorf("wrong value for property %s of user %s, want %v, got %s", k, resourceName, t, actual[k])
+			}
+		case string:
+			if actual[k] != t {
+				return fmt.Errorf("wrong value for property %s of user %s, want %s, got %s", k, resourceName, t, actual[k])
+			}
+		}
+	}
+
+	return nil
+}

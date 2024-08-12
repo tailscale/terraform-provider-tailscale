@@ -101,6 +101,8 @@ func Provider(options ...ProviderOption) *schema.Provider {
 			"tailscale_devices": dataSourceDevices(),
 			"tailscale_4via6":   dataSource4Via6(),
 			"tailscale_acl":     dataSourceACL(),
+			"tailscale_user":    dataSourceUser(),
+			"tailscale_users":   dataSourceUsers(),
 		},
 	}
 
@@ -285,4 +287,16 @@ func readWithWaitFor(fn schema.ReadContextFunc) schema.ReadContextFunc {
 			}
 		}
 	}
+}
+
+// setProperties sets the properties of a ResourceData from the values in the
+// given map. Existing ResourceData properties that don't appear in the map are
+// left as-is.
+func setProperties(d *schema.ResourceData, props map[string]any) diag.Diagnostics {
+	for name, value := range props {
+		if err := d.Set(name, value); err != nil {
+			return diagnosticsError(err, "failed to set %s", name)
+		}
+	}
+	return nil
 }
