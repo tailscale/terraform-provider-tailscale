@@ -28,8 +28,8 @@ func resourceDNSSearchPaths() *schema.Resource {
 }
 
 func resourceDNSSearchPathsRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
-	paths, err := client.DNSSearchPaths(ctx)
+	client := m.(*Clients).V2
+	paths, err := client.DNS().SearchPaths(ctx)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch dns search paths")
 	}
@@ -42,7 +42,7 @@ func resourceDNSSearchPathsRead(ctx context.Context, d *schema.ResourceData, m i
 }
 
 func resourceDNSSearchPathsCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 	paths := d.Get("search_paths").([]interface{})
 
 	searchPaths := make([]string, len(paths))
@@ -50,7 +50,7 @@ func resourceDNSSearchPathsCreate(ctx context.Context, d *schema.ResourceData, m
 		searchPaths[i] = path.(string)
 	}
 
-	if err := client.SetDNSSearchPaths(ctx, searchPaths); err != nil {
+	if err := client.DNS().SetSearchPaths(ctx, searchPaths); err != nil {
 		return diagnosticsError(err, "Failed to fetch set search paths")
 	}
 
@@ -63,7 +63,7 @@ func resourceDNSSearchPathsUpdate(ctx context.Context, d *schema.ResourceData, m
 		return resourceDNSSearchPathsRead(ctx, d, m)
 	}
 
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 	paths := d.Get("search_paths").([]interface{})
 
 	searchPaths := make([]string, len(paths))
@@ -71,7 +71,7 @@ func resourceDNSSearchPathsUpdate(ctx context.Context, d *schema.ResourceData, m
 		searchPaths[i] = path.(string)
 	}
 
-	if err := client.SetDNSSearchPaths(ctx, searchPaths); err != nil {
+	if err := client.DNS().SetSearchPaths(ctx, searchPaths); err != nil {
 		return diagnosticsError(err, "Failed to fetch set search paths")
 	}
 
@@ -79,9 +79,9 @@ func resourceDNSSearchPathsUpdate(ctx context.Context, d *schema.ResourceData, m
 }
 
 func resourceDNSSearchPathsDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 
-	if err := client.SetDNSSearchPaths(ctx, []string{}); err != nil {
+	if err := client.DNS().SetSearchPaths(ctx, []string{}); err != nil {
 		return diagnosticsError(err, "Failed to fetch set search paths")
 	}
 
