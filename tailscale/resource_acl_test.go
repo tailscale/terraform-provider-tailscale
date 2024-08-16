@@ -1,12 +1,17 @@
 package tailscale_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+
+	tsclient "github.com/tailscale/tailscale-client-go/v2"
 )
 
 const testACL = `
@@ -135,6 +140,91 @@ func TestProvider_TailscaleACLDiffs(t *testing.T) {
 				PreConfig: func() {
 					testServer.ResponseBody = toHuJSON(policyJSON("  "))
 				},
+			},
+		},
+	})
+}
+
+func TestAccACL(t *testing.T) {
+	const resourceName = "tailscale_acl.test_acl"
+
+	const testACLCreate = `
+		resource "tailscale_acl" "test_acl" {
+		    overwrite_existing_content = true
+			acl = <<EOF
+			{
+				// Access control lists.
+				"ACLs": [
+					{
+						"Action": "accept",
+						"Users": ["*"],
+						"Ports": ["*:*"]
+					}
+				],
+			}
+			EOF
+		}`
+
+	const testACLUpdate = `
+		resource "tailscale_acl" "test_acl" {
+			acl = <<EOF
+			{
+				// Tag owners.
+				"TagOwners": {
+					"tag:example": [
+						"autogroup:member"
+					]
+				},
+			}
+			EOF
+		}`
+
+	checkProperties := func(expected *tsclient.ACL) func(client *tsclient.Client, rs *terraform.ResourceState) error {
+		return func(client *tsclient.Client, rs *terraform.ResourceState) error {
+			actual, err := client.PolicyFile().Get(context.Background())
+			if err != nil {
+				return err
+			}
+
+			if diff := cmp.Diff(expected, actual); diff != "" {
+				t.Fatalf("diff found (-got, +want): %s", diff)
+			}
+
+			return nil
+		}
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testACLCreate,
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName,
+						checkProperties(&tsclient.ACL{
+							ACLs: []tsclient.ACLEntry{
+								{
+									Action: "accept",
+									Users:  []string{"*"},
+									Ports:  []string{"*:*"},
+								},
+							},
+						}),
+					),
+				),
+			},
+			{
+				Config: testACLUpdate,
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName,
+						checkProperties(&tsclient.ACL{
+							TagOwners: map[string][]string{
+								"tag:example": {"autogroup:member"},
+							},
+						}),
+					),
+				),
 			},
 		},
 	})
