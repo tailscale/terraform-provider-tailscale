@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/hashicorp/go-cty/cty"
@@ -309,4 +310,9 @@ func optional[T any](d *schema.ResourceData, key string) *T {
 		return nil
 	}
 	return tsclient.PointerTo(d.Get(key).(T))
+}
+
+// isAcceptanceTesting returns true if we're running acceptance tests.
+func isAcceptanceTesting() bool {
+	return os.Getenv("TF_ACC") != ""
 }
