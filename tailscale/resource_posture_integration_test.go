@@ -41,35 +41,25 @@ func TestAccTailscalePostureIntegration(t *testing.T) {
 
 	checkProperties := func(expected tsclient.PostureIntegration) func(client *tsclient.Client, rs *terraform.ResourceState) error {
 		return func(client *tsclient.Client, rs *terraform.ResourceState) error {
-			integrations, err := client.DevicePosture().ListIntegrations(context.Background())
+			integration, err := client.DevicePosture().GetIntegration(context.Background(), rs.Primary.ID)
 			if err != nil {
 				return err
 			}
 
-			if len(integrations) != 1 {
-				return fmt.Errorf("wrong number of posture integrations, expected 1, got %d", len(integrations))
+			if integration.Provider != expected.Provider {
+				return fmt.Errorf("wrong provider, want %q got %q", expected.Provider, integration.Provider)
+			}
+			if integration.CloudID != expected.CloudID {
+				return fmt.Errorf("wrong cloud_id, want %q got %q", expected.CloudID, integration.CloudID)
+			}
+			if integration.ClientID != expected.ClientID {
+				return fmt.Errorf("wrong client_id, want %q got %q", expected.ClientID, integration.ClientID)
+			}
+			if integration.TenantID != expected.TenantID {
+				return fmt.Errorf("wrong tenant_id, want %q got %q", expected.TenantID, integration.TenantID)
 			}
 
-			for _, integration := range integrations {
-				if integration.ID == rs.Primary.ID {
-					if integration.Provider != expected.Provider {
-						return fmt.Errorf("wrong provider, want %q got %q", expected.Provider, integration.Provider)
-					}
-					if integration.CloudID != expected.CloudID {
-						return fmt.Errorf("wrong cloud_id, want %q got %q", expected.CloudID, integration.CloudID)
-					}
-					if integration.ClientID != expected.ClientID {
-						return fmt.Errorf("wrong client_id, want %q got %q", expected.ClientID, integration.ClientID)
-					}
-					if integration.TenantID != expected.TenantID {
-						return fmt.Errorf("wrong tenant_id, want %q got %q", expected.TenantID, integration.TenantID)
-					}
-
-					return nil
-				}
-			}
-
-			return fmt.Errorf("failed to find posture integration for id %q", rs.Primary.ID)
+			return nil
 		}
 	}
 
@@ -77,15 +67,9 @@ func TestAccTailscalePostureIntegration(t *testing.T) {
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories(t),
 		CheckDestroy: checkResourceDestroyed(resourceName, func(client *tsclient.Client, rs *terraform.ResourceState) error {
-			integrations, err := client.DevicePosture().ListIntegrations(context.Background())
-			if err != nil {
-				return err
-			}
-
-			for _, integration := range integrations {
-				if integration.ID == rs.Primary.ID {
-					return fmt.Errorf("posture integration %q still exists on server", resourceName)
-				}
+			_, err := client.DevicePosture().GetIntegration(context.Background(), rs.Primary.ID)
+			if err == nil {
+				return fmt.Errorf("posture integration %q still exists on server", resourceName)
 			}
 
 			return nil

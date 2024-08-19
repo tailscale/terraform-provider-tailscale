@@ -62,18 +62,11 @@ func resourcePostureIntegration() *schema.Resource {
 func resourcePostureIntegrationRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*Clients).V2
 
-	integrations, err := client.DevicePosture().ListIntegrations(ctx)
+	integration, err := client.DevicePosture().GetIntegration(ctx, d.Id())
 	if err != nil {
-		return diagnosticsError(err, "Failed to fetch posture integrations")
+		return diagnosticsError(err, "Failed to find posture integration with id %q", d.Id())
 	}
-
-	for _, integration := range integrations {
-		if integration.ID == d.Id() {
-			return resourcePostureIntegrationUpdateFromRemote(d, &integration)
-		}
-	}
-
-	return diagnosticsError(err, "Failed to find posture integration with id %q", d.Id())
+	return resourcePostureIntegrationUpdateFromRemote(d, integration)
 }
 
 func resourcePostureIntegrationUpdateFromRemote(d *schema.ResourceData, integration *tsclient.PostureIntegration) diag.Diagnostics {
