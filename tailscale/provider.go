@@ -95,6 +95,7 @@ func Provider(options ...ProviderOption) *schema.Provider {
 			"tailscale_contacts":                resourceContacts(),
 			"tailscale_posture_integration":     resourcePostureIntegration(),
 			"tailscale_logstream_configuration": resourceLogstreamConfiguration(),
+			"tailscale_tailnet_settings":        resourceTailnetSettings(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"tailscale_device":  dataSourceDevice(),
@@ -299,4 +300,13 @@ func setProperties(d *schema.ResourceData, props map[string]any) diag.Diagnostic
 		}
 	}
 	return nil
+}
+
+// optional returns a pointer to the value at key in the given resource if,
+// and only if, the value has changed. If the value is unchanged, it returns nil.
+func optional[T any](d *schema.ResourceData, key string) *T {
+	if !d.HasChange(key) {
+		return nil
+	}
+	return tsclient.PointerTo(d.Get(key).(T))
 }
