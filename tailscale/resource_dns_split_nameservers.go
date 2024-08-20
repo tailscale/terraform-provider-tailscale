@@ -6,15 +6,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	"github.com/tailscale/tailscale-client-go/tailscale"
+	tsclient "github.com/tailscale/tailscale-client-go/v2"
 )
 
 func resourceDNSSplitNameservers() *schema.Resource {
 	return &schema.Resource{
 		Description:   "The dns_split_nameservers resource allows you to configure split DNS nameservers for your Tailscale network. See https://tailscale.com/kb/1054/dns for more information.",
 		ReadContext:   resourceSplitDNSNameserversRead,
-		CreateContext: resourceSplitDNSNameserversCreate,
-		UpdateContext: resourceSplitDNSNameserversUpdate,
+		CreateContext: resourceSplitDNSNameserversCreateOrUpdate,
+		UpdateContext: resourceSplitDNSNameserversCreateOrUpdate,
 		DeleteContext: resourceSplitDNSNameserversDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
@@ -22,8 +22,9 @@ func resourceDNSSplitNameservers() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"domain": {
 				Type:        schema.TypeString,
-				Description: "Domain to configure split DNS for. Requests for this domain will be resolved using the provided nameservers.",
+				Description: "Domain to configure split DNS for. Requests for this domain will be resolved using the provided nameservers. Changing this will force the resource to be recreated.",
 				Required:    true,
+				ForceNew:    true,
 			},
 			"nameservers": {
 				Type:        schema.TypeSet,
@@ -38,8 +39,8 @@ func resourceDNSSplitNameservers() *schema.Resource {
 }
 
 func resourceSplitDNSNameserversRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
-	splitDNS, err := client.SplitDNS(ctx)
+	client := m.(*Clients).V2
+	splitDNS, err := client.DNS().SplitDNS(ctx)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch split DNS configs")
 	}
@@ -59,14 +60,14 @@ func resourceSplitDNSNameserversRead(ctx context.Context, d *schema.ResourceData
 	return nil
 }
 
-func resourceSplitDNSNameserversCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+func resourceSplitDNSNameserversCreateOrUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	client := m.(*Clients).V2
 	nameserversSet := d.Get("nameservers").(*schema.Set)
 	domain := d.Get("domain").(string)
 
 	nameserversList := nameserversSet.List()
 
-	req := make(tailscale.SplitDnsRequest)
+	req := make(tsclient.SplitDNSRequest)
 	var nameservers []string
 	for _, nameserver := range nameserversList {
 		nameservers = append(nameservers, nameserver.(string))
@@ -74,7 +75,7 @@ func resourceSplitDNSNameserversCreate(ctx context.Context, d *schema.ResourceDa
 	req[domain] = nameservers
 
 	// Return value is not useful to us here, ignore.
-	if _, err := client.UpdateSplitDNS(ctx, req); err != nil {
+	if _, err := client.DNS().UpdateSplitDNS(ctx, req); err != nil {
 		return diagnosticsError(err, "Failed to set dns split nameservers")
 	}
 
@@ -82,24 +83,16 @@ func resourceSplitDNSNameserversCreate(ctx context.Context, d *schema.ResourceDa
 	return resourceSplitDNSNameserversRead(ctx, d, m)
 }
 
-func resourceSplitDNSNameserversUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	if !d.HasChange("nameservers") {
-		return resourceSplitDNSNameserversRead(ctx, d, m)
-	}
-
-	return resourceSplitDNSNameserversCreate(ctx, d, m)
-}
-
 func resourceSplitDNSNameserversDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 	domain := d.Get("domain").(string)
 
-	req := make(tailscale.SplitDnsRequest)
+	req := make(tsclient.SplitDNSRequest)
 	req[domain] = []string{}
 
 	// Return value is not useful to us here, ignore.
-	if _, err := client.UpdateSplitDNS(ctx, req); err != nil {
-		return diagnosticsError(err, "Failed to set dns split nameservers")
+	if _, err := client.DNS().UpdateSplitDNS(ctx, req); err != nil {
+		return diagnosticsError(err, "Failed to delete dns split nameservers")
 	}
 
 	return nil
