@@ -25,7 +25,7 @@ resource "tailscale_dns_split_nameservers" "sample_split_nameservers" {
 
 ### Required
 
-- `domain` (String) Domain to configure split DNS for. Requests for this domain will be resolved using the provided nameservers.
+- `domain` (String) Domain to configure split DNS for. Requests for this domain will be resolved using the provided nameservers. Changing this will force the resource to be recreated.
 - `nameservers` (Set of String) Devices on your network will use these nameservers to resolve DNS names. IPv4 or IPv6 addresses are accepted.
 
 ### Read-Only
