@@ -1,16 +1,20 @@
 package tailscale_test
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	"github.com/tailscale/tailscale-client-go/tailscale"
+	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"github.com/tailscale/terraform-provider-tailscale/tailscale"
 )
 
 const testTailnetKey = `
@@ -29,7 +33,7 @@ func TestProvider_TailscaleTailnetKey(t *testing.T) {
 		IsUnitTest: true,
 		PreCheck: func() {
 			testServer.ResponseCode = http.StatusOK
-			testServer.ResponseBody = tailscale.Key{
+			testServer.ResponseBody = tsclient.Key{
 				ID:  "test",
 				Key: "thisisatestkey",
 			}
@@ -42,8 +46,8 @@ func TestProvider_TailscaleTailnetKey(t *testing.T) {
 	})
 }
 
-func testTailnetKeyStruct(reusable bool) tailscale.Key {
-	var keyCapabilities tailscale.KeyCapabilities
+func testTailnetKeyStruct(reusable bool) tsclient.Key {
+	var keyCapabilities tsclient.KeyCapabilities
 	json.Unmarshal([]byte(`
 		{
 			"devices": {
@@ -57,7 +61,7 @@ func testTailnetKeyStruct(reusable bool) tailscale.Key {
 			}
 		}`), &keyCapabilities)
 	keyCapabilities.Devices.Create.Reusable = reusable
-	return tailscale.Key{
+	return tsclient.Key{
 		ID:           "test",
 		Key:          "thisisatestkey",
 		Description:  "Example key",
@@ -128,7 +132,7 @@ func TestProvider_TailscaleTailnetKeyInvalid(t *testing.T) {
 		IsUnitTest: true,
 		PreCheck: func() {
 			testServer.ResponseCode = http.StatusOK
-			testServer.ResponseBody = tailscale.Key{
+			testServer.ResponseBody = tsclient.Key{
 				ID:  "test",
 				Key: "thisisatestkey",
 			}
@@ -160,6 +164,122 @@ func TestProvider_TailscaleTailnetKeyInvalid(t *testing.T) {
 			// A reusable key with recreate=always, should be recreated.
 			setKeyStep(true, "always"),
 			checkInvalidKeyRecreated(true, true),
+		},
+	})
+}
+
+func TestAccTailscaleTailnetKey(t *testing.T) {
+	const resourceName = "tailscale_tailnet_key.test_key"
+
+	const testTailnetKeyCreate = `
+		resource "tailscale_tailnet_key" "test_key" {
+			reusable = true
+			ephemeral = true
+			preauthorized = true
+			tags = ["tag:a"]
+			expiry = 3600
+			description = "Test key"
+		}`
+
+	const testTailnetKeyUpdate = `
+		resource "tailscale_tailnet_key" "test_key" {
+			reusable = false
+			ephemeral = false
+			preauthorized = false
+			tags = ["tag:b"]
+			expiry = 7200
+			description = "Test key changed"
+		}`
+
+	checkProperties := func(expected *tsclient.Key, expectedExpirySeconds float64) func(client *tsclient.Client, rs *terraform.ResourceState) error {
+		return func(client *tsclient.Client, rs *terraform.ResourceState) error {
+			actual, err := client.Keys().Get(context.Background(), rs.Primary.ID)
+			if err != nil {
+				return err
+			}
+
+			if actual.Created.IsZero() {
+				return errors.New("created should be set")
+			}
+			if actual.Expires.Sub(actual.Created).Seconds() != expectedExpirySeconds {
+				return fmt.Errorf("wrong expires, want %s, got %s", actual.Created.Add(time.Duration(expectedExpirySeconds)*time.Second), actual.Expires)
+			}
+
+			// don't compare times
+			actual.Created = time.Time{}
+			actual.Expires = time.Time{}
+
+			// don't compare IDs
+			actual.ID = ""
+
+			if diff := cmp.Diff(expected, actual); diff != "" {
+				return fmt.Errorf("diff found (-got, +want): %s", diff)
+			}
+
+			return nil
+		}
+	}
+
+	var expectedKey tsclient.Key
+	expectedKey.Description = "Test key"
+	expectedKey.Capabilities.Devices.Create.Reusable = true
+	expectedKey.Capabilities.Devices.Create.Ephemeral = true
+	expectedKey.Capabilities.Devices.Create.Preauthorized = true
+	expectedKey.Capabilities.Devices.Create.Tags = []string{"tag:a"}
+
+	var expectedKeyUpdated tsclient.Key
+	expectedKeyUpdated.Description = "Test key changed"
+	expectedKeyUpdated.Capabilities.Devices.Create.Reusable = false
+	expectedKeyUpdated.Capabilities.Devices.Create.Ephemeral = false
+	expectedKeyUpdated.Capabilities.Devices.Create.Preauthorized = false
+	expectedKeyUpdated.Capabilities.Devices.Create.Tags = []string{"tag:b"}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories(t),
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					// Set up ACLs to allow the required tags
+					client := testAccProvider.Meta().(*tailscale.Clients).V2
+					err := client.PolicyFile().Set(context.Background(), `
+					{
+					    "tagOwners": {
+							"tag:a": ["autogroup:member"],
+							"tag:b": ["autogroup:member"],
+						},
+					}`, "")
+					if err != nil {
+						panic(err)
+					}
+				},
+				Config: testTailnetKeyCreate,
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName,
+						checkProperties(&expectedKey, 3600),
+					),
+					resource.TestCheckResourceAttr(resourceName, "reusable", "true"),
+					resource.TestCheckResourceAttr(resourceName, "ephemeral", "true"),
+					resource.TestCheckResourceAttr(resourceName, "preauthorized", "true"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "tags.*", "tag:a"),
+					resource.TestCheckResourceAttr(resourceName, "expiry", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test key"),
+				),
+			},
+			{
+				Config: testTailnetKeyUpdate,
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName,
+						checkProperties(&expectedKeyUpdated, 7200),
+					),
+					resource.TestCheckResourceAttr(resourceName, "reusable", "false"),
+					resource.TestCheckResourceAttr(resourceName, "ephemeral", "false"),
+					resource.TestCheckResourceAttr(resourceName, "preauthorized", "false"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "tags.*", "tag:b"),
+					resource.TestCheckResourceAttr(resourceName, "expiry", "7200"),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test key changed"),
+				),
+			},
 		},
 	})
 }
