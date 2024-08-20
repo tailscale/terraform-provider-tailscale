@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	"github.com/tailscale/tailscale-client-go/tailscale"
+	tsclient "github.com/tailscale/tailscale-client-go/v2"
 )
 
 func resourceTailnetKey() *schema.Resource {
@@ -104,7 +104,7 @@ func resourceTailnetKey() *schema.Resource {
 }
 
 func resourceTailnetKeyCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 	reusable := d.Get("reusable").(bool)
 	ephemeral := d.Get("ephemeral").(bool)
 	preauthorized := d.Get("preauthorized").(bool)
@@ -115,22 +115,21 @@ func resourceTailnetKeyCreate(ctx context.Context, d *schema.ResourceData, m int
 		tags = append(tags, tag.(string))
 	}
 
-	var capabilities tailscale.KeyCapabilities
-	capabilities.Devices.Create.Reusable = reusable
-	capabilities.Devices.Create.Ephemeral = ephemeral
-	capabilities.Devices.Create.Tags = tags
-	capabilities.Devices.Create.Preauthorized = preauthorized
+	var req tsclient.CreateKeyRequest
+	req.Capabilities.Devices.Create.Reusable = reusable
+	req.Capabilities.Devices.Create.Ephemeral = ephemeral
+	req.Capabilities.Devices.Create.Tags = tags
+	req.Capabilities.Devices.Create.Preauthorized = preauthorized
 
-	var opts []tailscale.CreateKeyOption
 	if hasExpiry {
-		opts = append(opts, tailscale.WithKeyExpiry(time.Duration(expiry.(int))*time.Second))
+		req.ExpirySeconds = int64(expiry.(int))
 	}
 
 	if hasDescription {
-		opts = append(opts, tailscale.WithKeyDescription(description.(string)))
+		req.Description = description.(string)
 	}
 
-	key, err := client.CreateKey(ctx, capabilities, opts...)
+	key, err := client.Keys().Create(ctx, req)
 	if err != nil {
 		return diagnosticsError(err, "Failed to create key")
 	}
@@ -157,11 +156,11 @@ func resourceTailnetKeyCreate(ctx context.Context, d *schema.ResourceData, m int
 }
 
 func resourceTailnetKeyDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 
-	err := client.DeleteKey(ctx, d.Id())
+	err := client.Keys().Delete(ctx, d.Id())
 	switch {
-	case tailscale.IsNotFound(err):
+	case tsclient.IsNotFound(err):
 		// Single-use keys may no longer be here, so we can ignore deletions that fail due to not-found errors.
 		return nil
 	case err != nil:
@@ -199,9 +198,9 @@ func resourceTailnetKeyDiff(ctx context.Context, d *schema.ResourceDiff, m inter
 		return nil
 	}
 
-	client := m.(*Clients).V1
-	key, err := client.GetKey(ctx, d.Id())
-	if tailscale.IsNotFound(err) || (err == nil && key.Invalid) {
+	client := m.(*Clients).V2
+	key, err := client.Keys().Get(ctx, d.Id())
+	if tsclient.IsNotFound(err) || (err == nil && key.Invalid) {
 		d.ForceNew("recreate_if_invalid")
 	}
 	return nil
@@ -210,11 +209,11 @@ func resourceTailnetKeyDiff(ctx context.Context, d *schema.ResourceDiff, m inter
 func resourceTailnetKeyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	recreateIfInvalid := shouldRecreateIfInvalid(d.Get("reusable").(bool), d.Get("recreate_if_invalid").(string))
 
-	client := m.(*Clients).V1
-	key, err := client.GetKey(ctx, d.Id())
+	client := m.(*Clients).V2
+	key, err := client.Keys().Get(ctx, d.Id())
 
 	switch {
-	case tailscale.IsNotFound(err):
+	case tsclient.IsNotFound(err):
 		if recreateIfInvalid {
 			d.SetId("")
 		}
