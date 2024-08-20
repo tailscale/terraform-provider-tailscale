@@ -2,6 +2,7 @@ package tailscale_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -48,7 +49,7 @@ func TestAccTailscaleDNSPreferences(t *testing.T) {
 			}
 
 			if diff := cmp.Diff(expected, actual); diff != "" {
-				t.Fatalf("diff found (-got, +want): %s", diff)
+				return fmt.Errorf("diff found (-got, +want): %s", diff)
 			}
 
 			return nil
