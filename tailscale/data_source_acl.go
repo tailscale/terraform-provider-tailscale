@@ -29,9 +29,9 @@ func dataSourceACL() *schema.Resource {
 }
 
 func dataSourceACLRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 
-	acl, err := client.RawACL(ctx)
+	acl, err := client.PolicyFile().Raw(ctx)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch ACL")
 	}
