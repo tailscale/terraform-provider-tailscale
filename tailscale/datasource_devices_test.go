@@ -1,4 +1,4 @@
-package tailscale_test
+package tailscale
 
 import (
 	"context"
@@ -8,8 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-
-	"github.com/tailscale/terraform-provider-tailscale/tailscale"
 )
 
 func TestAccTailscaleDevices(t *testing.T) {
@@ -31,7 +29,7 @@ func TestAccTailscaleDevices(t *testing.T) {
 			{
 				Config: `data "tailscale_devices" "all_devices" {}`,
 				Check: func(s *terraform.State) error {
-					client := testAccProvider.Meta().(*tailscale.Clients).V2
+					client := testAccProvider.Meta().(*Clients).V2
 					devices, err := client.Devices().List(context.Background())
 					if err != nil {
 						return fmt.Errorf("unable to list devices: %s", err)
@@ -39,7 +37,7 @@ func TestAccTailscaleDevices(t *testing.T) {
 
 					devicesByID := make(map[string]map[string]any)
 					for _, device := range devices {
-						m := tailscale.DeviceToMap(&device)
+						m := deviceToMap(&device)
 						m["id"] = device.ID
 						devicesByID[device.ID] = m
 					}
@@ -105,14 +103,14 @@ func TestAccTailscaleDevices(t *testing.T) {
 			{
 				Config: devicesDataSources.String(),
 				Check: func(s *terraform.State) error {
-					client := testAccProvider.Meta().(*tailscale.Clients).V2
+					client := testAccProvider.Meta().(*Clients).V2
 					devices, err := client.Devices().List(context.Background())
 					if err != nil {
 						return fmt.Errorf("unable to list devices: %s", err)
 					}
 
 					for _, device := range devices {
-						expected := tailscale.DeviceToMap(&device)
+						expected := deviceToMap(&device)
 						expected["id"] = device.ID
 						var nameComponent string
 						if device.Hostname != "" {

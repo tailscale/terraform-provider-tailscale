@@ -82,7 +82,7 @@ func dataSourceDevicesRead(ctx context.Context, d *schema.ResourceData, m interf
 			continue
 		}
 
-		m := DeviceToMap(&device)
+		m := deviceToMap(&device)
 		m["id"] = device.ID
 		deviceMaps = append(deviceMaps, m)
 	}

@@ -96,13 +96,13 @@ func dataSourceUserRead(ctx context.Context, d *schema.ResourceData, m interface
 	}
 
 	d.SetId(user.ID)
-	return setProperties(d, UserToMap(user))
+	return setProperties(d, userToMap(user))
 }
 
-// UserToMap converts the given user into a map representing the user as a
+// userToMap converts the given user into a map representing the user as a
 // resource in Terraform. This omits the "id" which is expected to be set
 // using [schema.ResourceData.SetId].
-func UserToMap(user *tsclient.User) map[string]any {
+func userToMap(user *tsclient.User) map[string]any {
 	return map[string]any{
 		"display_name":        user.DisplayName,
 		"login_name":          user.LoginName,

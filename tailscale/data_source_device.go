@@ -108,13 +108,13 @@ func dataSourceDeviceRead(ctx context.Context, d *schema.ResourceData, m interfa
 	}
 
 	d.SetId(selected.ID)
-	return setProperties(d, DeviceToMap(selected))
+	return setProperties(d, deviceToMap(selected))
 }
 
-// DeviceToMap converts the given device into a map representing the device as a
+// deviceToMap converts the given device into a map representing the device as a
 // resource in Terraform. This omits the "id" which is expected to be set
 // using [schema.ResourceData.SetId].
-func DeviceToMap(device *tsclient.Device) map[string]any {
+func deviceToMap(device *tsclient.Device) map[string]any {
 	return map[string]any{
 		"name":      device.Name,
 		"hostname":  device.Hostname,

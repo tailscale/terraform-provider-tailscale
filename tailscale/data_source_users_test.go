@@ -1,4 +1,4 @@
-package tailscale_test
+package tailscale
 
 import (
 	"context"
@@ -8,8 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-
-	"github.com/tailscale/terraform-provider-tailscale/tailscale"
 )
 
 func TestAccTailscaleUsers(t *testing.T) {
@@ -27,7 +25,7 @@ func TestAccTailscaleUsers(t *testing.T) {
 			{
 				Config: `data "tailscale_users" "all_users" {}`,
 				Check: func(s *terraform.State) error {
-					client := testAccProvider.Meta().(*tailscale.Clients).V2
+					client := testAccProvider.Meta().(*Clients).V2
 					users, err := client.Users().List(context.Background(), nil, nil)
 					if err != nil {
 						return fmt.Errorf("unable to list users: %s", err)
@@ -35,7 +33,7 @@ func TestAccTailscaleUsers(t *testing.T) {
 
 					usersByID := make(map[string]map[string]any)
 					for _, user := range users {
-						m := tailscale.UserToMap(&user)
+						m := userToMap(&user)
 						m["id"] = user.ID
 						usersByID[user.ID] = m
 					}
@@ -97,14 +95,14 @@ func TestAccTailscaleUsers(t *testing.T) {
 			{
 				Config: userDataSources.String(),
 				Check: func(s *terraform.State) error {
-					client := testAccProvider.Meta().(*tailscale.Clients).V2
+					client := testAccProvider.Meta().(*Clients).V2
 					users, err := client.Users().List(context.Background(), nil, nil)
 					if err != nil {
 						return fmt.Errorf("unable to list users: %s", err)
 					}
 
 					for _, user := range users {
-						expected := tailscale.UserToMap(&user)
+						expected := userToMap(&user)
 						expected["id"] = user.ID
 						resourceName := fmt.Sprintf("data.tailscale_user.%s", user.ID)
 						if err := checkPropertiesMatch(resourceName, s, expected); err != nil {

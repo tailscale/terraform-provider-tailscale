@@ -1,4 +1,4 @@
-package tailscale_test
+package tailscale
 
 import (
 	"bytes"
@@ -15,7 +15,6 @@ import (
 
 	tsclientv1 "github.com/tailscale/tailscale-client-go/tailscale"
 	tsclient "github.com/tailscale/tailscale-client-go/v2"
-	"github.com/tailscale/terraform-provider-tailscale/tailscale"
 )
 
 type TestServer struct {
@@ -29,7 +28,7 @@ type TestServer struct {
 	ResponseBody interface{}
 }
 
-func NewTestHarness(t *testing.T) (*tailscale.Clients, *TestServer) {
+func NewTestHarness(t *testing.T) (*Clients, *TestServer) {
 	t.Helper()
 
 	testServer := &TestServer{
@@ -69,7 +68,7 @@ func NewTestHarness(t *testing.T) (*tailscale.Clients, *TestServer) {
 		Tailnet: "example.com",
 	}
 
-	return &tailscale.Clients{client, clientV2}, testServer
+	return &Clients{client, clientV2}, testServer
 }
 
 func (t *TestServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
