@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	"github.com/tailscale/tailscale-client-go/tailscale"
+	tsclient "github.com/tailscale/tailscale-client-go/v2"
 )
 
 func dataSourceDevice() *schema.Resource {
@@ -71,31 +71,31 @@ func dataSourceDevice() *schema.Resource {
 }
 
 func dataSourceDeviceRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 
-	var filter func(d tailscale.Device) bool
+	var filter func(d tsclient.Device) bool
 	var filterDesc string
 
 	if name, ok := d.GetOk("name"); ok {
-		filter = func(d tailscale.Device) bool {
+		filter = func(d tsclient.Device) bool {
 			return d.Name == name.(string)
 		}
 		filterDesc = fmt.Sprintf("name=%q", name.(string))
 	}
 
 	if hostname, ok := d.GetOk("hostname"); ok {
-		filter = func(d tailscale.Device) bool {
+		filter = func(d tsclient.Device) bool {
 			return d.Hostname == hostname.(string)
 		}
 		filterDesc = fmt.Sprintf("hostname=%q", hostname.(string))
 	}
 
-	devices, err := client.Devices(ctx)
+	devices, err := client.Devices().List(ctx)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch devices")
 	}
 
-	var selected *tailscale.Device
+	var selected *tsclient.Device
 	for _, device := range devices {
 		if filter(device) {
 			selected = &device
@@ -108,26 +108,18 @@ func dataSourceDeviceRead(ctx context.Context, d *schema.ResourceData, m interfa
 	}
 
 	d.SetId(selected.ID)
+	return setProperties(d, DeviceToMap(selected))
+}
 
-	if err = d.Set("name", selected.Name); err != nil {
-		return diagnosticsError(err, "Failed to set name")
+// DeviceToMap converts the given device into a map representing the device as a
+// resource in Terraform. This omits the "id" which is expected to be set
+// using [schema.ResourceData.SetId].
+func DeviceToMap(device *tsclient.Device) map[string]any {
+	return map[string]any{
+		"name":      device.Name,
+		"hostname":  device.Hostname,
+		"user":      device.User,
+		"addresses": device.Addresses,
+		"tags":      device.Tags,
 	}
-
-	if err = d.Set("hostname", selected.Hostname); err != nil {
-		return diagnosticsError(err, "Failed to set hostname")
-	}
-
-	if err = d.Set("user", selected.User); err != nil {
-		return diagnosticsError(err, "Failed to set user")
-	}
-
-	if err = d.Set("addresses", selected.Addresses); err != nil {
-		return diagnosticsError(err, "Failed to set addresses")
-	}
-
-	if err = d.Set("tags", selected.Tags); err != nil {
-		return diagnosticsError(err, "Failed to set tags")
-	}
-
-	return nil
 }
