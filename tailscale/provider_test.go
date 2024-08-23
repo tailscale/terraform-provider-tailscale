@@ -1,4 +1,4 @@
-package tailscale_test
+package tailscale
 
 import (
 	"context"
@@ -14,12 +14,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
 	tsclient "github.com/tailscale/tailscale-client-go/v2"
-	"github.com/tailscale/terraform-provider-tailscale/tailscale"
 )
 
-var testClients *tailscale.Clients
+var testClients *Clients
 var testServer *TestServer
-var testAccProvider = tailscale.Provider()
+var testAccProvider = Provider()
 
 // testAccPreCheck ensures that the TAILSCALE_API_KEY and TAILSCALE_BASE_URL variables
 // are set and configures the provider. This must be called before running acceptance
@@ -53,19 +52,19 @@ func testAccProviderFactories(t *testing.T) map[string]func() (*schema.Provider,
 
 	return map[string]func() (*schema.Provider, error){
 		"tailscale": func() (*schema.Provider, error) {
-			return tailscale.Provider(), nil
+			return Provider(), nil
 		},
 	}
 }
 
 func TestProvider(t *testing.T) {
-	if err := tailscale.Provider().InternalValidate(); err != nil {
+	if err := Provider().InternalValidate(); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 }
 
 func TestProvider_Implemented(t *testing.T) {
-	var _ *schema.Provider = tailscale.Provider()
+	var _ *schema.Provider = Provider()
 }
 
 func testProviderFactories(t *testing.T) map[string]func() (*schema.Provider, error) {
@@ -74,7 +73,7 @@ func testProviderFactories(t *testing.T) map[string]func() (*schema.Provider, er
 	testClients, testServer = NewTestHarness(t)
 	return map[string]func() (*schema.Provider, error){
 		"tailscale": func() (*schema.Provider, error) {
-			return tailscale.Provider(func(p *schema.Provider) {
+			return Provider(func(p *schema.Provider) {
 				// Set up a test harness for the provider
 				p.ConfigureContextFunc = func(ctx context.Context, data *schema.ResourceData) (interface{}, diag.Diagnostics) {
 					return testClients, nil
@@ -140,7 +139,7 @@ func checkResourceRemoteProperties(resourceName string, check func(client *tscli
 			return fmt.Errorf("resource has no ID set")
 		}
 
-		client := testAccProvider.Meta().(*tailscale.Clients).V2
+		client := testAccProvider.Meta().(*Clients).V2
 		return check(client, rs)
 	}
 }
@@ -156,7 +155,7 @@ func checkResourceDestroyed(resourceName string, check func(client *tsclient.Cli
 			return fmt.Errorf("resource has no ID set")
 		}
 
-		client := testAccProvider.Meta().(*tailscale.Clients).V2
+		client := testAccProvider.Meta().(*Clients).V2
 		return check(client, rs)
 	}
 }

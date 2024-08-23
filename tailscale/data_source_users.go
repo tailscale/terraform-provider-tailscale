@@ -76,7 +76,7 @@ func dataSourceUsersRead(ctx context.Context, d *schema.ResourceData, m interfac
 
 	userMaps := make([]map[string]interface{}, 0, len(users))
 	for _, user := range users {
-		m := UserToMap(&user)
+		m := userToMap(&user)
 		m["id"] = user.ID
 		userMaps = append(userMaps, m)
 	}

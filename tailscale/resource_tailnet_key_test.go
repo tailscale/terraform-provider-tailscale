@@ -1,4 +1,4 @@
-package tailscale_test
+package tailscale
 
 import (
 	"context"
@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
 	tsclient "github.com/tailscale/tailscale-client-go/v2"
-	"github.com/tailscale/terraform-provider-tailscale/tailscale"
 )
 
 const testTailnetKey = `
@@ -240,7 +239,7 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 			{
 				PreConfig: func() {
 					// Set up ACLs to allow the required tags
-					client := testAccProvider.Meta().(*tailscale.Clients).V2
+					client := testAccProvider.Meta().(*Clients).V2
 					err := client.PolicyFile().Set(context.Background(), `
 					{
 					    "tagOwners": {
