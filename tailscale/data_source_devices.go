@@ -68,9 +68,9 @@ func dataSourceDevices() *schema.Resource {
 }
 
 func dataSourceDevicesRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V1
+	client := m.(*Clients).V2
 
-	devices, err := client.Devices(ctx)
+	devices, err := client.Devices().List(ctx)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch devices")
 	}
@@ -82,14 +82,9 @@ func dataSourceDevicesRead(ctx context.Context, d *schema.ResourceData, m interf
 			continue
 		}
 
-		deviceMaps = append(deviceMaps, map[string]interface{}{
-			"addresses": device.Addresses,
-			"name":      device.Name,
-			"hostname":  device.Hostname,
-			"user":      device.User,
-			"id":        device.ID,
-			"tags":      device.Tags,
-		})
+		m := DeviceToMap(&device)
+		m["id"] = device.ID
+		deviceMaps = append(deviceMaps, m)
 	}
 
 	if err = d.Set("devices", deviceMaps); err != nil {
