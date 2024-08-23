@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
@@ -212,8 +211,8 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 			// don't compare IDs
 			actual.ID = ""
 
-			if diff := cmp.Diff(expected, actual); diff != "" {
-				return fmt.Errorf("diff found (-got, +want): %s", diff)
+			if err := assertEqual(expected, actual, "wrong key"); err != nil {
+				return err
 			}
 
 			return nil

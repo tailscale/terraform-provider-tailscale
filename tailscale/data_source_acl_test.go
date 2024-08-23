@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
@@ -37,8 +36,8 @@ func TestAccTailscaleACL(t *testing.T) {
 
 					rs := s.RootModule().Resources[resourceName].Primary
 					actual := rs.Attributes["hujson"]
-					if diff := cmp.Diff(expected, actual); diff != "" {
-						return fmt.Errorf("wrong ACL (-got, +want): %s", diff)
+					if err := assertEqual(expected, actual, "wrong ACL"); err != nil {
+						return err
 					}
 
 					return nil

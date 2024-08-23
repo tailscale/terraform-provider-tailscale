@@ -2,10 +2,8 @@ package tailscale_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
@@ -42,8 +40,8 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 				return err
 			}
 
-			if diff := cmp.Diff(expected, actual); diff != "" {
-				return fmt.Errorf("diff found (-got, +want): %s", diff)
+			if err := assertEqual(expected, actual, "wrong Tailnet settings"); err != nil {
+				return err
 			}
 
 			return nil

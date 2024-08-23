@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -189,5 +190,14 @@ func checkPropertiesMatch(resourceName string, s *terraform.State, expected map[
 		}
 	}
 
+	return nil
+}
+
+// assertEqual compares the expected and actual using [cmp.Diff] and reports an
+// error if they're not equal.
+func assertEqual(want, got any, errorMessage string) error {
+	if diff := cmp.Diff(want, got); diff != "" {
+		return fmt.Errorf("%s (-want +got): %s", errorMessage, diff)
+	}
 	return nil
 }
