@@ -2,11 +2,9 @@ package tailscale_test
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
@@ -53,8 +51,8 @@ func TestAccTailscaleDNSNameservers(t *testing.T) {
 				return err
 			}
 
-			if diff := cmp.Diff(actual, expected); diff != "" {
-				return fmt.Errorf("wrong nameservers: (-got+want) \n%s", diff)
+			if err := assertEqual(expected, actual, "wrong nameservers"); err != nil {
+				return err
 			}
 
 			return nil
