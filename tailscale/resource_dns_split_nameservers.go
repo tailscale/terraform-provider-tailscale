@@ -39,7 +39,7 @@ func resourceDNSSplitNameservers() *schema.Resource {
 }
 
 func resourceSplitDNSNameserversRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 	splitDNS, err := client.DNS().SplitDNS(ctx)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch split DNS configs")
@@ -61,7 +61,7 @@ func resourceSplitDNSNameserversRead(ctx context.Context, d *schema.ResourceData
 }
 
 func resourceSplitDNSNameserversCreateOrUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 	nameserversSet := d.Get("nameservers").(*schema.Set)
 	domain := d.Get("domain").(string)
 
@@ -84,7 +84,7 @@ func resourceSplitDNSNameserversCreateOrUpdate(ctx context.Context, d *schema.Re
 }
 
 func resourceSplitDNSNameserversDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 	domain := d.Get("domain").(string)
 
 	req := make(tsclient.SplitDNSRequest)

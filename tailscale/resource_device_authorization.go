@@ -5,6 +5,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	tsclient "github.com/tailscale/tailscale-client-go/v2"
 )
 
 func resourceDeviceAuthorization() *schema.Resource {
@@ -33,7 +35,7 @@ func resourceDeviceAuthorization() *schema.Resource {
 }
 
 func resourceDeviceAuthorizationRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 	deviceID := d.Id()
 
 	device, err := client.Devices().Get(ctx, deviceID)
@@ -48,7 +50,7 @@ func resourceDeviceAuthorizationRead(ctx context.Context, d *schema.ResourceData
 }
 
 func resourceDeviceAuthorizationCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 	deviceID := d.Get("device_id").(string)
 	authorized := d.Get("authorized").(bool)
 
@@ -63,7 +65,7 @@ func resourceDeviceAuthorizationCreate(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceDeviceAuthorizationUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 	deviceID := d.Get("device_id").(string)
 
 	device, err := client.Devices().Get(ctx, deviceID)

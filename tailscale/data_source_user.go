@@ -83,7 +83,7 @@ func dataSourceUser() *schema.Resource {
 }
 
 func dataSourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 
 	id, hasID := d.Get("id").(string)
 	if !hasID {

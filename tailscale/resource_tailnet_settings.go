@@ -74,7 +74,7 @@ func resourceTailnetSettings() *schema.Resource {
 }
 
 func resourceTailnetSettingsRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 
 	settings, err := client.TailnetSettings().Get(ctx)
 	if err != nil {
@@ -126,7 +126,7 @@ func resourceTailnetSettingsDoUpdate(ctx context.Context, d *schema.ResourceData
 		PostureIdentityCollectionOn:            optional[bool](d, "posture_identity_collection_on"),
 	}
 
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 	if err := client.TailnetSettings().Update(ctx, settings); err != nil {
 		return diagnosticsError(err, "Failed to update tailnet settings")
 	}

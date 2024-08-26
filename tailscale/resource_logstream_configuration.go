@@ -68,7 +68,7 @@ func resourceLogstreamConfiguration() *schema.Resource {
 }
 
 func resourceLogstreamConfigurationCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 
 	logType := d.Get("log_type").(string)
 	destinationType := d.Get("destination_type").(string)
@@ -92,7 +92,7 @@ func resourceLogstreamConfigurationCreate(ctx context.Context, d *schema.Resourc
 }
 
 func resourceLogstreamConfigurationRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 
 	logstream, err := client.Logging().LogstreamConfiguration(ctx, tsclient.LogType(d.Id()))
 	if err != nil {
@@ -124,7 +124,7 @@ func resourceLogstreamUpdate(ctx context.Context, d *schema.ResourceData, m inte
 }
 
 func resourceLogstreamDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 
 	err := client.Logging().DeleteLogstreamConfiguration(ctx, tsclient.LogType(d.Id()))
 	if err != nil {

@@ -30,7 +30,7 @@ func resourceDNSPreferences() *schema.Resource {
 }
 
 func resourceDNSPreferencesRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 
 	preferences, err := client.DNS().Preferences(ctx)
 	if err != nil {
@@ -45,7 +45,7 @@ func resourceDNSPreferencesRead(ctx context.Context, d *schema.ResourceData, m i
 }
 
 func resourceDNSPreferencesCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 	magicDNS := d.Get("magic_dns").(bool)
 	preferences := tsclient.DNSPreferences{
 		MagicDNS: magicDNS,
@@ -64,7 +64,7 @@ func resourceDNSPreferencesUpdate(ctx context.Context, d *schema.ResourceData, m
 		return resourceDNSPreferencesRead(ctx, d, m)
 	}
 
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 	magicDNS := d.Get("magic_dns").(bool)
 
 	preferences := tsclient.DNSPreferences{
@@ -79,7 +79,7 @@ func resourceDNSPreferencesUpdate(ctx context.Context, d *schema.ResourceData, m
 }
 
 func resourceDNSPreferencesDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 
 	if err := client.DNS().SetPreferences(ctx, tsclient.DNSPreferences{}); err != nil {
 		return diagnosticsError(err, "Failed to set dns preferences")
