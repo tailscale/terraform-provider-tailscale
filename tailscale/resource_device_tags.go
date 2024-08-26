@@ -5,6 +5,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	tsclient "github.com/tailscale/tailscale-client-go/v2"
 )
 
 func resourceDeviceTags() *schema.Resource {
@@ -44,7 +46,7 @@ func resourceDeviceTags() *schema.Resource {
 }
 
 func resourceDeviceTagsRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 	deviceID := d.Get("device_id").(string)
 
 	device, err := client.Devices().Get(ctx, deviceID)
@@ -58,7 +60,7 @@ func resourceDeviceTagsRead(ctx context.Context, d *schema.ResourceData, m inter
 }
 
 func resourceDeviceTagsSet(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 	deviceID := d.Get("device_id").(string)
 	set := d.Get("tags").(*schema.Set)
 
@@ -76,7 +78,7 @@ func resourceDeviceTagsSet(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceDeviceTagsDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 	deviceID := d.Get("device_id").(string)
 
 	if err := client.Devices().SetTags(ctx, deviceID, []string{}); err != nil {

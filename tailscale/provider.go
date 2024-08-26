@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	tsclientv1 "github.com/tailscale/tailscale-client-go/tailscale"
 	tsclient "github.com/tailscale/tailscale-client-go/v2"
 )
 
@@ -22,12 +21,6 @@ import (
 var providerVersion = "dev"
 
 type ProviderOption func(p *schema.Provider)
-
-// Clients contains both v1 and v2 Tailscale Clients
-type Clients struct {
-	V1 *tsclientv1.Client
-	V2 *tsclient.Client
-}
 
 // Provider returns the *schema.Provider instance that implements the terraform provider.
 func Provider(options ...ProviderOption) *schema.Provider {
@@ -160,45 +153,24 @@ func providerConfigure(_ context.Context, provider *schema.Provider, d *schema.R
 			oauthScopes[i] = scope.(string)
 		}
 
-		client, err := tsclientv1.NewClient(
-			"",
-			tailnet,
-			tsclientv1.WithBaseURL(baseURL),
-			tsclientv1.WithUserAgent(userAgent),
-			tsclientv1.WithOAuthClientCredentials(oauthClientID, oauthClientSecret, oauthScopes),
-		)
-		if err != nil {
-			return nil, diagnosticsError(err, "failed to initialise client")
-		}
-
-		clientV2 := &tsclient.Client{
+		client := &tsclient.Client{
 			BaseURL:   parsedBaseURL,
 			UserAgent: userAgent,
 			Tailnet:   tailnet,
 		}
-		clientV2.UseOAuth(oauthClientID, oauthClientSecret, oauthScopes)
+		client.UseOAuth(oauthClientID, oauthClientSecret, oauthScopes)
 
-		return &Clients{client, clientV2}, nil
+		return client, nil
 	}
 
-	client, err := tsclientv1.NewClient(
-		apiKey,
-		tailnet,
-		tsclientv1.WithBaseURL(baseURL),
-		tsclientv1.WithUserAgent(userAgent),
-	)
-	if err != nil {
-		return nil, diagnosticsError(err, "failed to initialise client")
-	}
-
-	clientV2 := &tsclient.Client{
+	client := &tsclient.Client{
 		BaseURL:   parsedBaseURL,
 		UserAgent: userAgent,
 		APIKey:    apiKey,
 		Tailnet:   tailnet,
 	}
 
-	return &Clients{client, clientV2}, nil
+	return client, nil
 }
 
 func diagnosticsError(err error, message string, args ...interface{}) diag.Diagnostics {
@@ -215,7 +187,7 @@ func diagnosticsError(err error, message string, args ...interface{}) diag.Diagn
 		},
 	}
 
-	if details := tsclientv1.ErrorData(err); len(details) > 0 {
+	if details := tsclient.ErrorData(err); len(details) > 0 {
 		for _, dt := range details {
 			for _, e := range dt.Errors {
 				diags = append(diags, diag.Diagnostic{

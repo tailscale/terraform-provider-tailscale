@@ -57,7 +57,7 @@ func dataSourceUsers() *schema.Resource {
 }
 
 func dataSourceUsersRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 
 	var userType *tsclient.UserType
 	if _userType, ok := d.Get("type").(string); ok {

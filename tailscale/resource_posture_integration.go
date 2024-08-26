@@ -60,7 +60,7 @@ func resourcePostureIntegration() *schema.Resource {
 }
 
 func resourcePostureIntegrationRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 
 	integration, err := client.DevicePosture().GetIntegration(ctx, d.Id())
 	if err != nil {
@@ -87,7 +87,7 @@ func resourcePostureIntegrationUpdateFromRemote(d *schema.ResourceData, integrat
 }
 
 func resourcePostureIntegrationCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 
 	integration, err := client.DevicePosture().CreateIntegration(
 		ctx,
@@ -108,7 +108,7 @@ func resourcePostureIntegrationCreate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourcePostureIntegrationUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 
 	integration, err := client.DevicePosture().UpdateIntegration(
 		ctx,
@@ -127,7 +127,7 @@ func resourcePostureIntegrationUpdate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourcePostureIntegrationDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Clients).V2
+	client := m.(*tsclient.Client)
 
 	err := client.DevicePosture().DeleteIntegration(ctx, d.Id())
 	if err != nil {

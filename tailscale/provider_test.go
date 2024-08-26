@@ -16,7 +16,7 @@ import (
 	tsclient "github.com/tailscale/tailscale-client-go/v2"
 )
 
-var testClients *Clients
+var testClient *tsclient.Client
 var testServer *TestServer
 var testAccProvider = Provider()
 
@@ -70,13 +70,13 @@ func TestProvider_Implemented(t *testing.T) {
 func testProviderFactories(t *testing.T) map[string]func() (*schema.Provider, error) {
 	t.Helper()
 
-	testClients, testServer = NewTestHarness(t)
+	testClient, testServer = NewTestHarness(t)
 	return map[string]func() (*schema.Provider, error){
 		"tailscale": func() (*schema.Provider, error) {
 			return Provider(func(p *schema.Provider) {
 				// Set up a test harness for the provider
 				p.ConfigureContextFunc = func(ctx context.Context, data *schema.ResourceData) (interface{}, diag.Diagnostics) {
-					return testClients, nil
+					return testClient, nil
 				}
 
 				// Don't require any of the global configuration
@@ -139,7 +139,7 @@ func checkResourceRemoteProperties(resourceName string, check func(client *tscli
 			return fmt.Errorf("resource has no ID set")
 		}
 
-		client := testAccProvider.Meta().(*Clients).V2
+		client := testAccProvider.Meta().(*tsclient.Client)
 		return check(client, rs)
 	}
 }
@@ -155,7 +155,7 @@ func checkResourceDestroyed(resourceName string, check func(client *tsclient.Cli
 			return fmt.Errorf("resource has no ID set")
 		}
 
-		client := testAccProvider.Meta().(*Clients).V2
+		client := testAccProvider.Meta().(*tsclient.Client)
 		return check(client, rs)
 	}
 }

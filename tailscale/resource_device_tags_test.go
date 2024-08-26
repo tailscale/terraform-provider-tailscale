@@ -67,7 +67,7 @@ func TestAccTailscaleDeviceTags(t *testing.T) {
 			{
 				PreConfig: func() {
 					// Set up ACLs to allow the required tags
-					client := testAccProvider.Meta().(*Clients).V2
+					client := testAccProvider.Meta().(*tsclient.Client)
 					err := client.PolicyFile().Set(context.Background(), `
 					{
 					    "tagOwners": {
