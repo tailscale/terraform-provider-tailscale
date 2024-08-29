@@ -12,7 +12,7 @@ require (
 	github.com/tailscale/hujson v0.0.0-20221223112325-20486734a56a
 	github.com/tailscale/tailscale-client-go/v2 v2.0.0-20240826162147-08f128738726
 	golang.org/x/tools v0.24.0
-	tailscale.com v1.72.0
+	tailscale.com v1.72.1
 )
 
 require (
