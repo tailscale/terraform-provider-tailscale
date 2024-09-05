@@ -49,7 +49,18 @@ func dataSourceUsers() *schema.Resource {
 				Type:        schema.TypeList,
 				Description: "The list of users in the tailnet",
 				Elem: &schema.Resource{
-					Schema: userSchema,
+					Schema: combinedSchemas(commonUserSchema, map[string]*schema.Schema{
+						"id": {
+							Type:        schema.TypeString,
+							Description: "The unique identifier for the user.",
+							Computed:    true,
+						},
+						"login_name": {
+							Type:        schema.TypeString,
+							Description: "The emailish login name of the user.",
+							Computed:    true,
+						},
+					}),
 				},
 			},
 		},
@@ -77,7 +88,6 @@ func dataSourceUsersRead(ctx context.Context, d *schema.ResourceData, m interfac
 	userMaps := make([]map[string]interface{}, 0, len(users))
 	for _, user := range users {
 		m := userToMap(&user)
-		m["id"] = user.ID
 		userMaps = append(userMaps, m)
 	}
 

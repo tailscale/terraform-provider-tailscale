@@ -5,6 +5,7 @@ package tailscale
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/url"
 	"os"
 	"time"
@@ -287,4 +288,13 @@ func optional[T any](d *schema.ResourceData, key string) *T {
 // isAcceptanceTesting returns true if we're running acceptance tests.
 func isAcceptanceTesting() bool {
 	return os.Getenv("TF_ACC") != ""
+}
+
+// combinedSchemas creates a schema that combines two supplied schemas.
+// Properties in schema b overwrite the same properties in schema b.
+func combinedSchemas(a, b map[string]*schema.Schema) map[string]*schema.Schema {
+	out := make(map[string]*schema.Schema, len(a)+len(b))
+	maps.Copy(out, a)
+	maps.Copy(out, b)
+	return out
 }
