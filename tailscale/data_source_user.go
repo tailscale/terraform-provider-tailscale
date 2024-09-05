@@ -2,7 +2,6 @@ package tailscale
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -11,20 +10,10 @@ import (
 	tsclient "github.com/tailscale/tailscale-client-go/v2"
 )
 
-var userSchema = map[string]*schema.Schema{
-	"id": {
-		Type:        schema.TypeString,
-		Description: "The unique identifier for the user.",
-		Required:    true,
-	},
+var commonUserSchema = map[string]*schema.Schema{
 	"display_name": {
 		Type:        schema.TypeString,
 		Description: "The name of the user.",
-		Computed:    true,
-	},
-	"login_name": {
-		Type:        schema.TypeString,
-		Description: "The emailish login name of the user.",
 		Computed:    true,
 	},
 	"profile_pic_url": {
@@ -78,25 +67,58 @@ func dataSourceUser() *schema.Resource {
 	return &schema.Resource{
 		Description: "The user data source describes a single user in a tailnet",
 		ReadContext: dataSourceUserRead,
-		Schema:      userSchema,
+		Schema: combinedSchemas(commonUserSchema, map[string]*schema.Schema{
+			"id": {
+				Type:         schema.TypeString,
+				Description:  "The unique identifier for the user.",
+				Optional:     true,
+				ExactlyOneOf: []string{"id", "login_name"},
+			},
+			"login_name": {
+				Type:         schema.TypeString,
+				Description:  "The emailish login name of the user.",
+				Optional:     true,
+				ExactlyOneOf: []string{"id", "login_name"},
+			},
+		}),
 	}
 }
 
 func dataSourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*tsclient.Client)
 
-	id, hasID := d.Get("id").(string)
-	if !hasID {
-		return diagnosticsError(errors.New("data_source_user missing user ID"), "data_source_user missing user ID")
+	if id := d.Id(); id != "" {
+		user, err := client.Users().Get(ctx, id)
+		if err != nil {
+			return diagnosticsError(err, "Failed to fetch user with id %s", id)
+		}
+		return setProperties(d, userToMap(user))
 	}
 
-	user, err := client.Users().Get(ctx, id)
+	loginName, ok := d.GetOk("login_name")
+	if !ok {
+		return diag.Errorf("please specify an id or login_name for the user")
+	}
+
+	users, err := client.Users().List(ctx, nil, nil)
 	if err != nil {
-		return diagnosticsError(err, "Failed to fetch user with id %s", id)
+		return diagnosticsError(err, "Failed to fetch users")
 	}
 
-	d.SetId(user.ID)
-	return setProperties(d, userToMap(user))
+	var selected *tsclient.User
+	for _, user := range users {
+		if user.LoginName == loginName.(string) {
+			selected = &user
+			break
+		}
+	}
+
+	if selected == nil {
+		return diag.Errorf("Could not find user with login name %s", loginName)
+	}
+
+	d.SetId(selected.ID)
+	return setProperties(d, userToMap(selected))
 }
 
 // userToMap converts the given user into a map representing the user as a
@@ -104,6 +126,7 @@ func dataSourceUserRead(ctx context.Context, d *schema.ResourceData, m interface
 // using [schema.ResourceData.SetId].
 func userToMap(user *tsclient.User) map[string]any {
 	return map[string]any{
+		"id":                  user.ID,
 		"display_name":        user.DisplayName,
 		"login_name":          user.LoginName,
 		"profile_pic_url":     user.ProfilePicURL,
