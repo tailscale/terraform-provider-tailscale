@@ -3,12 +3,18 @@
 page_title: "tailscale_device_subnet_routes Resource - terraform-provider-tailscale"
 subcategory: ""
 description: |-
-  The device_subnet_routes resource allows you to configure subnet routes for your Tailscale devices. See https://tailscale.com/kb/1019/subnets for more information.
+  "The device_subnet_routes resource allows you to configure enabled subnet routes for your Tailscale devices. See https://tailscale.com/kb/1019/subnets for more information.
+  Routes must be both advertised and enabled for a device to act as a subnet router or exit node. Routes must be advertised directly from the device and cannot be managed through Terraform. If a device is advertising routes, they are not exposed to traffic until they are enabled. Conversely, if routes are enabled before they are advertised, they are not available for routing until the device in question is advertising them.
+  Note: all routes enabled for the device through the admin console or autoApprovers in the ACL must be explicitly added to the routes attribute of this resource to avoid configuration drift.
 ---
 
 # tailscale_device_subnet_routes (Resource)
 
-The device_subnet_routes resource allows you to configure subnet routes for your Tailscale devices. See https://tailscale.com/kb/1019/subnets for more information.
+"The device_subnet_routes resource allows you to configure enabled subnet routes for your Tailscale devices. See https://tailscale.com/kb/1019/subnets for more information.
+
+Routes must be both advertised and enabled for a device to act as a subnet router or exit node. Routes must be advertised directly from the device and cannot be managed through Terraform. If a device is advertising routes, they are not exposed to traffic until they are enabled. Conversely, if routes are enabled before they are advertised, they are not available for routing until the device in question is advertising them.
+
+Note: all routes enabled for the device through the admin console or autoApprovers in the ACL must be explicitly added to the routes attribute of this resource to avoid configuration drift.
 
 ## Example Usage
 
