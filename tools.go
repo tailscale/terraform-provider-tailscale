@@ -1,3 +1,6 @@
+// Copyright (c) David Bond, Tailscale Inc, & Contributors
+// SPDX-License-Identifier: MIT
+
 //go:build tools
 
 package tools
