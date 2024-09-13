@@ -1,3 +1,6 @@
+// Copyright (c) David Bond, Tailscale Inc, & Contributors
+// SPDX-License-Identifier: MIT
+
 // Package tailscale describes the resources and data sources provided by the terraform provider. Each resource
 // or data source is described within its own file.
 package tailscale

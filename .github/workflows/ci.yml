@@ -113,3 +113,11 @@ jobs:
         run: |
           git add .
           git diff --staged --exit-code
+
+  licenses:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: check licenses
+        run: ./scripts/check_license_headers.sh .
