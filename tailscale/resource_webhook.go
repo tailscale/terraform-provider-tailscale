@@ -54,6 +54,7 @@ func resourceWebhook() *schema.Resource {
 					Type: schema.TypeString,
 					ValidateFunc: validation.StringInSlice(
 						[]string{
+							string(tsclient.WebhookCategoryTailnetManagement),
 							string(tsclient.WebhookNodeCreated),
 							string(tsclient.WebhookNodeNeedsApproval),
 							string(tsclient.WebhookNodeApproved),
@@ -68,6 +69,7 @@ func resourceWebhook() *schema.Resource {
 							string(tsclient.WebhookUserDeleted),
 							string(tsclient.WebhookUserApproved),
 							string(tsclient.WebhookUserRoleUpdated),
+							string(tsclient.WebhookCategoryDeviceMisconfigurations),
 							string(tsclient.WebhookSubnetIPForwardingNotEnabled),
 							string(tsclient.WebhookExitNodeIPForwardingNotEnabled),
 						},
