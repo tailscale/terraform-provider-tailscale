@@ -161,8 +161,12 @@ func providerConfigure(_ context.Context, provider *schema.Provider, d *schema.R
 			BaseURL:   parsedBaseURL,
 			UserAgent: userAgent,
 			Tailnet:   tailnet,
+			HTTP: tsclient.OAuthConfig{
+				ClientID:     oauthClientID,
+				ClientSecret: oauthClientSecret,
+				Scopes:       oauthScopes,
+			}.HTTPClient(),
 		}
-		client.UseOAuth(oauthClientID, oauthClientSecret, oauthScopes)
 
 		return client, nil
 	}
