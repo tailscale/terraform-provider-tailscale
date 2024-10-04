@@ -37,3 +37,12 @@ resource "tailscale_device_key" "example_key" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+## Import
+
+Import is supported using the following syntax:
+
+```shell
+# Device key can be imported using the device id, e.g.,
+terraform import tailscale_device_key.sample 123456789
+```

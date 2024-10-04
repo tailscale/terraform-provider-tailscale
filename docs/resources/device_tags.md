@@ -34,3 +34,12 @@ resource "tailscale_device_tags" "sample_tags" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+## Import
+
+Import is supported using the following syntax:
+
+```shell
+# Device tags can be imported using the device id, e.g.,
+terraform import tailscale_device_tags.sample 123456789
+```

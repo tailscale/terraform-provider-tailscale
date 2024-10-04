@@ -19,6 +19,9 @@ func resourceDNSSearchPaths() *schema.Resource {
 		UpdateContext: resourceDNSSearchPathsUpdate,
 		DeleteContext: resourceDNSSearchPathsDelete,
 		CreateContext: resourceDNSSearchPathsCreate,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 		Schema: map[string]*schema.Schema{
 			"search_paths": {
 				Type: schema.TypeList,
