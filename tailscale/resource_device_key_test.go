@@ -78,6 +78,11 @@ func TestAccTailscaleDeviceKey(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "key_expiry_disabled", "true"),
 				),
 			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }

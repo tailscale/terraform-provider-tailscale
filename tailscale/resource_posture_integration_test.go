@@ -128,6 +128,12 @@ func TestAccTailscalePostureIntegration(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "client_secret", "test-secret3"),
 				),
 			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"client_secret"},
+			},
 		},
 	})
 }

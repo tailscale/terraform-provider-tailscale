@@ -98,6 +98,11 @@ func TestAccTailscaleDeviceTags(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr(resourceName, "tags.*", "tag:c"),
 				),
 			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
