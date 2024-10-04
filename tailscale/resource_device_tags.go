@@ -30,6 +30,9 @@ func resourceDeviceTags() *schema.Resource {
 		CreateContext: resourceDeviceTagsSet,
 		UpdateContext: resourceDeviceTagsSet,
 		DeleteContext: deleteContext,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 		Schema: map[string]*schema.Schema{
 			"device_id": {
 				Type:        schema.TypeString,
@@ -50,14 +53,14 @@ func resourceDeviceTags() *schema.Resource {
 
 func resourceDeviceTagsRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*tsclient.Client)
-	deviceID := d.Get("device_id").(string)
+	deviceID := d.Id()
 
 	device, err := client.Devices().Get(ctx, deviceID)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch device")
 	}
 
-	d.SetId(device.ID)
+	d.Set("device_id", device.ID)
 	d.Set("tags", device.Tags)
 	return nil
 }

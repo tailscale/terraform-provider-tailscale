@@ -26,6 +26,9 @@ func resourceDeviceSubnetRoutes() *schema.Resource {
 		CreateContext: resourceDeviceSubnetRoutesCreate,
 		UpdateContext: resourceDeviceSubnetRoutesUpdate,
 		DeleteContext: resourceDeviceSubnetRoutesDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 		Schema: map[string]*schema.Schema{
 			"device_id": {
 				Type:        schema.TypeString,
@@ -46,13 +49,14 @@ func resourceDeviceSubnetRoutes() *schema.Resource {
 
 func resourceDeviceSubnetRoutesRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*tsclient.Client)
-	deviceID := d.Get("device_id").(string)
+	deviceID := d.Id()
 
 	routes, err := client.Devices().SubnetRoutes(ctx, deviceID)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch device subnet routes")
 	}
 
+	d.Set("device_id", deviceID)
 	if err = d.Set("routes", routes.Enabled); err != nil {
 		return diag.FromErr(err)
 	}

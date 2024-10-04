@@ -53,3 +53,12 @@ resource "tailscale_device_subnet_routes" "sample_exit_node" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+## Import
+
+Import is supported using the following syntax:
+
+```shell
+# Device subnet rules can be imported using the device id, e.g.,
+terraform import tailscale_device_subnet_routes.sample 123456789
+```

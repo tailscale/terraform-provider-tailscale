@@ -19,6 +19,9 @@ func resourceDeviceKey() *schema.Resource {
 		CreateContext: resourceDeviceKeyCreate,
 		DeleteContext: resourceDeviceKeyDelete,
 		UpdateContext: resourceDeviceKeyUpdate,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 		Schema: map[string]*schema.Schema{
 			"device_id": {
 				Type:        schema.TypeString,
@@ -67,13 +70,14 @@ func resourceDeviceKeyDelete(ctx context.Context, d *schema.ResourceData, m inte
 
 func resourceDeviceKeyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*tsclient.Client)
-	deviceID := d.Get("device_id").(string)
+	deviceID := d.Id()
 
 	device, err := client.Devices().Get(ctx, deviceID)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch devices")
 	}
 
+	d.Set("device_id", device.ID)
 	if err = d.Set("key_expiry_disabled", device.KeyExpiryDisabled); err != nil {
 		return diagnosticsError(err, "failed to set key_expiry_disabled field")
 	}

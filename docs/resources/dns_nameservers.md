@@ -31,3 +31,12 @@ resource "tailscale_dns_nameservers" "sample_nameservers" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+## Import
+
+Import is supported using the following syntax:
+
+```shell
+# ID doesn't matter.
+terraform import tailscale_dns_nameservers.sample dns_nameservers
+```
