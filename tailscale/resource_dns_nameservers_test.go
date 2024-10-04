@@ -86,6 +86,11 @@ func TestAccTailscaleDNSNameservers(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr(resourceName, "nameservers.*", "1.1.1.1"),
 				),
 			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }

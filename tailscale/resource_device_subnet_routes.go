@@ -27,7 +27,17 @@ func resourceDeviceSubnetRoutes() *schema.Resource {
 		UpdateContext: resourceDeviceSubnetRoutesUpdate,
 		DeleteContext: resourceDeviceSubnetRoutesDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: func(ctx context.Context, d *schema.ResourceData, meta any) ([]*schema.ResourceData, error) {
+				// We can't do a simple passthrough here as the ID used for this resource is a
+				// randomly generated UUID and we need to instead fetch based on the device_id.
+				//
+				// TODO(mpminardi): investigate changing the ID in state to be the device_id instead
+				// in an eventual major version bump.
+				d.Set("device_id", d.Id())
+				d.SetId(createUUID())
+
+				return []*schema.ResourceData{d}, nil
+			},
 		},
 		Schema: map[string]*schema.Schema{
 			"device_id": {
@@ -49,14 +59,13 @@ func resourceDeviceSubnetRoutes() *schema.Resource {
 
 func resourceDeviceSubnetRoutesRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*tsclient.Client)
-	deviceID := d.Id()
+	deviceID := d.Get("device_id").(string)
 
 	routes, err := client.Devices().SubnetRoutes(ctx, deviceID)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch device subnet routes")
 	}
 
-	d.Set("device_id", deviceID)
 	if err = d.Set("routes", routes.Enabled); err != nil {
 		return diag.FromErr(err)
 	}

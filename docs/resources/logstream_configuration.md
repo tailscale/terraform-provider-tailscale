@@ -38,3 +38,12 @@ resource "tailscale_logstream_configuration" "sample_logstream_configuration" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+## Import
+
+Import is supported using the following syntax:
+
+```shell
+# Logstream configuration can be imported using the logstream configuration id, e.g.,
+terraform import tailscale_logstream_configuration.sample_logstream_configuration 123456789
+```
