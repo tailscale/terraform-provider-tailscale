@@ -38,3 +38,12 @@ resource "tailscale_posture_integration" "sample_posture_integration" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+## Import
+
+Import is supported using the following syntax:
+
+```shell
+# Posture integration can be imported using the posture integration id, e.g.,
+terraform import tailscale_posture_integration.sample_posture_integration 123456789
+```

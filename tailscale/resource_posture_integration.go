@@ -20,6 +20,9 @@ func resourcePostureIntegration() *schema.Resource {
 		CreateContext: resourcePostureIntegrationCreate,
 		UpdateContext: resourcePostureIntegrationUpdate,
 		DeleteContext: resourcePostureIntegrationDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 		Schema: map[string]*schema.Schema{
 			"posture_provider": {
 				Type:        schema.TypeString,

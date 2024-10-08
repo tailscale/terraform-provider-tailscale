@@ -20,6 +20,9 @@ func resourceLogstreamConfiguration() *schema.Resource {
 		CreateContext: resourceLogstreamConfigurationCreate,
 		UpdateContext: resourceLogstreamUpdate,
 		DeleteContext: resourceLogstreamDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 		Schema: map[string]*schema.Schema{
 			"log_type": {
 				Type:        schema.TypeString,

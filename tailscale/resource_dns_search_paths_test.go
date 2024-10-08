@@ -86,6 +86,11 @@ func TestAccTailscaleDNSSearchPaths(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr(resourceName, "search_paths.*", "example.com"),
 				),
 			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
