@@ -1,6 +1,7 @@
 module github.com/tailscale/terraform-provider-tailscale
 
 go 1.22.0
+toolchain go1.23.2
 
 require (
 	github.com/google/go-cmp v0.6.0
@@ -12,11 +13,11 @@ require (
 	github.com/tailscale/hujson v0.0.0-20221223112325-20486734a56a
 	github.com/tailscale/tailscale-client-go/v2 v2.0.0-20240916214524-e89a1ab786c8
 	golang.org/x/tools v0.24.0
-	tailscale.com v1.72.1
+	tailscale.com v1.76.3
 )
 
 require (
-	github.com/BurntSushi/toml v1.3.2 // indirect
+	github.com/BurntSushi/toml v1.4.1-0.20240526193622-a339e1f7089c // indirect
 	github.com/Kunde21/markdownfmt/v3 v3.1.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.2.1 // indirect
