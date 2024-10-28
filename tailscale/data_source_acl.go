@@ -39,7 +39,7 @@ func dataSourceACLRead(ctx context.Context, d *schema.ResourceData, m interface{
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch ACL")
 	}
-	huj, err := hujson.Parse([]byte(acl))
+	huj, err := hujson.Parse([]byte(acl.HuJSON))
 	if err != nil {
 		return diagnosticsError(err, "Failed to parse ACL as HuJSON")
 	}

@@ -105,7 +105,7 @@ func resourceACLRead(ctx context.Context, d *schema.ResourceData, m interface{})
 		return diagnosticsError(err, "Failed to fetch ACL")
 	}
 
-	if err := d.Set("acl", acl); err != nil {
+	if err := d.Set("acl", acl.HuJSON); err != nil {
 		return diag.FromErr(err)
 	}
 	return nil
