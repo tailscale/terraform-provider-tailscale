@@ -31,7 +31,7 @@ func TestAccTailscaleACL(t *testing.T) {
 						return fmt.Errorf("unable to get ACL: %s", err)
 					}
 
-					huj, err := hujson.Parse([]byte(acl))
+					huj, err := hujson.Parse([]byte(acl.HuJSON))
 					if err != nil {
 						return fmt.Errorf("Failed to parse ACL as HuJSON: %s", err)
 					}

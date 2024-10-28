@@ -188,6 +188,8 @@ func TestAccACL(t *testing.T) {
 				return err
 			}
 
+			// Clear out ETag before comparing to expected.
+			actual.ETag = ""
 			if err := assertEqual(expected, actual, "wrong ACL"); err != nil {
 				return err
 			}
