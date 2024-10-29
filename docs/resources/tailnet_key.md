@@ -34,6 +34,7 @@ resource "tailscale_tailnet_key" "sample_key" {
 - `recreate_if_invalid` (String) Determines whether the key should be created again if it becomes invalid. By default, reusable keys will be recreated, but single-use keys will not. Possible values: 'always', 'never'.
 - `reusable` (Boolean) Indicates if the key is reusable or single-use. Defaults to `false`.
 - `tags` (Set of String) List of tags to apply to the machines authenticated by the key.
+- `user_id` (String) ID of the user who created this key, empty for keys created by OAuth clients.
 
 ### Read-Only
 

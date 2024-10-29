@@ -102,6 +102,12 @@ func resourceTailnetKey() *schema.Resource {
 					}
 				},
 			},
+			"user_id": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "ID of the user who created this key, empty for keys created by OAuth clients.",
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -255,6 +261,10 @@ func resourceTailnetKeyRead(ctx context.Context, d *schema.ResourceData, m inter
 
 	if err = d.Set("invalid", key.Invalid); err != nil {
 		return diagnosticsError(err, "Failed to set 'invalid'")
+	}
+
+	if err = d.Set("user_id", key.UserID); err != nil {
+		return diagnosticsError(err, "Failed to set 'user_id'")
 	}
 
 	return nil
