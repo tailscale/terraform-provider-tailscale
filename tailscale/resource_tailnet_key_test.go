@@ -213,6 +213,9 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 			// don't compare IDs
 			actual.ID = ""
 
+			// don't compare user IDs
+			actual.UserID = ""
+
 			if err := assertEqual(expected, actual, "wrong key"); err != nil {
 				return err
 			}
