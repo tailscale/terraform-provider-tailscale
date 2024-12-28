@@ -62,6 +62,8 @@ func resourcePostureIntegration() *schema.Resource {
 				Required:    true,
 			},
 		},
+		EnableLegacyTypeSystemApplyErrors: true,
+		EnableLegacyTypeSystemPlanErrors:  true,
 	}
 }
 
@@ -79,14 +81,20 @@ func resourcePostureIntegrationUpdateFromRemote(d *schema.ResourceData, integrat
 	if err := d.Set("posture_provider", string(integration.Provider)); err != nil {
 		return diagnosticsError(err, "Failed to set posture_provider field")
 	}
-	if err := d.Set("cloud_id", string(integration.CloudID)); err != nil {
-		return diagnosticsError(err, "Failed to set cloud_id field")
+	if integration.CloudID != "" {
+		if err := d.Set("cloud_id", integration.CloudID); err != nil {
+			return diagnosticsError(err, "Failed to set cloud_id field")
+		}
 	}
-	if err := d.Set("client_id", string(integration.ClientID)); err != nil {
-		return diagnosticsError(err, "Failed to set client_id field")
+	if integration.ClientID != "" {
+		if err := d.Set("client_id", integration.ClientID); err != nil {
+			return diagnosticsError(err, "Failed to set client_id field")
+		}
 	}
-	if err := d.Set("tenant_id", string(integration.TenantID)); err != nil {
-		return diagnosticsError(err, "Failed to set tenant_id field")
+	if integration.TenantID != "" {
+		if err := d.Set("tenant_id", integration.TenantID); err != nil {
+			return diagnosticsError(err, "Failed to set tenant_id field")
+		}
 	}
 
 	return nil

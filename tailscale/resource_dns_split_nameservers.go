@@ -38,6 +38,8 @@ func resourceDNSSplitNameservers() *schema.Resource {
 				},
 			},
 		},
+		EnableLegacyTypeSystemApplyErrors: true,
+		EnableLegacyTypeSystemPlanErrors:  true,
 	}
 }
 

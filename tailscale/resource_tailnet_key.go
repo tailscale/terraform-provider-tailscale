@@ -109,6 +109,8 @@ func resourceTailnetKey() *schema.Resource {
 				Computed:    true,
 			},
 		},
+		EnableLegacyTypeSystemApplyErrors: true,
+		EnableLegacyTypeSystemPlanErrors:  true,
 	}
 }
 

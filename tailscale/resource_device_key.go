@@ -34,6 +34,8 @@ func resourceDeviceKey() *schema.Resource {
 				Description: "Determines whether or not the device's key will expire. Defaults to `false`.",
 			},
 		},
+		EnableLegacyTypeSystemApplyErrors: true,
+		EnableLegacyTypeSystemPlanErrors:  true,
 	}
 }
 

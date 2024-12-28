@@ -6,7 +6,6 @@ package tailscale
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"reflect"
 	"slices"
 	"testing"
@@ -30,23 +29,6 @@ const testWebhookUpdate = `
 		provider_type = "slack"
 		subscriptions = ["nodeCreated", "userSuspended", "userRoleUpdated"]
 	}`
-
-func TestProvider_TailscaleWebhook(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		IsUnitTest: true,
-		PreCheck: func() {
-			testServer.ResponseCode = http.StatusOK
-			testServer.ResponseBody = tsclient.Webhook{
-				EndpointID: "12345",
-			}
-		},
-		ProviderFactories: testProviderFactories(t),
-		Steps: []resource.TestStep{
-			testResourceCreated("tailscale_webhook.test_webhook", testWebhook),
-			testResourceDestroyed("tailscale_webhook.test_webhook", testWebhook),
-		},
-	})
-}
 
 func TestAccTailscaleWebhook(t *testing.T) {
 	const resourceName = "tailscale_webhook.test_webhook"

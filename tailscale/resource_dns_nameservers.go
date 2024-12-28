@@ -33,6 +33,8 @@ func resourceDNSNameservers() *schema.Resource {
 				MinItems:    1,
 			},
 		},
+		EnableLegacyTypeSystemApplyErrors: true,
+		EnableLegacyTypeSystemPlanErrors:  true,
 	}
 }
 

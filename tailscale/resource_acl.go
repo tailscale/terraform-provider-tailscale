@@ -95,6 +95,8 @@ func resourceACL() *schema.Resource {
 				Description: "If true, will skip requirement to import acl before allowing changes. Be careful, can cause ACL to be overwritten",
 			},
 		},
+		EnableLegacyTypeSystemApplyErrors: true,
+		EnableLegacyTypeSystemPlanErrors:  true,
 	}
 }
 

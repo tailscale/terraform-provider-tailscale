@@ -73,6 +73,8 @@ func resourceTailnetSettings() *schema.Resource {
 				Optional:    true,
 			},
 		},
+		EnableLegacyTypeSystemApplyErrors: true,
+		EnableLegacyTypeSystemPlanErrors:  true,
 	}
 }
 

@@ -34,6 +34,8 @@ func resourceDeviceAuthorization() *schema.Resource {
 				Description: "Whether or not the device is authorized",
 			},
 		},
+		EnableLegacyTypeSystemApplyErrors: true,
+		EnableLegacyTypeSystemPlanErrors:  true,
 	}
 }
 

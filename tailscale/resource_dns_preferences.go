@@ -29,6 +29,8 @@ func resourceDNSPreferences() *schema.Resource {
 				Required:    true,
 			},
 		},
+		EnableLegacyTypeSystemApplyErrors: true,
+		EnableLegacyTypeSystemPlanErrors:  true,
 	}
 }
 

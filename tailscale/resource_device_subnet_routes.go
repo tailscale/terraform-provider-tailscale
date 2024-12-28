@@ -54,6 +54,8 @@ func resourceDeviceSubnetRoutes() *schema.Resource {
 				Description: "The subnet routes that are enabled to be routed by a device",
 			},
 		},
+		EnableLegacyTypeSystemApplyErrors: true,
+		EnableLegacyTypeSystemPlanErrors:  true,
 	}
 }
 

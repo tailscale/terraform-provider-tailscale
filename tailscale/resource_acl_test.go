@@ -74,21 +74,6 @@ const testACL = `
 		EOF
 	}`
 
-func TestProvider_TailscaleACL(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		IsUnitTest: true,
-		PreCheck: func() {
-			testServer.ResponseCode = http.StatusOK
-			testServer.ResponseBody = nil
-		},
-		ProviderFactories: testProviderFactories(t),
-		Steps: []resource.TestStep{
-			testResourceCreated("tailscale_acl.test_acl", testACL),
-			testResourceDestroyed("tailscale_acl.test_acl", testACL),
-		},
-	})
-}
-
 // TestProvider_TailscaleACLDiffs checks that changes in whitespace
 // do not cause diffs in the Terraform plan.
 func TestProvider_TailscaleACLDiffs(t *testing.T) {

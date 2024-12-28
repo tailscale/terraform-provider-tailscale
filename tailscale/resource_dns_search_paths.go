@@ -32,6 +32,8 @@ func resourceDNSSearchPaths() *schema.Resource {
 				Description: "Devices on your network will use these domain suffixes to resolve DNS names.",
 			},
 		},
+		EnableLegacyTypeSystemApplyErrors: true,
+		EnableLegacyTypeSystemPlanErrors:  true,
 	}
 }
 

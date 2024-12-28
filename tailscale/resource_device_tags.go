@@ -48,6 +48,8 @@ func resourceDeviceTags() *schema.Resource {
 				Description: "The tags to apply to the device",
 			},
 		},
+		EnableLegacyTypeSystemApplyErrors: true,
+		EnableLegacyTypeSystemPlanErrors:  true,
 	}
 }
 

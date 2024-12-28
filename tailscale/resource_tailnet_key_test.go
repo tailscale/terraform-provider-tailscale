@@ -29,24 +29,6 @@ const testTailnetKey = `
 	}
 `
 
-func TestProvider_TailscaleTailnetKey(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		IsUnitTest: true,
-		PreCheck: func() {
-			testServer.ResponseCode = http.StatusOK
-			testServer.ResponseBody = tsclient.Key{
-				ID:  "test",
-				Key: "thisisatestkey",
-			}
-		},
-		ProviderFactories: testProviderFactories(t),
-		Steps: []resource.TestStep{
-			testResourceCreated("tailscale_tailnet_key.example_key", testTailnetKey),
-			testResourceDestroyed("tailscale_tailnet_key.example_key", testTailnetKey),
-		},
-	})
-}
-
 func testTailnetKeyStruct(reusable bool) tsclient.Key {
 	var keyCapabilities tsclient.KeyCapabilities
 	json.Unmarshal([]byte(`

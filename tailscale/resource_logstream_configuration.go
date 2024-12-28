@@ -70,6 +70,8 @@ func resourceLogstreamConfiguration() *schema.Resource {
 				Sensitive:   true,
 			},
 		},
+		EnableLegacyTypeSystemApplyErrors: true,
+		EnableLegacyTypeSystemPlanErrors:  true,
 	}
 }
 

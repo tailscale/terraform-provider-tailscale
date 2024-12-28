@@ -84,6 +84,8 @@ func resourceWebhook() *schema.Resource {
 				Computed:    true,
 			},
 		},
+		EnableLegacyTypeSystemApplyErrors: true,
+		EnableLegacyTypeSystemPlanErrors:  true,
 	}
 }
 

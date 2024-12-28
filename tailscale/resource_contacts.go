@@ -74,6 +74,8 @@ func resourceContacts() *schema.Resource {
 				},
 			},
 		},
+		EnableLegacyTypeSystemApplyErrors: true,
+		EnableLegacyTypeSystemPlanErrors:  true,
 	}
 }
 
