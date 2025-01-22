@@ -13,11 +13,38 @@ The logstream_configuration resource allows you to configure streaming configura
 ## Example Usage
 
 ```terraform
+# Example configuration for a non-S3 logstreaming endpoint
+
 resource "tailscale_logstream_configuration" "sample_logstream_configuration" {
   log_type         = "configuration"
   destination_type = "panther"
   url              = "https://example.com"
   token            = "some-token"
+}
+
+# Example configuration for an AWS S3 logstreaming endpoint
+
+resource "tailscale_logstream_configuration" "sample_logstream_configuration_s3" {
+  log_type               = "configuration"
+  destination_type       = "s3"
+  s3_bucket              = aws_s3_bucket.tailscale_logs.id
+  s3_region              = "us-west-2"
+  s3_authentication_type = "rolearn"
+  s3_role_arn            = aws_iam_role.tailscale_logs_writer.arn
+  s3_external_id         = tailscale_aws_external_id.prod.external_id
+}
+
+# Example configuration for an S3-compatible logstreaming endpoint
+
+resource "tailscale_logstream_configuration" "sample_logstream_configuration_s3_compatible" {
+  log_type               = "configuration"
+  destination_type       = "s3"
+  url                    = "https://s3.example.com"
+  s3_bucket              = "example-bucket"
+  s3_region              = "us-west-2"
+  s3_authentication_type = "accesskey"
+  s3_access_key_id       = "some-access-key"
+  s3_secret_access_key   = "some-secret-key"
 }
 ```
 
@@ -28,11 +55,19 @@ resource "tailscale_logstream_configuration" "sample_logstream_configuration" {
 
 - `destination_type` (String) The type of system to which logs are being streamed.
 - `log_type` (String) The type of log that is streamed to this endpoint.
-- `token` (String, Sensitive) The token/password with which log streams to this endpoint should be authenticated.
-- `url` (String) The URL to which log streams are being posted.
 
 ### Optional
 
+- `s3_access_key_id` (String) The S3 access key ID. Required if destination_type is s3 and s3_authentication_type is 'accesskey'.
+- `s3_authentication_type` (String) What type of authentication to use for S3. Required if destination_type is 's3'. Tailscale recommends using 'rolearn'.
+- `s3_bucket` (String) The S3 bucket name. Required if destination_type is 's3'.
+- `s3_external_id` (String) The AWS External ID that Tailscale supplies when authenticating using role-based authentication. Required if destination_type is 's3' and s3_authentication_type is 'rolearn'. This can be obtained via the tailscale_aws_external_id resource.
+- `s3_key_prefix` (String) An optional S3 key prefix to prepend to the auto-generated S3 key name.
+- `s3_region` (String) The region in which the S3 bucket is located. Required if destination_type is 's3'.
+- `s3_role_arn` (String) ARN of the AWS IAM role that Tailscale should assume when using role-based authentication. Required if destination_type is 's3' and s3_authentication_type is 'rolearn'.
+- `s3_secret_access_key` (String, Sensitive) The S3 secret access key. Required if destination_type is 's3' and s3_authentication_type is 'accesskey'.
+- `token` (String, Sensitive) The token/password with which log streams to this endpoint should be authenticated, required unless destination_type is 's3'.
+- `url` (String) The URL to which log streams are being posted. If destination_type is 's3' and you want to use the official Amazon S3 endpoint, leave this empty.
 - `user` (String) The username with which log streams to this endpoint are authenticated. Only required if destination_type is 'elastic', defaults to 'user' if not set.
 
 ### Read-Only
