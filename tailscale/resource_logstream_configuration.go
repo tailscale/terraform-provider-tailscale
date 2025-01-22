@@ -49,13 +49,14 @@ func resourceLogstreamConfiguration() *schema.Resource {
 						string(tsclient.LogstreamCriblEndpoint),
 						string(tsclient.LogstreamDatadogEndpoint),
 						string(tsclient.LogstreamAxiomEndpoint),
+						string(tsclient.LogstreamS3Endpoint),
 					},
 					false),
 			},
 			"url": {
 				Type:        schema.TypeString,
-				Description: "The URL to which log streams are being posted.",
-				Required:    true,
+				Description: "The URL to which log streams are being posted. If destination_type is 's3' and you want to use the official Amazon S3 endpoint, leave this empty.",
+				Optional:    true,
 			},
 			"user": {
 				Type:        schema.TypeString,
@@ -65,9 +66,57 @@ func resourceLogstreamConfiguration() *schema.Resource {
 			},
 			"token": {
 				Type:        schema.TypeString,
-				Description: "The token/password with which log streams to this endpoint should be authenticated.",
-				Required:    true,
+				Description: "The token/password with which log streams to this endpoint should be authenticated, required unless destination_type is 's3'.",
+				Optional:    true,
 				Sensitive:   true,
+			},
+			"s3_bucket": {
+				Type:        schema.TypeString,
+				Description: "The S3 bucket name. Required if destination_type is 's3'.",
+				Optional:    true,
+			},
+			"s3_region": {
+				Type:        schema.TypeString,
+				Description: "The region in which the S3 bucket is located. Required if destination_type is 's3'.",
+				Optional:    true,
+			},
+			"s3_key_prefix": {
+				Type:        schema.TypeString,
+				Description: "An optional S3 key prefix to prepend to the auto-generated S3 key name.",
+				Optional:    true,
+			},
+			"s3_authentication_type": {
+				Type:        schema.TypeString,
+				Description: "What type of authentication to use for S3. Required if destination_type is 's3'. Tailscale recommends using 'rolearn'.",
+				Optional:    true,
+				ValidateFunc: validation.StringInSlice(
+					[]string{
+						string(tsclient.S3AccessKeyAuthentication),
+						string(tsclient.S3RoleARNAuthentication),
+					},
+					false,
+				),
+			},
+			"s3_access_key_id": {
+				Type:        schema.TypeString,
+				Description: "The S3 access key ID. Required if destination_type is s3 and s3_authentication_type is 'accesskey'.",
+				Optional:    true,
+			},
+			"s3_secret_access_key": {
+				Type:        schema.TypeString,
+				Description: "The S3 secret access key. Required if destination_type is 's3' and s3_authentication_type is 'accesskey'.",
+				Optional:    true,
+				Sensitive:   true,
+			},
+			"s3_role_arn": {
+				Type:        schema.TypeString,
+				Description: "ARN of the AWS IAM role that Tailscale should assume when using role-based authentication. Required if destination_type is 's3' and s3_authentication_type is 'rolearn'.",
+				Optional:    true,
+			},
+			"s3_external_id": {
+				Type:        schema.TypeString,
+				Description: "The AWS External ID that Tailscale supplies when authenticating using role-based authentication. Required if destination_type is 's3' and s3_authentication_type is 'rolearn'. This can be obtained via the tailscale_aws_external_id resource.",
+				Optional:    true,
 			},
 		},
 	}
@@ -81,12 +130,28 @@ func resourceLogstreamConfigurationCreate(ctx context.Context, d *schema.Resourc
 	endpointURL := d.Get("url").(string)
 	user := d.Get("user").(string)
 	token := d.Get("token").(string)
+	s3Bucket := d.Get("s3_bucket").(string)
+	s3Region := d.Get("s3_region").(string)
+	s3KeyPrefix := d.Get("s3_key_prefix").(string)
+	s3AuthenticationType := tsclient.S3AuthenticationType(d.Get("s3_authentication_type").(string))
+	s3AccessKeyID := d.Get("s3_access_key_id").(string)
+	s3SecretAccessKey := d.Get("s3_secret_access_key").(string)
+	s3RoleARN := d.Get("s3_role_arn").(string)
+	s3ExternalID := d.Get("s3_external_id").(string)
 
 	err := client.Logging().SetLogstreamConfiguration(ctx, tsclient.LogType(logType), tsclient.SetLogstreamConfigurationRequest{
-		DestinationType: tsclient.LogstreamEndpointType(destinationType),
-		URL:             endpointURL,
-		User:            user,
-		Token:           token,
+		DestinationType:      tsclient.LogstreamEndpointType(destinationType),
+		URL:                  endpointURL,
+		User:                 user,
+		Token:                token,
+		S3Bucket:             s3Bucket,
+		S3Region:             s3Region,
+		S3KeyPrefix:          s3KeyPrefix,
+		S3AuthenticationType: s3AuthenticationType,
+		S3AccessKeyID:        s3AccessKeyID,
+		S3SecretAccessKey:    s3SecretAccessKey,
+		S3RoleARN:            s3RoleARN,
+		S3ExternalID:         s3ExternalID,
 	})
 
 	if err != nil {
@@ -101,6 +166,11 @@ func resourceLogstreamConfigurationRead(ctx context.Context, d *schema.ResourceD
 	client := m.(*tsclient.Client)
 
 	logstream, err := client.Logging().LogstreamConfiguration(ctx, tsclient.LogType(d.Id()))
+	if err != nil && tsclient.IsNotFound(err) {
+		d.SetId("")
+		return nil
+	}
+
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch logstream configuration")
 	}
@@ -119,6 +189,34 @@ func resourceLogstreamConfigurationRead(ctx context.Context, d *schema.ResourceD
 
 	if err = d.Set("user", logstream.User); err != nil {
 		return diagnosticsError(err, "Failed to set user field")
+	}
+
+	if err := d.Set("s3_bucket", logstream.S3Bucket); err != nil {
+		return diagnosticsError(err, "Failed to set s3_bucket field")
+	}
+
+	if err := d.Set("s3_region", logstream.S3Region); err != nil {
+		return diagnosticsError(err, "Failed to set s3_region field")
+	}
+
+	if err := d.Set("s3_key_prefix", logstream.S3KeyPrefix); err != nil {
+		return diagnosticsError(err, "Failed to set s3_key_prefix field")
+	}
+
+	if err := d.Set("s3_authentication_type", logstream.S3AuthenticationType); err != nil {
+		return diagnosticsError(err, "Failed to set s3_authentication_type field")
+	}
+
+	if err := d.Set("s3_access_key_id", logstream.S3AccessKeyID); err != nil {
+		return diagnosticsError(err, "Failed to set s3_access_key_id field")
+	}
+
+	if err := d.Set("s3_role_arn", logstream.S3RoleARN); err != nil {
+		return diagnosticsError(err, "Failed to set s3_role_arn field")
+	}
+
+	if err := d.Set("s3_external_id", logstream.S3ExternalID); err != nil {
+		return diagnosticsError(err, "Failed to set s3_external_id field")
 	}
 
 	return nil
