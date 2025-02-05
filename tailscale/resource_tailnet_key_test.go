@@ -284,6 +284,12 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "description", "Test key changed"),
 				),
 			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"key", "expiry"},
+			},
 		},
 	})
 }

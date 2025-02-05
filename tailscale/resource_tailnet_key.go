@@ -22,6 +22,9 @@ func resourceTailnetKey() *schema.Resource {
 		DeleteContext: resourceTailnetKeyDelete,
 		UpdateContext: schema.NoopContext,
 		CustomizeDiff: resourceTailnetKeyDiff,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 		Schema: map[string]*schema.Schema{
 			"reusable": {
 				Type:        schema.TypeBool,
@@ -265,6 +268,14 @@ func resourceTailnetKeyRead(ctx context.Context, d *schema.ResourceData, m inter
 
 	if err = d.Set("user_id", key.UserID); err != nil {
 		return diagnosticsError(err, "Failed to set 'user_id'")
+	}
+
+	if err = d.Set("preauthorized", key.Capabilities.Devices.Create.Preauthorized); err != nil {
+		return diagnosticsError(err, "Failed to set preauthorized")
+	}
+
+	if err = d.Set("tags", key.Capabilities.Devices.Create.Tags); err != nil {
+		return diagnosticsError(err, "Failed to set tags")
 	}
 
 	return nil
