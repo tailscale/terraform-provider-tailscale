@@ -30,9 +30,7 @@ func resourceACL() *schema.Resource {
 		ReadContext:   resourceACLRead,
 		CreateContext: resourceACLCreate,
 		UpdateContext: resourceACLUpdate,
-		// Each tailnet always has an associated ACL file, so deleting a resource will
-		// only remove it from Terraform state, leaving ACL contents intact.
-		Delete: schema.Noop,
+		DeleteContext: resourceACLDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -94,6 +92,11 @@ func resourceACL() *schema.Resource {
 				Optional:    true,
 				Description: "If true, will skip requirement to import acl before allowing changes. Be careful, can cause ACL to be overwritten",
 			},
+			"reset_acl_on_destroy": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "If true, will reset the ACL for the Tailnet to the default when this resource is destroyed",
+			},
 		},
 	}
 }
@@ -149,4 +152,20 @@ func resourceACLUpdate(ctx context.Context, d *schema.ResourceData, m interface{
 	}
 
 	return resourceACLRead(ctx, d, m)
+}
+
+func resourceACLDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	// Each tailnet always has an associated ACL file, so deleting a resource will
+	// only remove it from Terraform state, leaving ACL contents intact.
+	if !d.Get("reset_acl_on_destroy").(bool) {
+		return nil
+	}
+
+	client := m.(*tsclient.Client)
+	// Setting the ACL to an empty string resets its value to the default.
+	if err := client.PolicyFile().Set(ctx, "", ""); err != nil {
+		return diagnosticsError(err, "Failed to reset ACL")
+	}
+
+	return nil
 }
