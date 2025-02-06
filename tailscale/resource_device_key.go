@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 func resourceDeviceKey() *schema.Resource {
@@ -38,12 +38,12 @@ func resourceDeviceKey() *schema.Resource {
 }
 
 func resourceDeviceKeyCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
 	deviceID := d.Get("device_id").(string)
 	keyExpiryDisabled := d.Get("key_expiry_disabled").(bool)
 
-	key := tsclient.DeviceKey{
+	key := tailscale.DeviceKey{
 		KeyExpiryDisabled: keyExpiryDisabled,
 	}
 
@@ -56,10 +56,10 @@ func resourceDeviceKeyCreate(ctx context.Context, d *schema.ResourceData, m inte
 }
 
 func resourceDeviceKeyDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
 	deviceID := d.Get("device_id").(string)
-	key := tsclient.DeviceKey{}
+	key := tailscale.DeviceKey{}
 
 	if err := client.Devices().SetKey(ctx, deviceID, key); err != nil {
 		return diagnosticsError(err, "failed to update device key")
@@ -69,7 +69,7 @@ func resourceDeviceKeyDelete(ctx context.Context, d *schema.ResourceData, m inte
 }
 
 func resourceDeviceKeyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 	deviceID := d.Id()
 
 	device, err := client.Devices().Get(ctx, deviceID)
@@ -86,12 +86,12 @@ func resourceDeviceKeyRead(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceDeviceKeyUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
 	deviceID := d.Get("device_id").(string)
 	keyExpiryDisabled := d.Get("key_expiry_disabled").(bool)
 
-	key := tsclient.DeviceKey{
+	key := tailscale.DeviceKey{
 		KeyExpiryDisabled: keyExpiryDisabled,
 	}
 

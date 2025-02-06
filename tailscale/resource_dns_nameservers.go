@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 func resourceDNSNameservers() *schema.Resource {
@@ -37,7 +37,7 @@ func resourceDNSNameservers() *schema.Resource {
 }
 
 func resourceDNSNameserversRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 	servers, err := client.DNS().Nameservers(ctx)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch dns nameservers")
@@ -51,7 +51,7 @@ func resourceDNSNameserversRead(ctx context.Context, d *schema.ResourceData, m i
 }
 
 func resourceDNSNameserversCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 	nameservers := d.Get("nameservers").([]interface{})
 
 	servers := make([]string, len(nameservers))
@@ -72,7 +72,7 @@ func resourceDNSNameserversUpdate(ctx context.Context, d *schema.ResourceData, m
 		return resourceDNSNameserversRead(ctx, d, m)
 	}
 
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 	nameservers := d.Get("nameservers").([]interface{})
 
 	servers := make([]string, len(nameservers))
@@ -88,7 +88,7 @@ func resourceDNSNameserversUpdate(ctx context.Context, d *schema.ResourceData, m
 }
 
 func resourceDNSNameserversDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
 	if err := client.DNS().SetNameservers(ctx, []string{}); err != nil {
 		return diagnosticsError(err, "Failed to set dns nameservers")

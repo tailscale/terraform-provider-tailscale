@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 func TestAccTailscaleContacts(t *testing.T) {
@@ -47,32 +47,32 @@ func TestAccTailscaleContacts(t *testing.T) {
 		}
 	}`
 
-	expectedContactsBasic := &tsclient.Contacts{
-		Account: tsclient.Contact{
+	expectedContactsBasic := &tailscale.Contacts{
+		Account: tailscale.Contact{
 			Email: "account@example.com",
 		},
-		Support: tsclient.Contact{
+		Support: tailscale.Contact{
 			Email: "support@example.com",
 		},
-		Security: tsclient.Contact{
+		Security: tailscale.Contact{
 			Email: "security@example.com",
 		},
 	}
 
-	expectedContactsUpdated := &tsclient.Contacts{
-		Account: tsclient.Contact{
+	expectedContactsUpdated := &tailscale.Contacts{
+		Account: tailscale.Contact{
 			Email: "otheraccount@example.com",
 		},
-		Support: tsclient.Contact{
+		Support: tailscale.Contact{
 			Email: "support@example.com",
 		},
-		Security: tsclient.Contact{
+		Security: tailscale.Contact{
 			Email: "security2@example.com",
 		},
 	}
 
-	checkProperties := func(expectedContacts *tsclient.Contacts) func(client *tsclient.Client, rs *terraform.ResourceState) error {
-		return func(client *tsclient.Client, rs *terraform.ResourceState) error {
+	checkProperties := func(expectedContacts *tailscale.Contacts) func(client *tailscale.Client, rs *terraform.ResourceState) error {
+		return func(client *tailscale.Client, rs *terraform.ResourceState) error {
 			contacts, err := client.Contacts().Get(context.Background())
 			if err != nil {
 				return err

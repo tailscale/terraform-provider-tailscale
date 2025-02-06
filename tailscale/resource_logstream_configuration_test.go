@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 const testLogStreamConfiguration = `
@@ -68,28 +68,28 @@ const testLogstreamConfigurationUpdateS3AccessKey = `
 func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
 	const resourceName = "tailscale_logstream_configuration.test_logstream_configuration"
 
-	checkProperties := func(expectedConfiguration tsclient.LogstreamConfiguration) func(client *tsclient.Client, rs *terraform.ResourceState) error {
-		return func(client *tsclient.Client, rs *terraform.ResourceState) error {
-			var selectedConfig *tsclient.LogstreamConfiguration
-			logstreamConfigurationLogTypeConfig, err := client.Logging().LogstreamConfiguration(context.Background(), tsclient.LogTypeConfig)
-			if expectedConfiguration.LogType == tsclient.LogTypeConfig {
+	checkProperties := func(expectedConfiguration tailscale.LogstreamConfiguration) func(client *tailscale.Client, rs *terraform.ResourceState) error {
+		return func(client *tailscale.Client, rs *terraform.ResourceState) error {
+			var selectedConfig *tailscale.LogstreamConfiguration
+			logstreamConfigurationLogTypeConfig, err := client.Logging().LogstreamConfiguration(context.Background(), tailscale.LogTypeConfig)
+			if expectedConfiguration.LogType == tailscale.LogTypeConfig {
 				if err != nil {
 					return err
 				} else {
 					selectedConfig = logstreamConfigurationLogTypeConfig
 				}
-			} else if expectedConfiguration.LogType == tsclient.LogTypeNetwork && err == nil {
+			} else if expectedConfiguration.LogType == tailscale.LogTypeNetwork && err == nil {
 				return fmt.Errorf("expected no configuration logstream configuration but got %+v", logstreamConfigurationLogTypeConfig)
 			}
 
-			logstreamConfigurationLogTypeNetwork, err := client.Logging().LogstreamConfiguration(context.Background(), tsclient.LogTypeNetwork)
-			if expectedConfiguration.LogType == tsclient.LogTypeNetwork {
+			logstreamConfigurationLogTypeNetwork, err := client.Logging().LogstreamConfiguration(context.Background(), tailscale.LogTypeNetwork)
+			if expectedConfiguration.LogType == tailscale.LogTypeNetwork {
 				if err != nil {
 					return err
 				} else {
 					selectedConfig = logstreamConfigurationLogTypeNetwork
 				}
-			} else if expectedConfiguration.LogType == tsclient.LogTypeNetwork && err == nil {
+			} else if expectedConfiguration.LogType == tailscale.LogTypeNetwork && err == nil {
 				return fmt.Errorf("expected no network logstream configuration but got %+v", logstreamConfigurationLogTypeNetwork)
 			}
 
@@ -138,8 +138,8 @@ func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy: checkResourceDestroyed(resourceName, func(client *tsclient.Client, rs *terraform.ResourceState) error {
-			_, err := client.Logging().LogstreamConfiguration(context.Background(), tsclient.LogType(rs.Primary.ID))
+		CheckDestroy: checkResourceDestroyed(resourceName, func(client *tailscale.Client, rs *terraform.ResourceState) error {
+			_, err := client.Logging().LogstreamConfiguration(context.Background(), tailscale.LogType(rs.Primary.ID))
 			if err == nil {
 				return fmt.Errorf("logstream configuration %q still exists on server", resourceName)
 			}
@@ -151,9 +151,9 @@ func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(
 						resourceName,
-						checkProperties(tsclient.LogstreamConfiguration{
-							LogType:         tsclient.LogTypeConfig,
-							DestinationType: tsclient.LogstreamPantherEndpoint,
+						checkProperties(tailscale.LogstreamConfiguration{
+							LogType:         tailscale.LogTypeConfig,
+							DestinationType: tailscale.LogstreamPantherEndpoint,
 							URL:             "https://example.com",
 						}),
 					),
@@ -169,9 +169,9 @@ func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(
 						resourceName,
-						checkProperties(tsclient.LogstreamConfiguration{
-							LogType:         tsclient.LogTypeConfig,
-							DestinationType: tsclient.LogstreamCriblEndpoint,
+						checkProperties(tailscale.LogstreamConfiguration{
+							LogType:         tailscale.LogTypeConfig,
+							DestinationType: tailscale.LogstreamCriblEndpoint,
 							URL:             "https://example.com/other",
 							User:            "cribl-user",
 						}),
@@ -188,9 +188,9 @@ func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(
 						resourceName,
-						checkProperties(tsclient.LogstreamConfiguration{
-							LogType:         tsclient.LogTypeNetwork,
-							DestinationType: tsclient.LogstreamDatadogEndpoint,
+						checkProperties(tailscale.LogstreamConfiguration{
+							LogType:         tailscale.LogTypeNetwork,
+							DestinationType: tailscale.LogstreamDatadogEndpoint,
 							URL:             "https://example.com/other/other",
 						}),
 					),
@@ -218,13 +218,13 @@ func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
 
 						return checkResourceRemoteProperties(
 							resourceName,
-							checkProperties(tsclient.LogstreamConfiguration{
-								LogType:              tsclient.LogTypeNetwork,
-								DestinationType:      tsclient.LogstreamS3Endpoint,
+							checkProperties(tailscale.LogstreamConfiguration{
+								LogType:              tailscale.LogTypeNetwork,
+								DestinationType:      tailscale.LogstreamS3Endpoint,
 								S3Bucket:             "example-bucket",
 								S3Region:             "us-west-2",
 								S3KeyPrefix:          "logs/",
-								S3AuthenticationType: tsclient.S3RoleARNAuthentication,
+								S3AuthenticationType: tailscale.S3RoleARNAuthentication,
 								S3RoleARN:            "arn:aws:iam::123456789012:role/example-role",
 								S3ExternalID:         externalIdResource.Primary.Attributes["external_id"],
 							}),
@@ -245,12 +245,12 @@ func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(
 						resourceName,
-						checkProperties(tsclient.LogstreamConfiguration{
-							LogType:              tsclient.LogTypeNetwork,
-							DestinationType:      tsclient.LogstreamS3Endpoint,
+						checkProperties(tailscale.LogstreamConfiguration{
+							LogType:              tailscale.LogTypeNetwork,
+							DestinationType:      tailscale.LogstreamS3Endpoint,
 							S3Bucket:             "example-bucket",
 							S3Region:             "us-west-2",
-							S3AuthenticationType: tsclient.S3AccessKeyAuthentication,
+							S3AuthenticationType: tailscale.S3AccessKeyAuthentication,
 							S3AccessKeyID:        "example-access-key-id",
 							URL:                  "https://example.com/s3",
 						}),

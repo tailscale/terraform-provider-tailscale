@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 const testDNSPreferencesCreate = `
@@ -42,8 +42,8 @@ func TestProvider_TailscaleDNSPreferences(t *testing.T) {
 func TestAccTailscaleDNSPreferences(t *testing.T) {
 	const resourceName = "tailscale_dns_preferences.test_preferences"
 
-	checkProperties := func(expected *tsclient.DNSPreferences) func(client *tsclient.Client, rs *terraform.ResourceState) error {
-		return func(client *tsclient.Client, rs *terraform.ResourceState) error {
+	checkProperties := func(expected *tailscale.DNSPreferences) func(client *tailscale.Client, rs *terraform.ResourceState) error {
+		return func(client *tailscale.Client, rs *terraform.ResourceState) error {
 			actual, err := client.DNS().Preferences(context.Background())
 			if err != nil {
 				return err
@@ -60,13 +60,13 @@ func TestAccTailscaleDNSPreferences(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy:      checkResourceDestroyed(resourceName, checkProperties(&tsclient.DNSPreferences{})),
+		CheckDestroy:      checkResourceDestroyed(resourceName, checkProperties(&tailscale.DNSPreferences{})),
 		Steps: []resource.TestStep{
 			{
 				Config: testDNSPreferencesCreate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkProperties(&tsclient.DNSPreferences{MagicDNS: true}),
+						checkProperties(&tailscale.DNSPreferences{MagicDNS: true}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "magic_dns", "true"),
 				),
@@ -75,7 +75,7 @@ func TestAccTailscaleDNSPreferences(t *testing.T) {
 				Config: testDNSPreferencesUpdate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkProperties(&tsclient.DNSPreferences{MagicDNS: false}),
+						checkProperties(&tailscale.DNSPreferences{MagicDNS: false}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "magic_dns", "false"),
 				),

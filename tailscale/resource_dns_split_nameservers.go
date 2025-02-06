@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 func resourceDNSSplitNameservers() *schema.Resource {
@@ -42,7 +42,7 @@ func resourceDNSSplitNameservers() *schema.Resource {
 }
 
 func resourceSplitDNSNameserversRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 	splitDNS, err := client.DNS().SplitDNS(ctx)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch split DNS configs")
@@ -64,13 +64,13 @@ func resourceSplitDNSNameserversRead(ctx context.Context, d *schema.ResourceData
 }
 
 func resourceSplitDNSNameserversCreateOrUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 	nameserversSet := d.Get("nameservers").(*schema.Set)
 	domain := d.Get("domain").(string)
 
 	nameserversList := nameserversSet.List()
 
-	req := make(tsclient.SplitDNSRequest)
+	req := make(tailscale.SplitDNSRequest)
 	var nameservers []string
 	for _, nameserver := range nameserversList {
 		nameservers = append(nameservers, nameserver.(string))
@@ -87,10 +87,10 @@ func resourceSplitDNSNameserversCreateOrUpdate(ctx context.Context, d *schema.Re
 }
 
 func resourceSplitDNSNameserversDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 	domain := d.Get("domain").(string)
 
-	req := make(tsclient.SplitDNSRequest)
+	req := make(tailscale.SplitDNSRequest)
 	req[domain] = []string{}
 
 	// Return value is not useful to us here, ignore.

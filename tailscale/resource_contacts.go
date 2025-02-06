@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 const resourceContactsDescription = `The contacts resource allows you to configure contact details for your Tailscale network. See https://tailscale.com/kb/1224/contact-preferences for more information.
@@ -78,17 +78,17 @@ func resourceContacts() *schema.Resource {
 }
 
 func resourceContactsCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
-	if diagErr := updateContact(ctx, client, d, tsclient.ContactAccount); diagErr != nil {
+	if diagErr := updateContact(ctx, client, d, tailscale.ContactAccount); diagErr != nil {
 		return diagErr
 	}
 
-	if diagErr := updateContact(ctx, client, d, tsclient.ContactSupport); diagErr != nil {
+	if diagErr := updateContact(ctx, client, d, tailscale.ContactSupport); diagErr != nil {
 		return diagErr
 	}
 
-	if diagErr := updateContact(ctx, client, d, tsclient.ContactSecurity); diagErr != nil {
+	if diagErr := updateContact(ctx, client, d, tailscale.ContactSecurity); diagErr != nil {
 		return diagErr
 	}
 
@@ -97,7 +97,7 @@ func resourceContactsCreate(ctx context.Context, d *schema.ResourceData, m inter
 }
 
 func resourceContactsRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
 	contacts, err := client.Contacts().Get(ctx)
 	if err != nil {
@@ -120,22 +120,22 @@ func resourceContactsRead(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceContactsUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
 	if d.HasChange("account") {
-		if diagErr := updateContact(ctx, client, d, tsclient.ContactAccount); diagErr != nil {
+		if diagErr := updateContact(ctx, client, d, tailscale.ContactAccount); diagErr != nil {
 			return diagErr
 		}
 	}
 
 	if d.HasChange("support") {
-		if diagErr := updateContact(ctx, client, d, tsclient.ContactSupport); diagErr != nil {
+		if diagErr := updateContact(ctx, client, d, tailscale.ContactSupport); diagErr != nil {
 			return diagErr
 		}
 	}
 
 	if d.HasChange("security") {
-		if diagErr := updateContact(ctx, client, d, tsclient.ContactSecurity); diagErr != nil {
+		if diagErr := updateContact(ctx, client, d, tailscale.ContactSecurity); diagErr != nil {
 			return diagErr
 		}
 	}
@@ -161,7 +161,7 @@ See https://tailscale.com/kb/1224/contact-preferences to learn more.`
 // buildContactMap transforms a tailscale.Contact into an equivalnet single element
 // slice of map[string]interface{} so that it can be set on a schema.TypeSet property
 // in the resource.
-func buildContactMap(contact tsclient.Contact) []map[string]interface{} {
+func buildContactMap(contact tailscale.Contact) []map[string]interface{} {
 	return []map[string]interface{}{
 		{
 			"email": contact.Email,
@@ -172,11 +172,11 @@ func buildContactMap(contact tsclient.Contact) []map[string]interface{} {
 // updateContact updates the contact specified by the tailscale.ContactType by
 // reading the resource property with the correct name and using it to build a
 // request to the underlying client.
-func updateContact(ctx context.Context, client *tsclient.Client, d *schema.ResourceData, contactType tsclient.ContactType) diag.Diagnostics {
+func updateContact(ctx context.Context, client *tailscale.Client, d *schema.ResourceData, contactType tailscale.ContactType) diag.Diagnostics {
 	contact := d.Get(string(contactType)).(*schema.Set).List()
 	contactEmail := contact[0].(map[string]interface{})["email"].(string)
 
-	if err := client.Contacts().Update(ctx, contactType, tsclient.UpdateContactRequest{Email: &contactEmail}); err != nil {
+	if err := client.Contacts().Update(ctx, contactType, tailscale.UpdateContactRequest{Email: &contactEmail}); err != nil {
 		return diagnosticsError(err, "Failed to create contacts")
 	}
 

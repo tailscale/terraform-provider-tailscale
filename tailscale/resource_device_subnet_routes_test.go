@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 func TestAccTailscaleDeviceSubnetRoutes(t *testing.T) {
@@ -47,8 +47,8 @@ func TestAccTailscaleDeviceSubnetRoutes(t *testing.T) {
 			]
 		}`
 
-	checkProperties := func(expectedRoutes []string) func(client *tsclient.Client, rs *terraform.ResourceState) error {
-		return func(client *tsclient.Client, rs *terraform.ResourceState) error {
+	checkProperties := func(expectedRoutes []string) func(client *tailscale.Client, rs *terraform.ResourceState) error {
+		return func(client *tailscale.Client, rs *terraform.ResourceState) error {
 			deviceID := rs.Primary.Attributes["device_id"]
 
 			routes, err := client.Devices().SubnetRoutes(context.Background(), deviceID)

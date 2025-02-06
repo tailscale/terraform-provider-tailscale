@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 const testWebhook = `
@@ -36,7 +36,7 @@ func TestProvider_TailscaleWebhook(t *testing.T) {
 		IsUnitTest: true,
 		PreCheck: func() {
 			testServer.ResponseCode = http.StatusOK
-			testServer.ResponseBody = tsclient.Webhook{
+			testServer.ResponseBody = tailscale.Webhook{
 				EndpointID: "12345",
 			}
 		},
@@ -51,8 +51,8 @@ func TestProvider_TailscaleWebhook(t *testing.T) {
 func TestAccTailscaleWebhook(t *testing.T) {
 	const resourceName = "tailscale_webhook.test_webhook"
 
-	checkProperties := func(expectedSubscriptions []tsclient.WebhookSubscriptionType) func(client *tsclient.Client, rs *terraform.ResourceState) error {
-		return func(client *tsclient.Client, rs *terraform.ResourceState) error {
+	checkProperties := func(expectedSubscriptions []tailscale.WebhookSubscriptionType) func(client *tailscale.Client, rs *terraform.ResourceState) error {
+		return func(client *tailscale.Client, rs *terraform.ResourceState) error {
 			webhook, err := client.Webhooks().Get(context.Background(), rs.Primary.ID)
 			if err != nil {
 				return err
@@ -78,7 +78,7 @@ func TestAccTailscaleWebhook(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy: checkResourceDestroyed(resourceName, func(client *tsclient.Client, rs *terraform.ResourceState) error {
+		CheckDestroy: checkResourceDestroyed(resourceName, func(client *tailscale.Client, rs *terraform.ResourceState) error {
 			_, err := client.Webhooks().Get(context.Background(), rs.Primary.ID)
 			if err == nil {
 				return fmt.Errorf("webhook %q still exists on server", resourceName)
@@ -91,9 +91,9 @@ func TestAccTailscaleWebhook(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(
 						resourceName,
-						checkProperties([]tsclient.WebhookSubscriptionType{
-							tsclient.WebhookNodeCreated,
-							tsclient.WebhookUserNeedsApproval,
+						checkProperties([]tailscale.WebhookSubscriptionType{
+							tailscale.WebhookNodeCreated,
+							tailscale.WebhookUserNeedsApproval,
 						}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "endpoint_url", "https://example.com/endpoint"),
@@ -108,10 +108,10 @@ func TestAccTailscaleWebhook(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(
 						resourceName,
-						checkProperties([]tsclient.WebhookSubscriptionType{
-							tsclient.WebhookNodeCreated,
-							tsclient.WebhookUserRoleUpdated,
-							tsclient.WebhookUserSuspended,
+						checkProperties([]tailscale.WebhookSubscriptionType{
+							tailscale.WebhookNodeCreated,
+							tailscale.WebhookUserRoleUpdated,
+							tailscale.WebhookUserSuspended,
 						}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "endpoint_url", "https://example.com/endpoint"),

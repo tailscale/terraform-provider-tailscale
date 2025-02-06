@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 func resourceLogstreamConfiguration() *schema.Resource {
@@ -31,8 +31,8 @@ func resourceLogstreamConfiguration() *schema.Resource {
 				ForceNew:    true,
 				ValidateFunc: validation.StringInSlice(
 					[]string{
-						string(tsclient.LogTypeConfig),
-						string(tsclient.LogTypeNetwork),
+						string(tailscale.LogTypeConfig),
+						string(tailscale.LogTypeNetwork),
 					},
 					false,
 				),
@@ -43,13 +43,13 @@ func resourceLogstreamConfiguration() *schema.Resource {
 				Required:    true,
 				ValidateFunc: validation.StringInSlice(
 					[]string{
-						string(tsclient.LogstreamSplunkEndpoint),
-						string(tsclient.LogstreamElasticEndpoint),
-						string(tsclient.LogstreamPantherEndpoint),
-						string(tsclient.LogstreamCriblEndpoint),
-						string(tsclient.LogstreamDatadogEndpoint),
-						string(tsclient.LogstreamAxiomEndpoint),
-						string(tsclient.LogstreamS3Endpoint),
+						string(tailscale.LogstreamSplunkEndpoint),
+						string(tailscale.LogstreamElasticEndpoint),
+						string(tailscale.LogstreamPantherEndpoint),
+						string(tailscale.LogstreamCriblEndpoint),
+						string(tailscale.LogstreamDatadogEndpoint),
+						string(tailscale.LogstreamAxiomEndpoint),
+						string(tailscale.LogstreamS3Endpoint),
 					},
 					false),
 			},
@@ -91,8 +91,8 @@ func resourceLogstreamConfiguration() *schema.Resource {
 				Optional:    true,
 				ValidateFunc: validation.StringInSlice(
 					[]string{
-						string(tsclient.S3AccessKeyAuthentication),
-						string(tsclient.S3RoleARNAuthentication),
+						string(tailscale.S3AccessKeyAuthentication),
+						string(tailscale.S3RoleARNAuthentication),
 					},
 					false,
 				),
@@ -123,7 +123,7 @@ func resourceLogstreamConfiguration() *schema.Resource {
 }
 
 func resourceLogstreamConfigurationCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
 	logType := d.Get("log_type").(string)
 	destinationType := d.Get("destination_type").(string)
@@ -133,14 +133,14 @@ func resourceLogstreamConfigurationCreate(ctx context.Context, d *schema.Resourc
 	s3Bucket := d.Get("s3_bucket").(string)
 	s3Region := d.Get("s3_region").(string)
 	s3KeyPrefix := d.Get("s3_key_prefix").(string)
-	s3AuthenticationType := tsclient.S3AuthenticationType(d.Get("s3_authentication_type").(string))
+	s3AuthenticationType := tailscale.S3AuthenticationType(d.Get("s3_authentication_type").(string))
 	s3AccessKeyID := d.Get("s3_access_key_id").(string)
 	s3SecretAccessKey := d.Get("s3_secret_access_key").(string)
 	s3RoleARN := d.Get("s3_role_arn").(string)
 	s3ExternalID := d.Get("s3_external_id").(string)
 
-	err := client.Logging().SetLogstreamConfiguration(ctx, tsclient.LogType(logType), tsclient.SetLogstreamConfigurationRequest{
-		DestinationType:      tsclient.LogstreamEndpointType(destinationType),
+	err := client.Logging().SetLogstreamConfiguration(ctx, tailscale.LogType(logType), tailscale.SetLogstreamConfigurationRequest{
+		DestinationType:      tailscale.LogstreamEndpointType(destinationType),
 		URL:                  endpointURL,
 		User:                 user,
 		Token:                token,
@@ -163,10 +163,10 @@ func resourceLogstreamConfigurationCreate(ctx context.Context, d *schema.Resourc
 }
 
 func resourceLogstreamConfigurationRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
-	logstream, err := client.Logging().LogstreamConfiguration(ctx, tsclient.LogType(d.Id()))
-	if err != nil && tsclient.IsNotFound(err) {
+	logstream, err := client.Logging().LogstreamConfiguration(ctx, tailscale.LogType(d.Id()))
+	if err != nil && tailscale.IsNotFound(err) {
 		d.SetId("")
 		return nil
 	}
@@ -228,9 +228,9 @@ func resourceLogstreamUpdate(ctx context.Context, d *schema.ResourceData, m inte
 }
 
 func resourceLogstreamDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
-	err := client.Logging().DeleteLogstreamConfiguration(ctx, tsclient.LogType(d.Id()))
+	err := client.Logging().DeleteLogstreamConfiguration(ctx, tailscale.LogType(d.Id()))
 	if err != nil {
 		return diagnosticsError(err, "Failed to delete logstream configuration")
 	}

@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 const resourceDeviceSubnetRoutesDescription = `The device_subnet_routes resource allows you to configure enabled subnet routes for your Tailscale devices. See https://tailscale.com/kb/1019/subnets for more information.
@@ -58,7 +58,7 @@ func resourceDeviceSubnetRoutes() *schema.Resource {
 }
 
 func resourceDeviceSubnetRoutesRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 	deviceID := d.Get("device_id").(string)
 
 	routes, err := client.Devices().SubnetRoutes(ctx, deviceID)
@@ -74,7 +74,7 @@ func resourceDeviceSubnetRoutesRead(ctx context.Context, d *schema.ResourceData,
 }
 
 func resourceDeviceSubnetRoutesCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 	deviceID := d.Get("device_id").(string)
 	routes := d.Get("routes").(*schema.Set).List()
 
@@ -92,7 +92,7 @@ func resourceDeviceSubnetRoutesCreate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourceDeviceSubnetRoutesUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 	deviceID := d.Get("device_id").(string)
 	routes := d.Get("routes").(*schema.Set).List()
 
@@ -109,7 +109,7 @@ func resourceDeviceSubnetRoutesUpdate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourceDeviceSubnetRoutesDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 	deviceID := d.Get("device_id").(string)
 
 	if err := client.Devices().SetSubnetRoutes(ctx, deviceID, []string{}); err != nil {

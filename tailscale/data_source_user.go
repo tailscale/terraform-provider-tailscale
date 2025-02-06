@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 var commonUserSchema = map[string]*schema.Schema{
@@ -88,7 +88,7 @@ func dataSourceUser() *schema.Resource {
 }
 
 func dataSourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
 	if id := d.Id(); id != "" {
 		user, err := client.Users().Get(ctx, id)
@@ -108,7 +108,7 @@ func dataSourceUserRead(ctx context.Context, d *schema.ResourceData, m interface
 		return diagnosticsError(err, "Failed to fetch users")
 	}
 
-	var selected *tsclient.User
+	var selected *tailscale.User
 	for _, user := range users {
 		if user.LoginName == loginName.(string) {
 			selected = &user
@@ -127,7 +127,7 @@ func dataSourceUserRead(ctx context.Context, d *schema.ResourceData, m interface
 // userToMap converts the given user into a map representing the user as a
 // resource in Terraform. This omits the "id" which is expected to be set
 // using [schema.ResourceData.SetId].
-func userToMap(user *tsclient.User) map[string]any {
+func userToMap(user *tailscale.User) map[string]any {
 	return map[string]any{
 		"id":                  user.ID,
 		"display_name":        user.DisplayName,

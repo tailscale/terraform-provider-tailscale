@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 const testPostureIntegrationCreate = `
@@ -42,8 +42,8 @@ const testPostureIntegrationUpdateDifferentProvider = `
 func TestAccTailscalePostureIntegration(t *testing.T) {
 	const resourceName = "tailscale_posture_integration.test_posture_integration"
 
-	checkProperties := func(expected tsclient.PostureIntegration) func(client *tsclient.Client, rs *terraform.ResourceState) error {
-		return func(client *tsclient.Client, rs *terraform.ResourceState) error {
+	checkProperties := func(expected tailscale.PostureIntegration) func(client *tailscale.Client, rs *terraform.ResourceState) error {
+		return func(client *tailscale.Client, rs *terraform.ResourceState) error {
 			integration, err := client.DevicePosture().GetIntegration(context.Background(), rs.Primary.ID)
 			if err != nil {
 				return err
@@ -69,7 +69,7 @@ func TestAccTailscalePostureIntegration(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy: checkResourceDestroyed(resourceName, func(client *tsclient.Client, rs *terraform.ResourceState) error {
+		CheckDestroy: checkResourceDestroyed(resourceName, func(client *tailscale.Client, rs *terraform.ResourceState) error {
 			_, err := client.DevicePosture().GetIntegration(context.Background(), rs.Primary.ID)
 			if err == nil {
 				return fmt.Errorf("posture integration %q still exists on server", resourceName)
@@ -82,8 +82,8 @@ func TestAccTailscalePostureIntegration(t *testing.T) {
 				Config: testPostureIntegrationCreate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkProperties(tsclient.PostureIntegration{
-							Provider: tsclient.PostureIntegrationProviderFalcon,
+						checkProperties(tailscale.PostureIntegration{
+							Provider: tailscale.PostureIntegrationProviderFalcon,
 							CloudID:  "us-1",
 							ClientID: "clientid1",
 						}),
@@ -98,8 +98,8 @@ func TestAccTailscalePostureIntegration(t *testing.T) {
 				Config: testPostureIntegrationUpdateSameProvider,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkProperties(tsclient.PostureIntegration{
-							Provider: tsclient.PostureIntegrationProviderFalcon,
+						checkProperties(tailscale.PostureIntegration{
+							Provider: tailscale.PostureIntegrationProviderFalcon,
 							CloudID:  "us-2",
 							ClientID: "clientid2",
 						}),
@@ -114,8 +114,8 @@ func TestAccTailscalePostureIntegration(t *testing.T) {
 				Config: testPostureIntegrationUpdateDifferentProvider,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkProperties(tsclient.PostureIntegration{
-							Provider: tsclient.PostureIntegrationProviderIntune,
+						checkProperties(tailscale.PostureIntegration{
+							Provider: tailscale.PostureIntegrationProviderIntune,
 							CloudID:  "global",
 							ClientID: "fddf23ae-0e3a-4e0c-908d-6f44e80f9400",
 							TenantID: "fddf23ae-0e3a-4e0c-908d-6f44e80f9401",

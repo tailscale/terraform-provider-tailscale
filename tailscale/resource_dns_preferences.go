@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 func resourceDNSPreferences() *schema.Resource {
@@ -33,7 +33,7 @@ func resourceDNSPreferences() *schema.Resource {
 }
 
 func resourceDNSPreferencesRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
 	preferences, err := client.DNS().Preferences(ctx)
 	if err != nil {
@@ -48,9 +48,9 @@ func resourceDNSPreferencesRead(ctx context.Context, d *schema.ResourceData, m i
 }
 
 func resourceDNSPreferencesCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 	magicDNS := d.Get("magic_dns").(bool)
-	preferences := tsclient.DNSPreferences{
+	preferences := tailscale.DNSPreferences{
 		MagicDNS: magicDNS,
 	}
 
@@ -67,10 +67,10 @@ func resourceDNSPreferencesUpdate(ctx context.Context, d *schema.ResourceData, m
 		return resourceDNSPreferencesRead(ctx, d, m)
 	}
 
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 	magicDNS := d.Get("magic_dns").(bool)
 
-	preferences := tsclient.DNSPreferences{
+	preferences := tailscale.DNSPreferences{
 		MagicDNS: magicDNS,
 	}
 
@@ -82,9 +82,9 @@ func resourceDNSPreferencesUpdate(ctx context.Context, d *schema.ResourceData, m
 }
 
 func resourceDNSPreferencesDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
-	if err := client.DNS().SetPreferences(ctx, tsclient.DNSPreferences{}); err != nil {
+	if err := client.DNS().SetPreferences(ctx, tailscale.DNSPreferences{}); err != nil {
 		return diagnosticsError(err, "Failed to set dns preferences")
 	}
 

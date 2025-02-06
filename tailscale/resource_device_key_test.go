@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 func TestAccTailscaleDeviceKey(t *testing.T) {
@@ -39,8 +39,8 @@ func TestAccTailscaleDeviceKey(t *testing.T) {
 			key_expiry_disabled = true
 		}`
 
-	checkProperties := func(expectExpiryDisabled bool) func(client *tsclient.Client, rs *terraform.ResourceState) error {
-		return func(client *tsclient.Client, rs *terraform.ResourceState) error {
+	checkProperties := func(expectExpiryDisabled bool) func(client *tailscale.Client, rs *terraform.ResourceState) error {
+		return func(client *tailscale.Client, rs *terraform.ResourceState) error {
 			device, err := client.Devices().Get(context.Background(), rs.Primary.ID)
 			if err != nil {
 				return err
