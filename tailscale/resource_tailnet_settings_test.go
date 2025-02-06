@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 func TestAccTailscaleTailnetSettings(t *testing.T) {
@@ -36,8 +36,8 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 			posture_identity_collection_on = false
 		}`
 
-	checkProperties := func(expected *tsclient.TailnetSettings) func(client *tsclient.Client, rs *terraform.ResourceState) error {
-		return func(client *tsclient.Client, rs *terraform.ResourceState) error {
+	checkProperties := func(expected *tailscale.TailnetSettings) func(client *tailscale.Client, rs *terraform.ResourceState) error {
+		return func(client *tailscale.Client, rs *terraform.ResourceState) error {
 			actual, err := client.TailnetSettings().Get(context.Background())
 			if err != nil {
 				return err
@@ -59,12 +59,12 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 				Config: testTailnetSettingsCreate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkProperties(&tsclient.TailnetSettings{
+						checkProperties(&tailscale.TailnetSettings{
 							DevicesApprovalOn:                      true,
 							DevicesAutoUpdatesOn:                   true,
 							DevicesKeyDurationDays:                 5,
 							UsersApprovalOn:                        true,
-							UsersRoleAllowedToJoinExternalTailnets: tsclient.RoleAllowedToJoinExternalTailnetsMember,
+							UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsMember,
 							PostureIdentityCollectionOn:            true,
 						}),
 					),
@@ -80,12 +80,12 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 				Config: testTailnetSettingsUpdate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkProperties(&tsclient.TailnetSettings{
+						checkProperties(&tailscale.TailnetSettings{
 							DevicesApprovalOn:                      false,
 							DevicesAutoUpdatesOn:                   false,
 							DevicesKeyDurationDays:                 10,
 							UsersApprovalOn:                        false,
-							UsersRoleAllowedToJoinExternalTailnets: tsclient.RoleAllowedToJoinExternalTailnetsAdmin,
+							UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsAdmin,
 							PostureIdentityCollectionOn:            false,
 						}),
 					),

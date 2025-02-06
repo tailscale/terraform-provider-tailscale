@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 func resourceTailnetSettings() *schema.Resource {
@@ -50,9 +50,9 @@ func resourceTailnetSettings() *schema.Resource {
 				Optional:    true,
 				ValidateFunc: validation.StringInSlice(
 					[]string{
-						string(tsclient.RoleAllowedToJoinExternalTailnetsNone),
-						string(tsclient.RoleAllowedToJoinExternalTailnetsMember),
-						string(tsclient.RoleAllowedToJoinExternalTailnetsAdmin),
+						string(tailscale.RoleAllowedToJoinExternalTailnetsNone),
+						string(tailscale.RoleAllowedToJoinExternalTailnetsMember),
+						string(tailscale.RoleAllowedToJoinExternalTailnetsAdmin),
 					},
 					false,
 				),
@@ -77,7 +77,7 @@ func resourceTailnetSettings() *schema.Resource {
 }
 
 func resourceTailnetSettingsRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
 	settings, err := client.TailnetSettings().Get(ctx)
 	if err != nil {
@@ -113,12 +113,12 @@ func resourceTailnetSettingsUpdate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func resourceTailnetSettingsDoUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	var role *tsclient.RoleAllowedToJoinExternalTailnets
+	var role *tailscale.RoleAllowedToJoinExternalTailnets
 	_role, ok := d.GetOk("users_role_allowed_to_join_external_tailnet")
 	if ok {
-		role = tsclient.PointerTo(tsclient.RoleAllowedToJoinExternalTailnets(_role.(string)))
+		role = tailscale.PointerTo(tailscale.RoleAllowedToJoinExternalTailnets(_role.(string)))
 	}
-	settings := tsclient.UpdateTailnetSettingsRequest{
+	settings := tailscale.UpdateTailnetSettingsRequest{
 		DevicesApprovalOn:                      optional[bool](d, "devices_approval_on"),
 		DevicesAutoUpdatesOn:                   optional[bool](d, "devices_auto_updates_on"),
 		DevicesKeyDurationDays:                 optional[int](d, "devices_key_duration_days"),
@@ -129,7 +129,7 @@ func resourceTailnetSettingsDoUpdate(ctx context.Context, d *schema.ResourceData
 		PostureIdentityCollectionOn:            optional[bool](d, "posture_identity_collection_on"),
 	}
 
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 	if err := client.TailnetSettings().Update(ctx, settings); err != nil {
 		return diagnosticsError(err, "Failed to update tailnet settings")
 	}

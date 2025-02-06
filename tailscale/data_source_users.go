@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 func dataSourceUsers() *schema.Resource {
@@ -24,8 +24,8 @@ func dataSourceUsers() *schema.Resource {
 				Description: "Filters the users list to elements whose type is the provided value.",
 				ValidateFunc: validation.StringInSlice(
 					[]string{
-						string(tsclient.UserTypeMember),
-						string(tsclient.UserTypeShared),
+						string(tailscale.UserTypeMember),
+						string(tailscale.UserTypeShared),
 					},
 					false,
 				),
@@ -36,13 +36,13 @@ func dataSourceUsers() *schema.Resource {
 				Description: "Filters the users list to elements whose role is the provided value.",
 				ValidateFunc: validation.StringInSlice(
 					[]string{
-						string(tsclient.UserRoleOwner),
-						string(tsclient.UserRoleMember),
-						string(tsclient.UserRoleAdmin),
-						string(tsclient.UserRoleITAdmin),
-						string(tsclient.UserRoleNetworkAdmin),
-						string(tsclient.UserRoleBillingAdmin),
-						string(tsclient.UserRoleAuditor),
+						string(tailscale.UserRoleOwner),
+						string(tailscale.UserRoleMember),
+						string(tailscale.UserRoleAdmin),
+						string(tailscale.UserRoleITAdmin),
+						string(tailscale.UserRoleNetworkAdmin),
+						string(tailscale.UserRoleBillingAdmin),
+						string(tailscale.UserRoleAuditor),
 					},
 					false,
 				),
@@ -71,16 +71,16 @@ func dataSourceUsers() *schema.Resource {
 }
 
 func dataSourceUsersRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
-	var userType *tsclient.UserType
+	var userType *tailscale.UserType
 	if _userType, ok := d.Get("type").(string); ok {
-		userType = tsclient.PointerTo(tsclient.UserType(_userType))
+		userType = tailscale.PointerTo(tailscale.UserType(_userType))
 	}
 
-	var userRole *tsclient.UserRole
+	var userRole *tailscale.UserRole
 	if _userRole, ok := d.Get("role").(string); ok {
-		userRole = tsclient.PointerTo(tsclient.UserRole(_userRole))
+		userRole = tailscale.PointerTo(tailscale.UserRole(_userRole))
 	}
 
 	users, err := client.Users().List(ctx, userType, userRole)

@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 func resourcePostureIntegration() *schema.Resource {
@@ -31,12 +31,12 @@ func resourcePostureIntegration() *schema.Resource {
 				ForceNew:    true,
 				ValidateFunc: validation.StringInSlice(
 					[]string{
-						string(tsclient.PostureIntegrationProviderFalcon),
-						string(tsclient.PostureIntegrationProviderIntune),
-						string(tsclient.PostureIntegrationProviderJamfPro),
-						string(tsclient.PostureIntegrationProviderKandji),
-						string(tsclient.PostureIntegrationProviderKolide),
-						string(tsclient.PostureIntegrationProviderSentinelOne),
+						string(tailscale.PostureIntegrationProviderFalcon),
+						string(tailscale.PostureIntegrationProviderIntune),
+						string(tailscale.PostureIntegrationProviderJamfPro),
+						string(tailscale.PostureIntegrationProviderKandji),
+						string(tailscale.PostureIntegrationProviderKolide),
+						string(tailscale.PostureIntegrationProviderSentinelOne),
 					},
 					false,
 				),
@@ -66,7 +66,7 @@ func resourcePostureIntegration() *schema.Resource {
 }
 
 func resourcePostureIntegrationRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
 	integration, err := client.DevicePosture().GetIntegration(ctx, d.Id())
 	if err != nil {
@@ -75,7 +75,7 @@ func resourcePostureIntegrationRead(ctx context.Context, d *schema.ResourceData,
 	return resourcePostureIntegrationUpdateFromRemote(d, integration)
 }
 
-func resourcePostureIntegrationUpdateFromRemote(d *schema.ResourceData, integration *tsclient.PostureIntegration) diag.Diagnostics {
+func resourcePostureIntegrationUpdateFromRemote(d *schema.ResourceData, integration *tailscale.PostureIntegration) diag.Diagnostics {
 	if err := d.Set("posture_provider", string(integration.Provider)); err != nil {
 		return diagnosticsError(err, "Failed to set posture_provider field")
 	}
@@ -93,12 +93,12 @@ func resourcePostureIntegrationUpdateFromRemote(d *schema.ResourceData, integrat
 }
 
 func resourcePostureIntegrationCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
 	integration, err := client.DevicePosture().CreateIntegration(
 		ctx,
-		tsclient.CreatePostureIntegrationRequest{
-			Provider:     tsclient.PostureIntegrationProvider(d.Get("posture_provider").(string)),
+		tailscale.CreatePostureIntegrationRequest{
+			Provider:     tailscale.PostureIntegrationProvider(d.Get("posture_provider").(string)),
 			CloudID:      d.Get("cloud_id").(string),
 			ClientID:     d.Get("client_id").(string),
 			TenantID:     d.Get("tenant_id").(string),
@@ -114,16 +114,16 @@ func resourcePostureIntegrationCreate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourcePostureIntegrationUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
 	integration, err := client.DevicePosture().UpdateIntegration(
 		ctx,
 		d.Id(),
-		tsclient.UpdatePostureIntegrationRequest{
+		tailscale.UpdatePostureIntegrationRequest{
 			CloudID:      d.Get("cloud_id").(string),
 			ClientID:     d.Get("client_id").(string),
 			TenantID:     d.Get("tenant_id").(string),
-			ClientSecret: tsclient.PointerTo(d.Get("client_secret").(string)),
+			ClientSecret: tailscale.PointerTo(d.Get("client_secret").(string)),
 		})
 	if err != nil {
 		return diagnosticsError(err, "Failed to update posture integration with id %q", d.Id())
@@ -133,7 +133,7 @@ func resourcePostureIntegrationUpdate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourcePostureIntegrationDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
 	err := client.DevicePosture().DeleteIntegration(ctx, d.Id())
 	if err != nil {

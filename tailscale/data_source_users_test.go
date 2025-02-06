@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 func TestAccTailscaleUsers(t *testing.T) {
@@ -30,7 +30,7 @@ func TestAccTailscaleUsers(t *testing.T) {
 			{
 				Config: `data "tailscale_users" "all_users" {}`,
 				Check: func(s *terraform.State) error {
-					client := testAccProvider.Meta().(*tsclient.Client)
+					client := testAccProvider.Meta().(*tailscale.Client)
 					users, err := client.Users().List(context.Background(), nil, nil)
 					if err != nil {
 						return fmt.Errorf("unable to list users: %s", err)
@@ -99,7 +99,7 @@ func TestAccTailscaleUsers(t *testing.T) {
 			{
 				Config: userDataSources.String(),
 				Check: func(s *terraform.State) error {
-					client := testAccProvider.Meta().(*tsclient.Client)
+					client := testAccProvider.Meta().(*tailscale.Client)
 					users, err := client.Users().List(context.Background(), nil, nil)
 					if err != nil {
 						return fmt.Errorf("unable to list users: %s", err)

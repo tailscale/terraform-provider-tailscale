@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 const testNameserversCreate = `
@@ -47,8 +47,8 @@ func TestProvider_TailscaleDNSNameservers(t *testing.T) {
 func TestAccTailscaleDNSNameservers(t *testing.T) {
 	const resourceName = "tailscale_dns_nameservers.test_nameservers"
 
-	checkProperties := func(expected []string) func(client *tsclient.Client, rs *terraform.ResourceState) error {
-		return func(client *tsclient.Client, rs *terraform.ResourceState) error {
+	checkProperties := func(expected []string) func(client *tailscale.Client, rs *terraform.ResourceState) error {
+		return func(client *tailscale.Client, rs *terraform.ResourceState) error {
 			actual, err := client.DNS().Nameservers(context.Background())
 			if err != nil {
 				return err

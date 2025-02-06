@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 func resourceAWSExternalID() *schema.Resource {
@@ -37,7 +37,7 @@ func resourceAWSExternalID() *schema.Resource {
 }
 
 func resourceAWSExternalIDCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
 	// We pass "reusable: false" on purpose. Otherwise, two tailscale_aws_external_id resources
 	// could end up with the same resource ID (because we use the actual external ID).

@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 func TestAccTailscaleDeviceTags(t *testing.T) {
@@ -47,8 +47,8 @@ func TestAccTailscaleDeviceTags(t *testing.T) {
 			]
 		}`
 
-	checkProperties := func(expectedTags []string) func(client *tsclient.Client, rs *terraform.ResourceState) error {
-		return func(client *tsclient.Client, rs *terraform.ResourceState) error {
+	checkProperties := func(expectedTags []string) func(client *tailscale.Client, rs *terraform.ResourceState) error {
+		return func(client *tailscale.Client, rs *terraform.ResourceState) error {
 			deviceID := rs.Primary.Attributes["device_id"]
 
 			device, err := client.Devices().Get(context.Background(), deviceID)
@@ -70,7 +70,7 @@ func TestAccTailscaleDeviceTags(t *testing.T) {
 			{
 				PreConfig: func() {
 					// Set up ACLs to allow the required tags
-					client := testAccProvider.Meta().(*tsclient.Client)
+					client := testAccProvider.Meta().(*tailscale.Client)
 					err := client.PolicyFile().Set(context.Background(), `
 					{
 					    "tagOwners": {

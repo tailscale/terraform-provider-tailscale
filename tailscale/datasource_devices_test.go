@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 func TestAccTailscaleDevices(t *testing.T) {
@@ -34,7 +34,7 @@ func TestAccTailscaleDevices(t *testing.T) {
 			{
 				Config: `data "tailscale_devices" "all_devices" {}`,
 				Check: func(s *terraform.State) error {
-					client := testAccProvider.Meta().(*tsclient.Client)
+					client := testAccProvider.Meta().(*tailscale.Client)
 					devices, err := client.Devices().List(context.Background())
 					if err != nil {
 						return fmt.Errorf("unable to list devices: %s", err)
@@ -108,7 +108,7 @@ func TestAccTailscaleDevices(t *testing.T) {
 			{
 				Config: devicesDataSources.String(),
 				Check: func(s *terraform.State) error {
-					client := testAccProvider.Meta().(*tsclient.Client)
+					client := testAccProvider.Meta().(*tailscale.Client)
 					devices, err := client.Devices().List(context.Background())
 					if err != nil {
 						return fmt.Errorf("unable to list devices: %s", err)

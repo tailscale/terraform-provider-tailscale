@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 const testACL = `
@@ -190,8 +190,8 @@ func TestAccACL(t *testing.T) {
 				Config: testACLCreate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkProperties(&tsclient.ACL{
-							ACLs: []tsclient.ACLEntry{
+						checkProperties(&tailscale.ACL{
+							ACLs: []tailscale.ACLEntry{
 								{
 									Action: "accept",
 									Users:  []string{"*"},
@@ -206,7 +206,7 @@ func TestAccACL(t *testing.T) {
 				Config: testACLUpdate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkProperties(&tsclient.ACL{
+						checkProperties(&tailscale.ACL{
 							TagOwners: map[string][]string{
 								"tag:example": {"autogroup:member"},
 							},
@@ -248,7 +248,7 @@ func TestAccACL_resetOnDestroy(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy: checkResourceDestroyed(resourceName, func(client *tsclient.Client, rs *terraform.ResourceState) error {
+		CheckDestroy: checkResourceDestroyed(resourceName, func(client *tailscale.Client, rs *terraform.ResourceState) error {
 			aclAfterDestroy, err := client.PolicyFile().Raw(context.Background())
 			if err != nil {
 				return err
@@ -276,8 +276,8 @@ func TestAccACL_resetOnDestroy(t *testing.T) {
 				Config: testACLCreate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkProperties(&tsclient.ACL{
-							ACLs: []tsclient.ACLEntry{
+						checkProperties(&tailscale.ACL{
+							ACLs: []tailscale.ACLEntry{
 								{
 									Action: "accept",
 									Users:  []string{"*"},
@@ -292,8 +292,8 @@ func TestAccACL_resetOnDestroy(t *testing.T) {
 	})
 }
 
-func checkProperties(expected *tsclient.ACL) func(client *tsclient.Client, rs *terraform.ResourceState) error {
-	return func(client *tsclient.Client, rs *terraform.ResourceState) error {
+func checkProperties(expected *tailscale.ACL) func(client *tailscale.Client, rs *terraform.ResourceState) error {
+	return func(client *tailscale.Client, rs *terraform.ResourceState) error {
 		actual, err := client.PolicyFile().Get(context.Background())
 		if err != nil {
 			return err

@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 func TestAccTailscaleDeviceAuthorization(t *testing.T) {
@@ -28,7 +28,7 @@ func TestAccTailscaleDeviceAuthorization(t *testing.T) {
 			authorized = true
 		}`
 
-	checkAuthorized := func(client *tsclient.Client, rs *terraform.ResourceState) error {
+	checkAuthorized := func(client *tailscale.Client, rs *terraform.ResourceState) error {
 		// Check that the device both exists and is still authorized.
 		device, err := client.Devices().Get(context.Background(), rs.Primary.ID)
 		if err != nil {

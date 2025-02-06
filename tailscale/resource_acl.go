@@ -12,8 +12,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"tailscale.com/client/tailscale/v2"
+
 	"github.com/tailscale/hujson"
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
 )
 
 const resourceACLDescription = `The acl resource allows you to configure a Tailscale ACL. See https://tailscale.com/kb/1018/acls for more information. Note that this resource will completely overwrite existing ACL contents for a given tailnet.
@@ -35,7 +36,7 @@ func resourceACL() *schema.Resource {
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 		CustomizeDiff: func(ctx context.Context, rd *schema.ResourceDiff, m interface{}) error {
-			client := m.(*tsclient.Client)
+			client := m.(*tailscale.Client)
 
 			//if the acl is only known after apply, then acl will be an empty string and validation will fail
 			if rd.Get("acl").(string) == "" {
@@ -102,7 +103,7 @@ func resourceACL() *schema.Resource {
 }
 
 func resourceACLRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 	acl, err := client.PolicyFile().Raw(ctx)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch ACL")
@@ -115,7 +116,7 @@ func resourceACLRead(ctx context.Context, d *schema.ResourceData, m interface{})
 }
 
 func resourceACLCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 	acl := d.Get("acl").(string)
 
 	// Setting the `ts-default` ETag will make this operation succeed only if
@@ -141,7 +142,7 @@ func resourceACLCreate(ctx context.Context, d *schema.ResourceData, m interface{
 }
 
 func resourceACLUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
 	if !d.HasChange("acl") {
 		return nil
@@ -161,7 +162,7 @@ func resourceACLDelete(ctx context.Context, d *schema.ResourceData, m interface{
 		return nil
 	}
 
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 	// Setting the ACL to an empty string resets its value to the default.
 	if err := client.PolicyFile().Set(ctx, "", ""); err != nil {
 		return diagnosticsError(err, "Failed to reset ACL")

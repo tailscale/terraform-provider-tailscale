@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 const testTailnetKey = `
@@ -34,7 +34,7 @@ func TestProvider_TailscaleTailnetKey(t *testing.T) {
 		IsUnitTest: true,
 		PreCheck: func() {
 			testServer.ResponseCode = http.StatusOK
-			testServer.ResponseBody = tsclient.Key{
+			testServer.ResponseBody = tailscale.Key{
 				ID:  "test",
 				Key: "thisisatestkey",
 			}
@@ -47,8 +47,8 @@ func TestProvider_TailscaleTailnetKey(t *testing.T) {
 	})
 }
 
-func testTailnetKeyStruct(reusable bool) tsclient.Key {
-	var keyCapabilities tsclient.KeyCapabilities
+func testTailnetKeyStruct(reusable bool) tailscale.Key {
+	var keyCapabilities tailscale.KeyCapabilities
 	json.Unmarshal([]byte(`
 		{
 			"devices": {
@@ -62,7 +62,7 @@ func testTailnetKeyStruct(reusable bool) tsclient.Key {
 			}
 		}`), &keyCapabilities)
 	keyCapabilities.Devices.Create.Reusable = reusable
-	return tsclient.Key{
+	return tailscale.Key{
 		ID:           "test",
 		Key:          "thisisatestkey",
 		Description:  "Example key",
@@ -133,7 +133,7 @@ func TestProvider_TailscaleTailnetKeyInvalid(t *testing.T) {
 		IsUnitTest: true,
 		PreCheck: func() {
 			testServer.ResponseCode = http.StatusOK
-			testServer.ResponseBody = tsclient.Key{
+			testServer.ResponseBody = tailscale.Key{
 				ID:  "test",
 				Key: "thisisatestkey",
 			}
@@ -192,8 +192,8 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 			description = "Test key changed"
 		}`
 
-	checkProperties := func(expected *tsclient.Key, expectedExpirySeconds float64) func(client *tsclient.Client, rs *terraform.ResourceState) error {
-		return func(client *tsclient.Client, rs *terraform.ResourceState) error {
+	checkProperties := func(expected *tailscale.Key, expectedExpirySeconds float64) func(client *tailscale.Client, rs *terraform.ResourceState) error {
+		return func(client *tailscale.Client, rs *terraform.ResourceState) error {
 			actual, err := client.Keys().Get(context.Background(), rs.Primary.ID)
 			if err != nil {
 				return err
@@ -224,14 +224,14 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 		}
 	}
 
-	var expectedKey tsclient.Key
+	var expectedKey tailscale.Key
 	expectedKey.Description = "Test key"
 	expectedKey.Capabilities.Devices.Create.Reusable = true
 	expectedKey.Capabilities.Devices.Create.Ephemeral = true
 	expectedKey.Capabilities.Devices.Create.Preauthorized = true
 	expectedKey.Capabilities.Devices.Create.Tags = []string{"tag:a"}
 
-	var expectedKeyUpdated tsclient.Key
+	var expectedKeyUpdated tailscale.Key
 	expectedKeyUpdated.Description = "Test key changed"
 	expectedKeyUpdated.Capabilities.Devices.Create.Reusable = false
 	expectedKeyUpdated.Capabilities.Devices.Create.Ephemeral = false
@@ -245,7 +245,7 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 			{
 				PreConfig: func() {
 					// Set up ACLs to allow the required tags
-					client := testAccProvider.Meta().(*tsclient.Client)
+					client := testAccProvider.Meta().(*tailscale.Client)
 					err := client.PolicyFile().Set(context.Background(), `
 					{
 					    "tagOwners": {

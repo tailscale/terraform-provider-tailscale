@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 func dataSourceDevice() *schema.Resource {
@@ -74,20 +74,20 @@ func dataSourceDevice() *schema.Resource {
 }
 
 func dataSourceDeviceRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
-	var filter func(d tsclient.Device) bool
+	var filter func(d tailscale.Device) bool
 	var filterDesc string
 
 	if name, ok := d.GetOk("name"); ok {
-		filter = func(d tsclient.Device) bool {
+		filter = func(d tailscale.Device) bool {
 			return d.Name == name.(string)
 		}
 		filterDesc = fmt.Sprintf("name=%q", name.(string))
 	}
 
 	if hostname, ok := d.GetOk("hostname"); ok {
-		filter = func(d tsclient.Device) bool {
+		filter = func(d tailscale.Device) bool {
 			return d.Hostname == hostname.(string)
 		}
 		filterDesc = fmt.Sprintf("hostname=%q", hostname.(string))
@@ -98,7 +98,7 @@ func dataSourceDeviceRead(ctx context.Context, d *schema.ResourceData, m interfa
 		return diagnosticsError(err, "Failed to fetch devices")
 	}
 
-	var selected *tsclient.Device
+	var selected *tailscale.Device
 	for _, device := range devices {
 		if filter(device) {
 			selected = &device
@@ -117,7 +117,7 @@ func dataSourceDeviceRead(ctx context.Context, d *schema.ResourceData, m interfa
 // deviceToMap converts the given device into a map representing the device as a
 // resource in Terraform. This omits the "id" which is expected to be set
 // using [schema.ResourceData.SetId].
-func deviceToMap(device *tsclient.Device) map[string]any {
+func deviceToMap(device *tailscale.Device) map[string]any {
 	return map[string]any{
 		"name":      device.Name,
 		"hostname":  device.Hostname,

@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 // providerVersion is filled by goreleaser at build time.
@@ -158,11 +158,11 @@ func providerConfigure(_ context.Context, provider *schema.Provider, d *schema.R
 			oauthScopes[i] = scope.(string)
 		}
 
-		client := &tsclient.Client{
+		client := &tailscale.Client{
 			BaseURL:   parsedBaseURL,
 			UserAgent: userAgent,
 			Tailnet:   tailnet,
-			HTTP: tsclient.OAuthConfig{
+			HTTP: tailscale.OAuthConfig{
 				BaseURL:      parsedBaseURL.String(),
 				ClientID:     oauthClientID,
 				ClientSecret: oauthClientSecret,
@@ -173,7 +173,7 @@ func providerConfigure(_ context.Context, provider *schema.Provider, d *schema.R
 		return client, nil
 	}
 
-	client := &tsclient.Client{
+	client := &tailscale.Client{
 		BaseURL:   parsedBaseURL,
 		UserAgent: userAgent,
 		APIKey:    apiKey,
@@ -197,7 +197,7 @@ func diagnosticsError(err error, message string, args ...interface{}) diag.Diagn
 		},
 	}
 
-	if details := tsclient.ErrorData(err); len(details) > 0 {
+	if details := tailscale.ErrorData(err); len(details) > 0 {
 		for _, dt := range details {
 			for _, e := range dt.Errors {
 				diags = append(diags, diag.Diagnostic{
@@ -291,7 +291,7 @@ func optional[T any](d *schema.ResourceData, key string) *T {
 	if !d.HasChange(key) {
 		return nil
 	}
-	return tsclient.PointerTo(d.Get(key).(T))
+	return tailscale.PointerTo(d.Get(key).(T))
 }
 
 // isAcceptanceTesting returns true if we're running acceptance tests.

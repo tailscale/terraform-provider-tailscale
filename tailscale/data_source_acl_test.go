@@ -11,8 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"tailscale.com/client/tailscale/v2"
+
 	"github.com/tailscale/hujson"
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
 )
 
 func TestAccTailscaleACL(t *testing.T) {
@@ -25,7 +26,7 @@ func TestAccTailscaleACL(t *testing.T) {
 			{
 				Config: `data "tailscale_acl" "acl" {}`,
 				Check: func(s *terraform.State) error {
-					client := testAccProvider.Meta().(*tsclient.Client)
+					client := testAccProvider.Meta().(*tailscale.Client)
 					acl, err := client.PolicyFile().Raw(context.Background())
 					if err != nil {
 						return fmt.Errorf("unable to get ACL: %s", err)

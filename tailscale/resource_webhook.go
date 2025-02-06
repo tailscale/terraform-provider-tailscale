@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
-	tsclient "github.com/tailscale/tailscale-client-go/v2"
+	"tailscale.com/client/tailscale/v2"
 )
 
 func resourceWebhook() *schema.Resource {
@@ -37,11 +37,11 @@ func resourceWebhook() *schema.Resource {
 				ForceNew:    true,
 				ValidateFunc: validation.StringInSlice(
 					[]string{
-						string(tsclient.WebhookEmptyProviderType),
-						string(tsclient.WebhookSlackProviderType),
-						string(tsclient.WebhookMattermostProviderType),
-						string(tsclient.WebhookGoogleChatProviderType),
-						string(tsclient.WebhookDiscordProviderType),
+						string(tailscale.WebhookEmptyProviderType),
+						string(tailscale.WebhookSlackProviderType),
+						string(tailscale.WebhookMattermostProviderType),
+						string(tailscale.WebhookGoogleChatProviderType),
+						string(tailscale.WebhookDiscordProviderType),
 					},
 					false,
 				),
@@ -54,24 +54,24 @@ func resourceWebhook() *schema.Resource {
 					Type: schema.TypeString,
 					ValidateFunc: validation.StringInSlice(
 						[]string{
-							string(tsclient.WebhookCategoryTailnetManagement),
-							string(tsclient.WebhookNodeCreated),
-							string(tsclient.WebhookNodeNeedsApproval),
-							string(tsclient.WebhookNodeApproved),
-							string(tsclient.WebhookNodeKeyExpiringInOneDay),
-							string(tsclient.WebhookNodeKeyExpired),
-							string(tsclient.WebhookNodeDeleted),
-							string(tsclient.WebhookPolicyUpdate),
-							string(tsclient.WebhookUserCreated),
-							string(tsclient.WebhookUserNeedsApproval),
-							string(tsclient.WebhookUserSuspended),
-							string(tsclient.WebhookUserRestored),
-							string(tsclient.WebhookUserDeleted),
-							string(tsclient.WebhookUserApproved),
-							string(tsclient.WebhookUserRoleUpdated),
-							string(tsclient.WebhookCategoryDeviceMisconfigurations),
-							string(tsclient.WebhookSubnetIPForwardingNotEnabled),
-							string(tsclient.WebhookExitNodeIPForwardingNotEnabled),
+							string(tailscale.WebhookCategoryTailnetManagement),
+							string(tailscale.WebhookNodeCreated),
+							string(tailscale.WebhookNodeNeedsApproval),
+							string(tailscale.WebhookNodeApproved),
+							string(tailscale.WebhookNodeKeyExpiringInOneDay),
+							string(tailscale.WebhookNodeKeyExpired),
+							string(tailscale.WebhookNodeDeleted),
+							string(tailscale.WebhookPolicyUpdate),
+							string(tailscale.WebhookUserCreated),
+							string(tailscale.WebhookUserNeedsApproval),
+							string(tailscale.WebhookUserSuspended),
+							string(tailscale.WebhookUserRestored),
+							string(tailscale.WebhookUserDeleted),
+							string(tailscale.WebhookUserApproved),
+							string(tailscale.WebhookUserRoleUpdated),
+							string(tailscale.WebhookCategoryDeviceMisconfigurations),
+							string(tailscale.WebhookSubnetIPForwardingNotEnabled),
+							string(tailscale.WebhookExitNodeIPForwardingNotEnabled),
 						},
 						false,
 					),
@@ -88,18 +88,18 @@ func resourceWebhook() *schema.Resource {
 }
 
 func resourceWebhookCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
 	endpointURL := d.Get("endpoint_url").(string)
-	providerType := tsclient.WebhookProviderType(d.Get("provider_type").(string))
+	providerType := tailscale.WebhookProviderType(d.Get("provider_type").(string))
 	subscriptions := d.Get("subscriptions").(*schema.Set).List()
 
-	var requestSubscriptions []tsclient.WebhookSubscriptionType
+	var requestSubscriptions []tailscale.WebhookSubscriptionType
 	for _, subscription := range subscriptions {
-		requestSubscriptions = append(requestSubscriptions, tsclient.WebhookSubscriptionType(subscription.(string)))
+		requestSubscriptions = append(requestSubscriptions, tailscale.WebhookSubscriptionType(subscription.(string)))
 	}
 
-	request := tsclient.CreateWebhookRequest{
+	request := tailscale.CreateWebhookRequest{
 		EndpointURL:   endpointURL,
 		ProviderType:  providerType,
 		Subscriptions: requestSubscriptions,
@@ -118,7 +118,7 @@ func resourceWebhookCreate(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceWebhookRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
 	webhook, err := client.Webhooks().Get(ctx, d.Id())
 	if err != nil {
@@ -149,12 +149,12 @@ func resourceWebhookUpdate(ctx context.Context, d *schema.ResourceData, m interf
 		return resourceWebhookRead(ctx, d, m)
 	}
 
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 	subscriptions := d.Get("subscriptions").(*schema.Set).List()
 
-	var requestSubscriptions []tsclient.WebhookSubscriptionType
+	var requestSubscriptions []tailscale.WebhookSubscriptionType
 	for _, subscription := range subscriptions {
-		requestSubscriptions = append(requestSubscriptions, tsclient.WebhookSubscriptionType(subscription.(string)))
+		requestSubscriptions = append(requestSubscriptions, tailscale.WebhookSubscriptionType(subscription.(string)))
 	}
 
 	_, err := client.Webhooks().Update(ctx, d.Id(), requestSubscriptions)
@@ -166,7 +166,7 @@ func resourceWebhookUpdate(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceWebhookDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tsclient.Client)
+	client := m.(*tailscale.Client)
 
 	err := client.Webhooks().Delete(ctx, d.Id())
 	if err != nil {
