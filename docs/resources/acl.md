@@ -56,6 +56,7 @@ resource "tailscale_acl" "as_hujson" {
 ### Optional
 
 - `overwrite_existing_content` (Boolean) If true, will skip requirement to import acl before allowing changes. Be careful, can cause ACL to be overwritten
+- `reset_acl_on_destroy` (Boolean) If true, will reset the ACL for the Tailnet to the default when this resource is destroyed
 
 ### Read-Only
 

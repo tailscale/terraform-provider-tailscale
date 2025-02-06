@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
@@ -181,23 +182,6 @@ func TestAccACL(t *testing.T) {
 			EOF
 		}`
 
-	checkProperties := func(expected *tsclient.ACL) func(client *tsclient.Client, rs *terraform.ResourceState) error {
-		return func(client *tsclient.Client, rs *terraform.ResourceState) error {
-			actual, err := client.PolicyFile().Get(context.Background())
-			if err != nil {
-				return err
-			}
-
-			// Clear out ETag before comparing to expected.
-			actual.ETag = ""
-			if err := assertEqual(expected, actual, "wrong ACL"); err != nil {
-				return err
-			}
-
-			return nil
-		}
-	}
-
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories(t),
@@ -230,6 +214,97 @@ func TestAccACL(t *testing.T) {
 					),
 				),
 			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"overwrite_existing_content"},
+			},
 		},
 	})
+}
+
+func TestAccACL_resetOnDestroy(t *testing.T) {
+	const resourceName = "tailscale_acl.test_acl"
+
+	const testACLCreate = `
+		resource "tailscale_acl" "test_acl" {
+            reset_acl_on_destroy = true
+		    overwrite_existing_content = true
+			acl = <<EOF
+			{
+				// Access control lists.
+				"ACLs": [
+					{
+						"Action": "accept",
+						"Users": ["*"],
+						"Ports": ["*:*"]
+					}
+				],
+			}
+			EOF
+		}`
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories(t),
+		CheckDestroy: checkResourceDestroyed(resourceName, func(client *tsclient.Client, rs *terraform.ResourceState) error {
+			aclAfterDestroy, err := client.PolicyFile().Raw(context.Background())
+			if err != nil {
+				return err
+			}
+
+			// Reset the ACL through the API client
+			err = client.PolicyFile().Set(context.Background(), "", "")
+			if err != nil {
+				return err
+			}
+
+			aclAfterReset, err := client.PolicyFile().Raw(context.Background())
+			if err != nil {
+				return err
+			}
+
+			if diff := cmp.Diff(aclAfterDestroy.HuJSON, aclAfterReset.HuJSON); diff != "" {
+				return fmt.Errorf("wrong ACL after destroy: (-got+want) \n%s", diff)
+			}
+
+			return nil
+		}),
+		Steps: []resource.TestStep{
+			{
+				Config: testACLCreate,
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName,
+						checkProperties(&tsclient.ACL{
+							ACLs: []tsclient.ACLEntry{
+								{
+									Action: "accept",
+									Users:  []string{"*"},
+									Ports:  []string{"*:*"},
+								},
+							},
+						}),
+					),
+				),
+			},
+		},
+	})
+}
+
+func checkProperties(expected *tsclient.ACL) func(client *tsclient.Client, rs *terraform.ResourceState) error {
+	return func(client *tsclient.Client, rs *terraform.ResourceState) error {
+		actual, err := client.PolicyFile().Get(context.Background())
+		if err != nil {
+			return err
+		}
+
+		// Clear out ETag before comparing to expected.
+		actual.ETag = ""
+		if err := assertEqual(expected, actual, "wrong ACL"); err != nil {
+			return err
+		}
+
+		return nil
+	}
 }
