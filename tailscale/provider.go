@@ -40,12 +40,14 @@ func Provider(options ...ProviderOption) *schema.Provider {
 				Optional:    true,
 				Description: "The API key to use for authenticating requests to the API. Can be set via the TAILSCALE_API_KEY environment variable. Conflicts with 'oauth_client_id' and 'oauth_client_secret'.",
 				Sensitive:   true,
+				StateFunc:   func(i interface{}) string { return "$TAILSCALE_API_KEY" },
 			},
 			"oauth_client_id": {
 				Type:        schema.TypeString,
 				DefaultFunc: schema.MultiEnvDefaultFunc(oauthClientIDEnvVars, ""),
 				Optional:    true,
 				Description: "The OAuth application's ID when using OAuth client credentials. Can be set via the TAILSCALE_OAUTH_CLIENT_ID environment variable. Both 'oauth_client_id' and 'oauth_client_secret' must be set. Conflicts with 'api_key'.",
+				StateFunc:   func(i interface{}) string { return "$TAILSCALE_OAUTH_CLIENT_ID" },
 			},
 			"oauth_client_secret": {
 				Type:        schema.TypeString,
@@ -53,6 +55,7 @@ func Provider(options ...ProviderOption) *schema.Provider {
 				Optional:    true,
 				Description: "The OAuth application's secret when using OAuth client credentials. Can be set via the TAILSCALE_OAUTH_CLIENT_SECRET environment variable. Both 'oauth_client_id' and 'oauth_client_secret' must be set. Conflicts with 'api_key'.",
 				Sensitive:   true,
+				StateFunc:   func(i interface{}) string { return "$TAILSCALE_OAUTH_CLIENT_SECRET" },
 			},
 			"scopes": {
 				Type:        schema.TypeList,
