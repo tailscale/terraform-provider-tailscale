@@ -54,10 +54,11 @@ resource "tailscale_logstream_configuration" "sample_logstream_configuration_s3_
 ### Required
 
 - `destination_type` (String) The type of system to which logs are being streamed.
-- `log_type` (String) The type of log that is streamed to this endpoint.
+- `log_type` (String) The type of log that is streamed to this endpoint. Either `configuration` for configuration audit logs, or `network` for network flow logs.
 
 ### Optional
 
+- `compression_format` (String) The compression algorithm with which to compress logs. One of `none`, `zstd` or `gzip`. Defaults to `none`.
 - `s3_access_key_id` (String) The S3 access key ID. Required if destination_type is s3 and s3_authentication_type is 'accesskey'.
 - `s3_authentication_type` (String) What type of authentication to use for S3. Required if destination_type is 's3'. Tailscale recommends using 'rolearn'.
 - `s3_bucket` (String) The S3 bucket name. Required if destination_type is 's3'.
@@ -67,6 +68,7 @@ resource "tailscale_logstream_configuration" "sample_logstream_configuration_s3_
 - `s3_role_arn` (String) ARN of the AWS IAM role that Tailscale should assume when using role-based authentication. Required if destination_type is 's3' and s3_authentication_type is 'rolearn'.
 - `s3_secret_access_key` (String, Sensitive) The S3 secret access key. Required if destination_type is 's3' and s3_authentication_type is 'accesskey'.
 - `token` (String, Sensitive) The token/password with which log streams to this endpoint should be authenticated, required unless destination_type is 's3'.
+- `upload_period_minutes` (Number) An optional number of minutes to wait in between uploading new logs. If the quantity of logs does not fit within a single upload, multiple uploads will be made.
 - `url` (String) The URL to which log streams are being posted. If destination_type is 's3' and you want to use the official Amazon S3 endpoint, leave this empty.
 - `user` (String) The username with which log streams to this endpoint are authenticated. Only required if destination_type is 'elastic', defaults to 'user' if not set.
 

@@ -26,7 +26,7 @@ func resourceLogstreamConfiguration() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"log_type": {
 				Type:        schema.TypeString,
-				Description: "The type of log that is streamed to this endpoint.",
+				Description: "The type of log that is streamed to this endpoint. Either `configuration` for configuration audit logs, or `network` for network flow logs.",
 				Required:    true,
 				ForceNew:    true,
 				ValidateFunc: validation.StringInSlice(
@@ -69,6 +69,25 @@ func resourceLogstreamConfiguration() *schema.Resource {
 				Description: "The token/password with which log streams to this endpoint should be authenticated, required unless destination_type is 's3'.",
 				Optional:    true,
 				Sensitive:   true,
+			},
+			"upload_period_minutes": {
+				Type:        schema.TypeInt,
+				Description: "An optional number of minutes to wait in between uploading new logs. If the quantity of logs does not fit within a single upload, multiple uploads will be made.",
+				Optional:    true,
+			},
+			"compression_format": {
+				Type:        schema.TypeString,
+				Description: "The compression algorithm with which to compress logs. One of `none`, `zstd` or `gzip`. Defaults to `none`.",
+				Optional:    true,
+				Default:     string(tailscale.CompressionFormatNone),
+				ValidateFunc: validation.StringInSlice(
+					[]string{
+						string(tailscale.CompressionFormatNone),
+						string(tailscale.CompressionFormatZstd),
+						string(tailscale.CompressionFormatGzip),
+					},
+					false,
+				),
 			},
 			"s3_bucket": {
 				Type:        schema.TypeString,
@@ -130,6 +149,8 @@ func resourceLogstreamConfigurationCreate(ctx context.Context, d *schema.Resourc
 	endpointURL := d.Get("url").(string)
 	user := d.Get("user").(string)
 	token := d.Get("token").(string)
+	uploadPeriodMinutes := d.Get("upload_period_minutes").(int)
+	compressionFormat := d.Get("compression_format").(string)
 	s3Bucket := d.Get("s3_bucket").(string)
 	s3Region := d.Get("s3_region").(string)
 	s3KeyPrefix := d.Get("s3_key_prefix").(string)
@@ -144,6 +165,8 @@ func resourceLogstreamConfigurationCreate(ctx context.Context, d *schema.Resourc
 		URL:                  endpointURL,
 		User:                 user,
 		Token:                token,
+		UploadPeriodMinutes:  uploadPeriodMinutes,
+		CompressionFormat:    tailscale.CompressionFormat(compressionFormat),
 		S3Bucket:             s3Bucket,
 		S3Region:             s3Region,
 		S3KeyPrefix:          s3KeyPrefix,
@@ -189,6 +212,14 @@ func resourceLogstreamConfigurationRead(ctx context.Context, d *schema.ResourceD
 
 	if err = d.Set("user", logstream.User); err != nil {
 		return diagnosticsError(err, "Failed to set user field")
+	}
+
+	if err = d.Set("upload_period_minutes", logstream.UploadPeriodMinutes); err != nil {
+		return diagnosticsError(err, "Failed to set upload_period_minutes field")
+	}
+
+	if err = d.Set("compression_format", logstream.CompressionFormat); err != nil {
+		return diagnosticsError(err, "Failed to set compression_format field")
 	}
 
 	if err := d.Set("s3_bucket", logstream.S3Bucket); err != nil {
