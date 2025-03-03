@@ -63,6 +63,8 @@ const testLogstreamConfigurationUpdateS3AccessKey = `
 		s3_access_key_id       = "example-access-key-id"
 		s3_secret_access_key   = "example-secret-access-key"
 		url                    = "https://example.com/s3"
+		upload_period_minutes  = 5
+		compression_format     = "zstd"
 	}`
 
 func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
@@ -128,6 +130,17 @@ func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
 				// We have a default value of user = 'user'.
 				if expectedConfiguration.User != "" || selectedConfig.User != "user" {
 					return fmt.Errorf("bad logstream_configuration.user: %s", selectedConfig.User)
+				}
+			}
+
+			if selectedConfig.UploadPeriodMinutes != expectedConfiguration.UploadPeriodMinutes {
+				return fmt.Errorf("bad logstream_configuration.upload_period_minutes: %d", selectedConfig.UploadPeriodMinutes)
+			}
+
+			if selectedConfig.CompressionFormat != expectedConfiguration.CompressionFormat {
+				// We have a default value of compression_format = 'none'.
+				if expectedConfiguration.CompressionFormat != "" || selectedConfig.CompressionFormat != tailscale.CompressionFormatNone {
+					return fmt.Errorf("bad logstream_configuration.compression_format: %s", selectedConfig.CompressionFormat)
 				}
 			}
 
@@ -227,6 +240,7 @@ func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
 								S3AuthenticationType: tailscale.S3RoleARNAuthentication,
 								S3RoleARN:            "arn:aws:iam::123456789012:role/example-role",
 								S3ExternalID:         externalIdResource.Primary.Attributes["external_id"],
+								CompressionFormat:    tailscale.CompressionFormatNone,
 							}),
 						)(s)
 					},
@@ -238,6 +252,7 @@ func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "s3_authentication_type", "rolearn"),
 					resource.TestCheckResourceAttr(resourceName, "s3_role_arn", "arn:aws:iam::123456789012:role/example-role"),
 					resource.TestCheckResourceAttrPair(resourceName, "s3_external_id", "tailscale_aws_external_id.external_id", "external_id"),
+					resource.TestCheckResourceAttr(resourceName, "compression_format", "none"),
 				),
 			},
 			{
@@ -253,6 +268,8 @@ func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
 							S3AuthenticationType: tailscale.S3AccessKeyAuthentication,
 							S3AccessKeyID:        "example-access-key-id",
 							URL:                  "https://example.com/s3",
+							UploadPeriodMinutes:  5,
+							CompressionFormat:    tailscale.CompressionFormatZstd,
 						}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "log_type", "network"),
@@ -263,6 +280,8 @@ func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "s3_access_key_id", "example-access-key-id"),
 					resource.TestCheckResourceAttr(resourceName, "s3_secret_access_key", "example-secret-access-key"),
 					resource.TestCheckResourceAttr(resourceName, "url", "https://example.com/s3"),
+					resource.TestCheckResourceAttr(resourceName, "upload_period_minutes", "5"),
+					resource.TestCheckResourceAttr(resourceName, "compression_format", "zstd"),
 				),
 			},
 			{

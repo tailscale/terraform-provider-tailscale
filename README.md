@@ -92,6 +92,8 @@ provider_installation {
 }
 ```
 
+Remember to run `make build` to build the provider and pick up your local changes.
+
 #### Acceptance Tests
 
 Tests in this repo that are prefixed with `TestAcc` are acceptance tests which run against a real instance of the tailscale control plane.
@@ -108,6 +110,14 @@ The following tailscale specific environment variables must also be set:
   - Tests will be performed against the tailnet which the key belongs to
 - `TAILSCALE_TEST_DEVICE_NAME`
   - The FQDN of a device owned by the owner of the API key in use
+
+If you run a local control server with the `terraform-acceptance-testing` test scenario, then you can use the make rule `testacc_local`
+which will correctly populate the necessary environment variables for you.
+
+```
+./tool/go run ./cmd/tailcontrol --dev --generate-test-devices=terraform-acceptance-testing &
+make testacc_local
+```
 
 ## Releasing
 

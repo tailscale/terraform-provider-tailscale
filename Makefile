@@ -36,6 +36,9 @@ test:
 testacc:
 	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
 
+testacc_local:
+	TF_ACC=1 TAILSCALE_BASE_URL="http://localhost:31544" TAILSCALE_API_KEY=$$(jq -r .apiKey /tmp/terraform-api-key.json) TAILSCALE_TEST_DEVICE_NAME=$$(jq -r .name /tmp/terraform-device-info.json) go test $(TEST) -v $(TESTARGS) -timeout 120m
+
 format:
 	go fmt ./...
 	goimports -w -local github.com/tailscale .
