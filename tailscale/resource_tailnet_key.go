@@ -141,7 +141,7 @@ func resourceTailnetKeyCreate(ctx context.Context, d *schema.ResourceData, m int
 		req.Description = description.(string)
 	}
 
-	key, err := client.Keys().Create(ctx, req)
+	key, err := client.Keys().CreateAuthKey(ctx, req)
 	if err != nil {
 		return diagnosticsError(err, "Failed to create key")
 	}
