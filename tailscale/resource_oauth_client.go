@@ -20,7 +20,7 @@ func resourceOAuthClient() *schema.Resource {
 		ReadContext:   resourceOAuthClientRead,
 		CreateContext: resourceOAuthClientCreate,
 		DeleteContext: resourceOAuthClientDelete,
-		UpdateContext: schema.NoopContext,
+		UpdateContext: nil,
 		// Importer: &schema.ResourceImporter{StateContext: schema.ImportStatePassthroughContext}, no import support - the key is not returned by the API so it'd serve no purpose
 		Schema: map[string]*schema.Schema{
 			"description": {
@@ -71,7 +71,6 @@ func resourceOAuthClient() *schema.Resource {
 			},
 			"user_id": {
 				Type:        schema.TypeString,
-				Optional:    true,
 				Description: "ID of the user who created this key, empty for OAuth clients created by other OAuth clients.",
 				Computed:    true,
 			},

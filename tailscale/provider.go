@@ -212,6 +212,21 @@ func diagnosticsError(err error, message string, args ...interface{}) diag.Diagn
 	return diags
 }
 
+func diagnosticsAsError(diags diag.Diagnostics) error {
+	var combined string
+	for _, d := range diags {
+		if d.Severity == diag.Error {
+			combined += fmt.Sprintf("%s: %s\n", d.Summary, d.Detail)
+		}
+	}
+
+	if combined == "" {
+		return nil
+	}
+
+	return fmt.Errorf(combined)
+}
+
 func diagnosticsErrorWithPath(err error, message string, path cty.Path, args ...interface{}) diag.Diagnostics {
 	d := diagnosticsError(err, message, args...)
 	for i := range d {

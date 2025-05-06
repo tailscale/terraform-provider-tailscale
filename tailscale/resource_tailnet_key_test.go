@@ -35,8 +35,9 @@ func TestProvider_TailscaleTailnetKey(t *testing.T) {
 		PreCheck: func() {
 			testServer.ResponseCode = http.StatusOK
 			testServer.ResponseBody = tailscale.Key{
-				ID:  "test",
-				Key: "thisisatestkey",
+				ID:      "test",
+				KeyType: "auth",
+				Key:     "thisisatestkey",
 			}
 		},
 		ProviderFactories: testProviderFactories(t),
@@ -64,6 +65,7 @@ func testTailnetKeyStruct(reusable bool) tailscale.Key {
 	keyCapabilities.Devices.Create.Reusable = reusable
 	return tailscale.Key{
 		ID:           "test",
+		KeyType:      "auth",
 		Key:          "thisisatestkey",
 		Description:  "Example key",
 		Capabilities: keyCapabilities,
@@ -134,8 +136,9 @@ func TestProvider_TailscaleTailnetKeyInvalid(t *testing.T) {
 		PreCheck: func() {
 			testServer.ResponseCode = http.StatusOK
 			testServer.ResponseBody = tailscale.Key{
-				ID:  "test",
-				Key: "thisisatestkey",
+				ID:      "test",
+				KeyType: "auth",
+				Key:     "thisisatestkey",
 			}
 		},
 		ProviderFactories: testProviderFactories(t),
@@ -225,6 +228,7 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 	}
 
 	var expectedKey tailscale.Key
+	expectedKey.KeyType = "auth"
 	expectedKey.Description = "Test key"
 	expectedKey.Capabilities.Devices.Create.Reusable = true
 	expectedKey.Capabilities.Devices.Create.Ephemeral = true
@@ -232,6 +236,7 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 	expectedKey.Capabilities.Devices.Create.Tags = []string{"tag:a"}
 
 	var expectedKeyUpdated tailscale.Key
+	expectedKeyUpdated.KeyType = "auth"
 	expectedKeyUpdated.Description = "Test key changed"
 	expectedKeyUpdated.Capabilities.Devices.Create.Reusable = false
 	expectedKeyUpdated.Capabilities.Devices.Create.Ephemeral = false
