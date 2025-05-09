@@ -5,11 +5,13 @@ package tailscale
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/pkg/errors"
 
 	"tailscale.com/client/tailscale/v2"
 )
@@ -23,7 +25,7 @@ func resourceTailnetKey() *schema.Resource {
 		UpdateContext: schema.NoopContext,
 		CustomizeDiff: resourceTailnetKeyDiff,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceTailnetKeyImport,
 		},
 		Schema: map[string]*schema.Schema{
 			"reusable": {
@@ -241,13 +243,17 @@ func resourceTailnetKeyRead(ctx context.Context, d *schema.ResourceData, m inter
 		return nil
 	}
 
+	if key.KeyType != "auth" {
+		return diagnosticsError(errors.New("Only 'auth' keys are supported by this resource"), fmt.Sprintf("Invalid key type '%s'", key.KeyType))
+	}
+
 	d.SetId(key.ID)
 	if err = d.Set("reusable", key.Capabilities.Devices.Create.Reusable); err != nil {
 		return diagnosticsError(err, "Failed to set reusable")
 	}
 
 	if err = d.Set("ephemeral", key.Capabilities.Devices.Create.Ephemeral); err != nil {
-		return diagnosticsError(err, "failed to set ephemeral")
+		return diagnosticsError(err, "Failed to set ephemeral")
 	}
 
 	if err = d.Set("created_at", key.Created.Format(time.RFC3339)); err != nil {
@@ -279,4 +285,13 @@ func resourceTailnetKeyRead(ctx context.Context, d *schema.ResourceData, m inter
 	}
 
 	return nil
+}
+
+func resourceTailnetKeyImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+	diags := resourceTailnetKeyRead(ctx, d, m)
+	if diags.HasError() {
+		return nil, diagnosticsAsError(diags)
+	}
+
+	return []*schema.ResourceData{d}, nil
 }
