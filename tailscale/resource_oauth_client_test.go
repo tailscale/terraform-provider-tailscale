@@ -59,9 +59,11 @@ func TestAccTailscaleOAuthClient(t *testing.T) {
 
 	var expectedOAuthClientCreated tailscale.Key
 	expectedOAuthClientCreated.Description = "Test client"
+	expectedOAuthClientCreated.KeyType = "client"
 
 	var expectedOAuthClientUpdated tailscale.Key
 	expectedOAuthClientUpdated.Description = "Updated description"
+	expectedOAuthClientUpdated.KeyType = "client"
 
 	checkProperties := func(expected *tailscale.Key) func(client *tailscale.Client, rs *terraform.ResourceState) error {
 		return func(client *tailscale.Client, rs *terraform.ResourceState) error {
