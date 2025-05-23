@@ -24,6 +24,17 @@ func resourceTailnetSettings() *schema.Resource {
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
+			"acls_externally_managed_on": {
+				Type:        schema.TypeBool,
+				Description: "Prevent users from editing policies in the admin console to avoid conflicts with external management workflows like GitOps or Terraform.",
+				Optional:    true,
+			},
+			"acls_external_link": {
+				Type:         schema.TypeString,
+				Description:  "Link to your external ACL definition or management system. Must be a valid URL.",
+				ValidateFunc: validation.IsURLWithHTTPorHTTPS,
+				Optional:     true,
+			},
 			"devices_approval_on": {
 				Type:        schema.TypeBool,
 				Description: "Whether device approval is enabled for the tailnet",
@@ -38,6 +49,7 @@ func resourceTailnetSettings() *schema.Resource {
 				Type:        schema.TypeInt,
 				Description: "The key expiry duration for devices on this tailnet",
 				Optional:    true,
+				Default:     10,
 			},
 			"users_approval_on": {
 				Type:        schema.TypeBool,
@@ -56,6 +68,7 @@ func resourceTailnetSettings() *schema.Resource {
 					},
 					false,
 				),
+				Default: string(tailscale.RoleAllowedToJoinExternalTailnetsAdmin),
 			},
 			"network_flow_logging_on": {
 				Type:        schema.TypeBool,
@@ -85,6 +98,8 @@ func resourceTailnetSettingsRead(ctx context.Context, d *schema.ResourceData, m 
 	}
 
 	settingsMap := map[string]any{
+		"acls_externally_managed_on":                  settings.ACLsExternallyManagedOn,
+		"acls_external_link":                          settings.ACLsExternalLink,
 		"devices_approval_on":                         settings.DevicesApprovalOn,
 		"devices_auto_updates_on":                     settings.DevicesAutoUpdatesOn,
 		"devices_key_duration_days":                   settings.DevicesKeyDurationDays,
@@ -119,6 +134,8 @@ func resourceTailnetSettingsDoUpdate(ctx context.Context, d *schema.ResourceData
 		role = tailscale.PointerTo(tailscale.RoleAllowedToJoinExternalTailnets(_role.(string)))
 	}
 	settings := tailscale.UpdateTailnetSettingsRequest{
+		ACLsExternallyManagedOn:                optional[bool](d, "acls_externally_managed_on"),
+		ACLsExternalLink:                       optional[string](d, "acls_external_link"),
 		DevicesApprovalOn:                      optional[bool](d, "devices_approval_on"),
 		DevicesAutoUpdatesOn:                   optional[bool](d, "devices_auto_updates_on"),
 		DevicesKeyDurationDays:                 optional[int](d, "devices_key_duration_days"),
