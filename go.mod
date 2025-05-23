@@ -14,7 +14,7 @@ require (
 	github.com/tailscale/hujson v0.0.0-20221223112325-20486734a56a
 	golang.org/x/tools v0.32.0
 	tailscale.com v1.80.2
-	tailscale.com/client/tailscale/v2 v2.0.0-20250509161557-5fad10cf3a33
+	tailscale.com/client/tailscale/v2 v2.0.0-20250523170732-d0115b288f23 // TODO maxc use the real version once the client PR is merged
 )
 
 require github.com/pkg/errors v0.9.1

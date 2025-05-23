@@ -14,6 +14,8 @@ The tailnet_settings resource allows you to configure settings for your tailnet.
 
 ```terraform
 resource "tailscale_tailnet_settings" "sample_tailnet_settings" {
+  acls_externally_managed_on                  = true
+  acls_external_link                          = "https://github.com/octocat/Hello-World"
   devices_approval_on                         = true
   devices_auto_updates_on                     = true
   devices_key_duration_days                   = 5
@@ -28,6 +30,8 @@ resource "tailscale_tailnet_settings" "sample_tailnet_settings" {
 
 ### Optional
 
+- `acls_external_link` (String) Link to your external ACL definition or management system. Must be a valid URL.
+- `acls_externally_managed_on` (Boolean) Prevent users from editing policies in the admin console to avoid conflicts with external management workflows like GitOps or Terraform.
 - `devices_approval_on` (Boolean) Whether device approval is enabled for the tailnet
 - `devices_auto_updates_on` (Boolean) Whether auto updates are enabled for devices that belong to this tailnet
 - `devices_key_duration_days` (Number) The key expiry duration for devices on this tailnet
