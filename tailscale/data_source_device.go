@@ -37,6 +37,11 @@ func dataSourceDevice() *schema.Resource {
 				Description: "The user associated with the device",
 				Computed:    true,
 			},
+			"node_id": {
+				Type:        schema.TypeString,
+				Description: "The preferred indentifier for a device.",
+				Computed:    true,
+			},
 			"addresses": {
 				Type:        schema.TypeList,
 				Description: "The list of device's IPs",
@@ -122,6 +127,7 @@ func deviceToMap(device *tailscale.Device) map[string]any {
 		"name":      device.Name,
 		"hostname":  device.Hostname,
 		"user":      device.User,
+		"node_id":   device.NodeID,
 		"addresses": device.Addresses,
 		"tags":      device.Tags,
 	}
