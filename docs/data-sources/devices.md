@@ -39,5 +39,6 @@ Read-Only:
 - `hostname` (String)
 - `id` (String)
 - `name` (String)
+- `node_id` (String)
 - `tags` (Set of String)
 - `user` (String)

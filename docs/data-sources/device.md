@@ -37,5 +37,6 @@ data "tailscale_device" "sample_device2" {
 
 - `addresses` (List of String) The list of device's IPs
 - `id` (String) The ID of this resource.
+- `node_id` (String) The preferred indentifier for a device.
 - `tags` (Set of String) The tags applied to the device
 - `user` (String) The user associated with the device
