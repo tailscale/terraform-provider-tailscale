@@ -24,30 +24,48 @@ func resourceTailnetSettings() *schema.Resource {
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
+			"acls_externally_managed_on": {
+				Type:        schema.TypeBool,
+				Description: "Prevent users from editing policies in the admin console to avoid conflicts with external management workflows like GitOps or Terraform.",
+				Optional:    true,
+				Computed:    true,
+			},
+			"acls_external_link": {
+				Type:         schema.TypeString,
+				Description:  "Link to your external ACL definition or management system. Must be a valid URL.",
+				ValidateFunc: validation.IsURLWithHTTPorHTTPS,
+				Optional:     true,
+				Computed:     true,
+			},
 			"devices_approval_on": {
 				Type:        schema.TypeBool,
 				Description: "Whether device approval is enabled for the tailnet",
 				Optional:    true,
+				Computed:    true,
 			},
 			"devices_auto_updates_on": {
 				Type:        schema.TypeBool,
 				Description: "Whether auto updates are enabled for devices that belong to this tailnet",
 				Optional:    true,
+				Computed:    true,
 			},
 			"devices_key_duration_days": {
 				Type:        schema.TypeInt,
 				Description: "The key expiry duration for devices on this tailnet",
 				Optional:    true,
+				Computed:    true,
 			},
 			"users_approval_on": {
 				Type:        schema.TypeBool,
 				Description: "Whether user approval is enabled for this tailnet",
 				Optional:    true,
+				Computed:    true,
 			},
 			"users_role_allowed_to_join_external_tailnet": {
 				Type:        schema.TypeString,
 				Description: "Which user roles are allowed to join external tailnets",
 				Optional:    true,
+				Computed:    true,
 				ValidateFunc: validation.StringInSlice(
 					[]string{
 						string(tailscale.RoleAllowedToJoinExternalTailnetsNone),
@@ -61,16 +79,19 @@ func resourceTailnetSettings() *schema.Resource {
 				Type:        schema.TypeBool,
 				Description: "Whether network flog logs are enabled for the tailnet",
 				Optional:    true,
+				Computed:    true,
 			},
 			"regional_routing_on": {
 				Type:        schema.TypeBool,
 				Description: "Whether regional routing is enabled for the tailnet",
 				Optional:    true,
+				Computed:    true,
 			},
 			"posture_identity_collection_on": {
 				Type:        schema.TypeBool,
 				Description: "Whether identity collection is enabled for device posture integrations for the tailnet",
 				Optional:    true,
+				Computed:    true,
 			},
 		},
 	}
@@ -85,6 +106,8 @@ func resourceTailnetSettingsRead(ctx context.Context, d *schema.ResourceData, m 
 	}
 
 	settingsMap := map[string]any{
+		"acls_externally_managed_on":                  settings.ACLsExternallyManagedOn,
+		"acls_external_link":                          settings.ACLsExternalLink,
 		"devices_approval_on":                         settings.DevicesApprovalOn,
 		"devices_auto_updates_on":                     settings.DevicesAutoUpdatesOn,
 		"devices_key_duration_days":                   settings.DevicesKeyDurationDays,
@@ -119,6 +142,8 @@ func resourceTailnetSettingsDoUpdate(ctx context.Context, d *schema.ResourceData
 		role = tailscale.PointerTo(tailscale.RoleAllowedToJoinExternalTailnets(_role.(string)))
 	}
 	settings := tailscale.UpdateTailnetSettingsRequest{
+		ACLsExternallyManagedOn:                optional[bool](d, "acls_externally_managed_on"),
+		ACLsExternalLink:                       optional[string](d, "acls_external_link"),
 		DevicesApprovalOn:                      optional[bool](d, "devices_approval_on"),
 		DevicesAutoUpdatesOn:                   optional[bool](d, "devices_auto_updates_on"),
 		DevicesKeyDurationDays:                 optional[int](d, "devices_key_duration_days"),
