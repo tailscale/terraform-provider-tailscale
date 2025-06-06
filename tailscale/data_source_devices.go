@@ -46,7 +46,12 @@ func dataSourceDevices() *schema.Resource {
 						},
 						"id": {
 							Type:        schema.TypeString,
-							Description: "The unique identifier of the device",
+							Description: "The legacy identifier of the device. Use node_id instead for new resources.",
+							Computed:    true,
+						},
+						"node_id": {
+							Type:        schema.TypeString,
+							Description: "The preferred indentifier for a device.",
 							Computed:    true,
 						},
 						"addresses": {

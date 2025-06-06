@@ -77,7 +77,15 @@ func resourceDeviceKeyRead(ctx context.Context, d *schema.ResourceData, m interf
 		return diagnosticsError(err, "Failed to fetch devices")
 	}
 
-	d.Set("device_id", device.ID)
+	// If the device lookup succeeds and the state ID is not the same as the legacy ID, we can assume the ID is the node ID.
+	canonicalDeviceID := device.ID
+	if device.ID != deviceID {
+		canonicalDeviceID = device.NodeID
+	}
+
+	if err = d.Set("device_id", canonicalDeviceID); err != nil {
+		return diagnosticsError(err, "failed to set device_id")
+	}
 	if err = d.Set("key_expiry_disabled", device.KeyExpiryDisabled); err != nil {
 		return diagnosticsError(err, "failed to set key_expiry_disabled field")
 	}
