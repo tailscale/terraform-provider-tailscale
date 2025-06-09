@@ -5,7 +5,6 @@ package tailscale
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/hashicorp/go-cty/cty"
@@ -244,7 +243,7 @@ func resourceTailnetKeyRead(ctx context.Context, d *schema.ResourceData, m inter
 	}
 
 	if key.KeyType != "auth" {
-		return diagnosticsError(errors.New("Only 'auth' keys are supported by this resource"), fmt.Sprintf("Invalid key type '%s'", key.KeyType))
+		return diagnosticsError(errors.New("Only 'auth' keys are supported by this resource"), "Invalid key type '%s'", key.KeyType)
 	}
 
 	d.SetId(key.ID)

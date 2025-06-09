@@ -7,6 +7,7 @@ package tailscale
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"net/url"
@@ -224,7 +225,7 @@ func diagnosticsAsError(diags diag.Diagnostics) error {
 		return nil
 	}
 
-	return fmt.Errorf(combined)
+	return errors.New(combined)
 }
 
 func diagnosticsErrorWithPath(err error, message string, path cty.Path, args ...interface{}) diag.Diagnostics {
