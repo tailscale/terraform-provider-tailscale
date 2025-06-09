@@ -46,8 +46,16 @@ func resourceDeviceAuthorizationRead(ctx context.Context, d *schema.ResourceData
 		return diagnosticsError(err, "Failed to fetch device")
 	}
 
-	d.SetId(device.ID)
-	d.Set("device_id", device.ID)
+	// If the device lookup succeeds and the state ID is not the same as the legacy ID, we can assume the ID is the node ID.
+	canonicalDeviceID := device.ID
+	if device.ID != deviceID {
+		canonicalDeviceID = device.NodeID
+	}
+	d.SetId(canonicalDeviceID)
+	if err = d.Set("device_id", canonicalDeviceID); err != nil {
+		return diagnosticsError(err, "failed to set device_id")
+	}
+
 	d.Set("authorized", device.Authorized)
 	return nil
 }
