@@ -255,6 +255,10 @@ func resourceTailnetKeyRead(ctx context.Context, d *schema.ResourceData, m inter
 		return diagnosticsError(err, "Failed to set ephemeral")
 	}
 
+	if err = d.Set("expiry", key.ExpirySeconds); err != nil {
+		return diagnosticsError(err, "Failed to set expiry")
+	}
+
 	if err = d.Set("created_at", key.Created.Format(time.RFC3339)); err != nil {
 		return diagnosticsError(err, "Failed to set created_at")
 	}

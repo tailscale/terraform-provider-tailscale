@@ -310,5 +310,5 @@ gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 tailscale.com v1.84.2 h1:v6aM4RWUgYiV52LRAx6ET+dlGnvO/5lnqPXb7/pMnR0=
 tailscale.com v1.84.2/go.mod h1:6/S63NMAhmncYT/1zIPDJkvCuZwMw+JnUuOfSPNazpo=
-tailscale.com/client/tailscale/v2 v2.0.0-20250602205246-d51fc603f5ea h1:lXgaPz+scY0fqkoXfy6TpX9lpP4+dRa3Sv+YHQujFOk=
-tailscale.com/client/tailscale/v2 v2.0.0-20250602205246-d51fc603f5ea/go.mod h1:nzqx3Hs59z2W8Gnmq2ChavPButcyvtxAxRpNc+ZVy7s=
+tailscale.com/client/tailscale/v2 v2.0.0-20250612212601-b07559cfb82a h1:13roeNMp7BQ4g59m6acby/LjAvvsHWw5pePmI1pKvco=
+tailscale.com/client/tailscale/v2 v2.0.0-20250612212601-b07559cfb82a/go.mod h1:nzqx3Hs59z2W8Gnmq2ChavPButcyvtxAxRpNc+ZVy7s=

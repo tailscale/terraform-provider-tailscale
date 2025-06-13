@@ -64,11 +64,12 @@ func testTailnetKeyStruct(reusable bool) tailscale.Key {
 		}`), &keyCapabilities)
 	keyCapabilities.Devices.Create.Reusable = reusable
 	return tailscale.Key{
-		ID:           "test",
-		KeyType:      "auth",
-		Key:          "thisisatestkey",
-		Description:  "Example key",
-		Capabilities: keyCapabilities,
+		ID:            "test",
+		KeyType:       "auth",
+		Key:           "thisisatestkey",
+		Description:   "Example key",
+		ExpirySeconds: toPtr(time.Duration(3600)),
+		Capabilities:  keyCapabilities,
 	}
 }
 
@@ -230,6 +231,7 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 	var expectedKey tailscale.Key
 	expectedKey.KeyType = "auth"
 	expectedKey.Description = "Test key"
+	expectedKey.ExpirySeconds = toPtr(time.Duration(3600))
 	expectedKey.Capabilities.Devices.Create.Reusable = true
 	expectedKey.Capabilities.Devices.Create.Ephemeral = true
 	expectedKey.Capabilities.Devices.Create.Preauthorized = true
@@ -238,6 +240,7 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 	var expectedKeyUpdated tailscale.Key
 	expectedKeyUpdated.KeyType = "auth"
 	expectedKeyUpdated.Description = "Test key changed"
+	expectedKeyUpdated.ExpirySeconds = toPtr(time.Duration(7200))
 	expectedKeyUpdated.Capabilities.Devices.Create.Reusable = false
 	expectedKeyUpdated.Capabilities.Devices.Create.Ephemeral = false
 	expectedKeyUpdated.Capabilities.Devices.Create.Preauthorized = false
@@ -293,8 +296,12 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"key", "expiry"},
+				ImportStateVerifyIgnore: []string{"key"}, // sensitive material not returned by the API
 			},
 		},
 	})
+}
+
+func toPtr[T any](v T) *T {
+	return &v
 }
