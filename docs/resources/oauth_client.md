@@ -38,3 +38,12 @@ resource "tailscale_oauth_client" "sample_client" {
 - `id` (String) The client ID, also known as the key id. Used with the client secret to generate access tokens.
 - `key` (String, Sensitive) The client secret, also known as the key. Used with the client ID to generate access tokens.
 - `user_id` (String) ID of the user who created this key, empty for OAuth clients created by other OAuth clients.
+
+## Import
+
+Import is supported using the following syntax:
+
+```shell
+# Note: Sensitive fields such as the secret key are not returned by the API and will be unset in the Terraform state after import.
+terraform import tailscale_oauth_client.example k1234511CNTRL
+```

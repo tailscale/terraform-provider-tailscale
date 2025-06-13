@@ -21,7 +21,9 @@ func resourceOAuthClient() *schema.Resource {
 		CreateContext: resourceOAuthClientCreate,
 		DeleteContext: resourceOAuthClientDelete,
 		UpdateContext: nil,
-		// Importer: &schema.ResourceImporter{StateContext: schema.ImportStatePassthroughContext}, no import support - the key is not returned by the API so it'd serve no purpose
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 		Schema: map[string]*schema.Schema{
 			"description": {
 				Type:        schema.TypeString,
@@ -88,6 +90,14 @@ func resourceOAuthClientRead(ctx context.Context, d *schema.ResourceData, m inte
 	d.SetId(key.ID)
 	if err = d.Set("description", key.Description); err != nil {
 		return diagnosticsError(err, "Failed to set description")
+	}
+
+	if err = d.Set("scopes", key.Scopes); err != nil {
+		return diagnosticsError(err, "Failed to set 'scopes'")
+	}
+
+	if err = d.Set("tags", key.Tags); err != nil {
+		return diagnosticsError(err, "Failed to set 'tags'")
 	}
 
 	if err = d.Set("created_at", key.Created.Format(time.RFC3339)); err != nil {
