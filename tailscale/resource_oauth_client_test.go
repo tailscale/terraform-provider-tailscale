@@ -60,10 +60,14 @@ func TestAccTailscaleOAuthClient(t *testing.T) {
 	var expectedOAuthClientCreated tailscale.Key
 	expectedOAuthClientCreated.Description = "Test client"
 	expectedOAuthClientCreated.KeyType = "client"
+	expectedOAuthClientCreated.Scopes = []string{"auth_keys", "devices:core"}
+	expectedOAuthClientCreated.Tags = []string{"tag:test"}
 
 	var expectedOAuthClientUpdated tailscale.Key
 	expectedOAuthClientUpdated.Description = "Updated description"
 	expectedOAuthClientUpdated.KeyType = "client"
+	expectedOAuthClientUpdated.Scopes = []string{"auth_keys:read"}
+	expectedOAuthClientUpdated.Tags = nil
 
 	checkProperties := func(expected *tailscale.Key) func(client *tailscale.Client, rs *terraform.ResourceState) error {
 		return func(client *tailscale.Client, rs *terraform.ResourceState) error {
@@ -152,6 +156,12 @@ func TestAccTailscaleOAuthClient(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "created_at"),
 					resource.TestCheckResourceAttrSet(resourceName, "user_id"),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"key"}, // sensitive material not returned by the API
 			},
 		},
 	})
