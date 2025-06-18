@@ -182,7 +182,6 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 			ephemeral = true
 			preauthorized = true
 			tags = ["tag:a"]
-			expiry = 3600
 			description = "Test key"
 		}`
 
@@ -231,7 +230,7 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 	var expectedKey tailscale.Key
 	expectedKey.KeyType = "auth"
 	expectedKey.Description = "Test key"
-	expectedKey.ExpirySeconds = toPtr(time.Duration(3600))
+	expectedKey.ExpirySeconds = toPtr(time.Duration(7776000))
 	expectedKey.Capabilities.Devices.Create.Reusable = true
 	expectedKey.Capabilities.Devices.Create.Ephemeral = true
 	expectedKey.Capabilities.Devices.Create.Preauthorized = true
@@ -268,15 +267,20 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 				Config: testTailnetKeyCreate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkProperties(&expectedKey, 3600),
+						checkProperties(&expectedKey, 7776000),
 					),
 					resource.TestCheckResourceAttr(resourceName, "reusable", "true"),
 					resource.TestCheckResourceAttr(resourceName, "ephemeral", "true"),
 					resource.TestCheckResourceAttr(resourceName, "preauthorized", "true"),
 					resource.TestCheckTypeSetElemAttr(resourceName, "tags.*", "tag:a"),
-					resource.TestCheckResourceAttr(resourceName, "expiry", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "expiry", "7776000"),
 					resource.TestCheckResourceAttr(resourceName, "description", "Test key"),
 				),
+			},
+			{
+				Config:             testTailnetKeyCreate,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
 			},
 			{
 				Config: testTailnetKeyUpdate,
