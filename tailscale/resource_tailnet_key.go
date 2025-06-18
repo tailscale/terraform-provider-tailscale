@@ -63,6 +63,7 @@ func resourceTailnetKey() *schema.Resource {
 			"expiry": {
 				Type:        schema.TypeInt,
 				Optional:    true,
+				Computed:    true,
 				Description: "The expiry of the key in seconds. Defaults to `7776000` (90 days).",
 				ForceNew:    true,
 			},
