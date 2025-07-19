@@ -44,6 +44,7 @@ func resourceDeviceSubnetRoutes() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The device to set subnet routes for",
+				ForceNew:    true,
 			},
 			"routes": {
 				Type: schema.TypeSet,
@@ -62,7 +63,14 @@ func resourceDeviceSubnetRoutesRead(ctx context.Context, d *schema.ResourceData,
 	deviceID := d.Get("device_id").(string)
 
 	routes, err := client.Devices().SubnetRoutes(ctx, deviceID)
+
 	if err != nil {
+		// If the device is not found, remove from the state so we can create it again.
+		if tailscale.IsNotFound(err) {
+			d.SetId("")
+			return nil
+		}
+
 		return diagnosticsError(err, "Failed to fetch device subnet routes")
 	}
 
