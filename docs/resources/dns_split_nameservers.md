@@ -36,6 +36,8 @@ resource "tailscale_dns_split_nameservers" "sample_split_nameservers" {
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # Split DNS nameservers can be imported using the domain name, e.g.
 terraform import tailscale_dns_split_nameservers.sample_split_nameservers example.com

@@ -60,6 +60,8 @@ resource "tailscale_device_subnet_routes" "sample_exit_node" {
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # Device subnet rules can be imported using the node ID (preferred), e.g.,
 terraform import tailscale_device_subnet_routes.sample nodeidCNTRL

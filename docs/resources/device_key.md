@@ -43,6 +43,8 @@ resource "tailscale_device_key" "example_key" {
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # Device key can be imported using the node ID (preferred), e.g.,
 terraform import tailscale_device_key.sample nodeidCNTRL

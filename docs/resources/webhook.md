@@ -41,6 +41,8 @@ resource "tailscale_webhook" "sample_webhook" {
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # Webhooks can be imported using the endpoint id, e.g.,
 terraform import tailscale_webhook.sample_webhook 123456789

@@ -80,6 +80,8 @@ resource "tailscale_logstream_configuration" "sample_logstream_configuration_s3_
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # Logstream configuration can be imported using the logstream configuration id, e.g.,
 terraform import tailscale_logstream_configuration.sample_logstream_configuration 123456789
