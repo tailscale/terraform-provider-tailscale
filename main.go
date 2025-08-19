@@ -1,7 +1,7 @@
 // Copyright (c) David Bond, Tailscale Inc, & Contributors
 // SPDX-License-Identifier: MIT
 
-//go:generate tfplugindocs
+//go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
 package main
 
 import (

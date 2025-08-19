@@ -36,6 +36,8 @@ resource "tailscale_dns_nameservers" "sample_nameservers" {
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # ID doesn't matter.
 terraform import tailscale_dns_nameservers.sample dns_nameservers

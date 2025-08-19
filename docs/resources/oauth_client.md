@@ -43,6 +43,8 @@ resource "tailscale_oauth_client" "sample_client" {
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # Note: Sensitive fields such as the secret key are not returned by the API and will be unset in the Terraform state after import.
 terraform import tailscale_oauth_client.example k1234511CNTRL

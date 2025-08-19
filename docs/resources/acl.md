@@ -66,6 +66,8 @@ resource "tailscale_acl" "as_hujson" {
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # ID doesn't matter.
 terraform import tailscale_acl.sample_acl acl

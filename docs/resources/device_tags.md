@@ -40,6 +40,8 @@ resource "tailscale_device_tags" "sample_tags" {
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # Device tags can be imported using the node ID (preferred), e.g.,
 terraform import tailscale_device_tags.sample nodeidCNTRL
