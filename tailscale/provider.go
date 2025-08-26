@@ -63,7 +63,7 @@ func Provider(options ...ProviderOption) *schema.Provider {
 			},
 			"tailnet": {
 				Type:        schema.TypeString,
-				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_TAILNET", "-"),
+				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_TAILNET", ""),
 				Optional:    true,
 				Description: "The organization name of the Tailnet in which to perform actions. Can be set via the TAILSCALE_TAILNET environment variable. Default is the tailnet that owns API credentials passed to the provider.",
 			},
@@ -127,10 +127,6 @@ func providerConfigure(_ context.Context, provider *schema.Provider, d *schema.R
 	}
 
 	tailnet := d.Get("tailnet").(string)
-	if tailnet == "" {
-		return nil, diag.Errorf("tailscale provider argument 'tailnet' is empty")
-	}
-
 	apiKey := d.Get("api_key").(string)
 	oauthClientID := d.Get("oauth_client_id").(string)
 	oauthClientSecret := d.Get("oauth_client_secret").(string)

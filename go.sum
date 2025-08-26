@@ -312,3 +312,5 @@ tailscale.com v1.86.4 h1:KHAmLyzVn50t2P5877wohBU0UPVeIMHC9XDzRw4Ycz4=
 tailscale.com v1.86.4/go.mod h1:Lm8dnzU2i/Emw15r6sl3FRNp/liSQ/nYw6ZSQvIdZ1M=
 tailscale.com/client/tailscale/v2 v2.0.0-20250616133344-8dcb33eb281b h1:Cyso/184f0BUfEDUWVmM65t6byUEB8wuTBGpB8Tv1PA=
 tailscale.com/client/tailscale/v2 v2.0.0-20250616133344-8dcb33eb281b/go.mod h1:nzqx3Hs59z2W8Gnmq2ChavPButcyvtxAxRpNc+ZVy7s=
+tailscale.com/client/tailscale/v2 v2.0.0-20250826133425-448e3c567bf8 h1:5YBLi4Q7oJHtOPAs6450j/Hl7AIYP99iwjEjne7LfEA=
+tailscale.com/client/tailscale/v2 v2.0.0-20250826133425-448e3c567bf8/go.mod h1:4akEJPbysqHWAP+t7CZLQ5ZH8/vZWeH6+Hv+fEJUMp0=
