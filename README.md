@@ -115,7 +115,7 @@ If you run a local control server with the `terraform-acceptance-testing` test s
 which will correctly populate the necessary environment variables for you.
 
 ```
-./tool/go run ./cmd/tailcontrol --dev --generate-test-devices=terraform-acceptance-testing &
+./tool/go run -tags tailscale_saas ./cmd/devcontrol --generate-test-devices=terraform-acceptance-testing &
 make testacc_local
 ```
 
