@@ -81,6 +81,7 @@ func Provider(options ...ProviderOption) *schema.Provider {
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"tailscale_acl":                     resourceACL(),
+			"tailscale_dns_configuration":       resourceDNSConfiguration(),
 			"tailscale_dns_nameservers":         resourceDNSNameservers(),
 			"tailscale_dns_preferences":         resourceDNSPreferences(),
 			"tailscale_dns_search_paths":        resourceDNSSearchPaths(),
