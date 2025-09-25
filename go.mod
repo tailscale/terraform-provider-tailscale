@@ -1,6 +1,6 @@
 module github.com/tailscale/terraform-provider-tailscale
 
-go 1.24.4
+go 1.25.1
 
 require (
 	github.com/google/go-cmp v0.7.0
@@ -11,7 +11,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/tailscale/hujson v0.0.0-20221223112325-20486734a56a
 	golang.org/x/tools v0.37.0
-	tailscale.com v1.86.4
+	tailscale.com v1.88.3
 	tailscale.com/client/tailscale/v2 v2.0.0-20250917165625-03d1dde3a1fc
 )
 
@@ -32,6 +32,7 @@ require (
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fatih/color v1.18.0 // indirect
+	github.com/go-json-experiment/json v0.0.0-20250813024750-ebf49471dced // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/cli v1.1.7 // indirect
