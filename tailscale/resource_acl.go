@@ -6,9 +6,11 @@ package tailscale
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/go-cty/cty"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -24,6 +26,8 @@ If tests are defined in the ACL (the top-level "tests" section), ACL validation 
 // From https://github.com/hashicorp/terraform-plugin-sdk/blob/34d8a9ebca6bed68fddb983123d6fda72481752c/internal/configs/hcl2shim/values.go#L19
 // TODO: use an exported variable when https://github.com/hashicorp/terraform-plugin-sdk/issues/803 has been addressed.
 const UnknownVariableValue = "74D93920-ED26-11E3-AC10-0800200C9A66"
+
+var syntaxErrorMessage = regexp.MustCompile(`^ACL validation failed: line \d+, column \d+:`)
 
 func resourceACL() *schema.Resource {
 	return &schema.Resource{
@@ -42,7 +46,17 @@ func resourceACL() *schema.Resource {
 			if rd.Get("acl").(string) == "" {
 				return nil
 			}
-			return client.PolicyFile().Validate(ctx, rd.Get("acl").(string))
+			err := client.PolicyFile().Validate(ctx, rd.Get("acl").(string))
+			if err != nil && syntaxErrorMessage.MatchString(err.Error()) {
+				return err
+			} else if err != nil {
+				// non-syntax errors are logged but do not fail the plan operation
+				tflog.Debug(ctx, "ACL validation unsuccessful due to advisory error", map[string]interface{}{"error": err})
+				return nil
+			}
+
+			tflog.Debug(ctx, "ACL validation successful")
+			return nil
 		},
 		Schema: map[string]*schema.Schema{
 			"acl": {
