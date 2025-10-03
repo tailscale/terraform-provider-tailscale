@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -287,6 +288,63 @@ func TestAccACL_resetOnDestroy(t *testing.T) {
 						}),
 					),
 				),
+			},
+		},
+	})
+}
+
+func TestAccACLValidation(t *testing.T) {
+	const resourceName = "tailscale_acl.test_acl_validation"
+
+	const testACLInvalidSyntax = `
+		resource "tailscale_acl" "test_acl" {
+			acl = <<EOF
+			{
+                "grants": [
+					{
+						"src": ["group:scim-that-does-not-exist-yet"], 
+						"dst": ["*"], 
+						"ip": ["*"]
+					},
+    			// ] <- Commented out to create invalid syntax, invalid JSON should fail the plan
+			}
+			EOF
+		}`
+	const testACLUndefinedReferences = `
+		resource "tailscale_acl" "test_acl" {
+			acl = <<EOF
+			{
+                "grants": [
+					{
+						"src": ["group:scim-that-does-not-exist-yet"], // <- Undefined reference do not fail plan because they could be created in the same run
+						"dst": ["*"], 
+						"ip": ["*"]
+					},
+    			]
+			}
+			EOF
+		}`
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories(t),
+		Steps: []resource.TestStep{
+			{
+				ResourceName: resourceName,
+				Config:       testACLInvalidSyntax,
+				PlanOnly:     true,
+				ExpectError:  regexp.MustCompile("Error: ACL is not a valid HuJSON string"),
+			},
+			{
+				ResourceName:       resourceName,
+				Config:             testACLUndefinedReferences,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				ResourceName: resourceName,
+				Config:       testACLUndefinedReferences,
+				ExpectError:  regexp.MustCompile("Error: Failed to set ACL"), // Apply should still fail if the pre-requisite resource is not created before the ACLs are applied
 			},
 		},
 	})
