@@ -12,7 +12,7 @@ require (
 	github.com/tailscale/hujson v0.0.0-20221223112325-20486734a56a
 	golang.org/x/tools v0.37.0
 	tailscale.com v1.88.3
-	tailscale.com/client/tailscale/v2 v2.0.0-20250917165625-03d1dde3a1fc
+	tailscale.com/client/tailscale/v2 v2.0.0
 )
 
 require github.com/pkg/errors v0.9.1
@@ -83,7 +83,7 @@ require (
 	golang.org/x/exp v0.0.0-20250210185358-939b2ce775ac // indirect
 	golang.org/x/mod v0.28.0 // indirect
 	golang.org/x/net v0.44.0 // indirect
-	golang.org/x/oauth2 v0.30.0 // indirect
+	golang.org/x/oauth2 v0.31.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.36.0 // indirect
 	golang.org/x/telemetry v0.0.0-20250908211612-aef8a434d053 // indirect
