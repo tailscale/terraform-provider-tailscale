@@ -93,6 +93,12 @@ func resourceTailnetSettings() *schema.Resource {
 				Optional:    true,
 				Computed:    true,
 			},
+			"https_enabled": {
+				Type:        schema.TypeBool,
+				Description: "Whether provisioning of HTTPS certificates is enabled for the tailnet",
+				Optional:    true,
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -116,6 +122,7 @@ func resourceTailnetSettingsRead(ctx context.Context, d *schema.ResourceData, m 
 		"network_flow_logging_on":                     settings.NetworkFlowLoggingOn,
 		"regional_routing_on":                         settings.RegionalRoutingOn,
 		"posture_identity_collection_on":              settings.PostureIdentityCollectionOn,
+		"https_enabled":                               settings.HTTPSEnabled,
 	}
 	return setProperties(d, settingsMap)
 }
@@ -152,6 +159,7 @@ func resourceTailnetSettingsDoUpdate(ctx context.Context, d *schema.ResourceData
 		NetworkFlowLoggingOn:                   optional[bool](d, "network_flow_logging_on"),
 		RegionalRoutingOn:                      optional[bool](d, "regional_routing_on"),
 		PostureIdentityCollectionOn:            optional[bool](d, "posture_identity_collection_on"),
+		HTTPSEnabled:                           optional[bool](d, "https_enabled"),
 	}
 
 	client := m.(*tailscale.Client)

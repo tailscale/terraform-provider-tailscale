@@ -7,4 +7,5 @@ resource "tailscale_tailnet_settings" "sample_tailnet_settings" {
   users_approval_on                           = true
   users_role_allowed_to_join_external_tailnet = "member"
   posture_identity_collection_on              = true
+  https_enabled                               = true
 }
