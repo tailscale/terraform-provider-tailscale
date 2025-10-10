@@ -101,10 +101,11 @@ jobs:
       - name: Install goimports
         run: go install golang.org/x/tools/cmd/goimports
 
-      - name: Format code
+      - name: Format code, clean up imports and module dependencies
         run: |
           go fmt ./...
           goimports -w -local github.com/tailscale .
+          go mod tidy
 
       - name: Check for uncommitted changes
         run: |
