@@ -17,9 +17,9 @@ import (
 	"github.com/tailscale/hujson"
 )
 
-const resourceACLDescription = `The acl resource allows you to configure a Tailscale ACL. See https://tailscale.com/kb/1018/acls for more information. Note that this resource will completely overwrite existing ACL contents for a given tailnet.
+const resourceACLDescription = `The acl resource allows you to configure a Tailscale policy file. See https://tailscale.com/kb/1395/tailnet-policy-file for more information. Note that this resource will completely overwrite existing policy file contents for a given tailnet.
 
-If tests are defined in the ACL (the top-level "tests" section), ACL validation will occur before creation and update operations are applied.`
+If tests are defined in the policy file (the top-level "tests" section), policy file validation will occur before creation and update operations are applied.`
 
 // From https://github.com/hashicorp/terraform-plugin-sdk/blob/34d8a9ebca6bed68fddb983123d6fda72481752c/internal/configs/hcl2shim/values.go#L19
 // TODO: use an exported variable when https://github.com/hashicorp/terraform-plugin-sdk/issues/803 has been addressed.
@@ -91,12 +91,12 @@ func resourceACL() *schema.Resource {
 			"overwrite_existing_content": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "If true, will skip requirement to import acl before allowing changes. Be careful, can cause ACL to be overwritten",
+				Description: "If true, will skip requirement to import acl before allowing changes. Be careful, can cause the policy file to be overwritten",
 			},
 			"reset_acl_on_destroy": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "If true, will reset the ACL for the Tailnet to the default when this resource is destroyed",
+				Description: "If true, will reset the policy file for the Tailnet to the default when this resource is destroyed",
 			},
 		},
 	}
@@ -106,7 +106,7 @@ func resourceACLRead(ctx context.Context, d *schema.ResourceData, m interface{})
 	client := m.(*tailscale.Client)
 	acl, err := client.PolicyFile().Raw(ctx)
 	if err != nil {
-		return diagnosticsError(err, "Failed to fetch ACL")
+		return diagnosticsError(err, "Failed to fetch policy file")
 	}
 
 	if err := d.Set("acl", acl.HuJSON); err != nil {
@@ -129,12 +129,12 @@ func resourceACLCreate(ctx context.Context, d *schema.ResourceData, m interface{
 	if err := client.PolicyFile().Set(ctx, acl, etag); err != nil {
 		if strings.HasSuffix(err.Error(), "(412)") {
 			err = fmt.Errorf(
-				"! You seem to be trying to overwrite a non-default ACL with a tailscale_acl resource.\n"+
-					"Before doing this, please import your existing ACL into Terraform state using:\n"+
+				"! You seem to be trying to overwrite a non-default policy file with a tailscale_acl resource.\n"+
+					"Before doing this, please import your existing policy file into Terraform state using:\n"+
 					" terraform import $(this_resource) acl\n"+
 					"(got error %q)", err)
 		}
-		return diagnosticsError(err, "Failed to set ACL")
+		return diagnosticsError(err, "Failed to set policy file")
 	}
 
 	d.SetId(createUUID())
@@ -149,7 +149,7 @@ func resourceACLUpdate(ctx context.Context, d *schema.ResourceData, m interface{
 	}
 
 	if err := client.PolicyFile().Set(ctx, d.Get("acl").(string), ""); err != nil {
-		return diagnosticsError(err, "Failed to set ACL")
+		return diagnosticsError(err, "Failed to set policy file")
 	}
 
 	return resourceACLRead(ctx, d, m)
@@ -165,7 +165,7 @@ func resourceACLDelete(ctx context.Context, d *schema.ResourceData, m interface{
 	client := m.(*tailscale.Client)
 	// Setting the ACL to an empty string resets its value to the default.
 	if err := client.PolicyFile().Set(ctx, "", ""); err != nil {
-		return diagnosticsError(err, "Failed to reset ACL")
+		return diagnosticsError(err, "Failed to reset policy file")
 	}
 
 	return nil
