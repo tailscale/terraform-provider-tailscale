@@ -16,7 +16,7 @@ import (
 
 func dataSourceACL() *schema.Resource {
 	return &schema.Resource{
-		Description: "The acl data source gets the Tailscale ACL for a tailnet",
+		Description: "The acl data source gets the Tailscale policy file for a tailnet",
 		ReadContext: dataSourceACLRead,
 		Schema: map[string]*schema.Schema{
 			"json": {
