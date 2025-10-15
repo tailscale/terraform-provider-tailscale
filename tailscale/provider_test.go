@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -202,4 +203,104 @@ func assertEqual(want, got any, errorMessage string) error {
 		return fmt.Errorf("%s (-want +got): %s", errorMessage, diff)
 	}
 	return nil
+}
+
+func TestValidateProviderCreds(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		apiKey        string
+		oauthClientID string
+		oauthSecret   string
+		idToken       string
+		wantErr       string
+	}{
+		{
+			name:    "valid api_key only",
+			apiKey:  "test-api-key",
+			wantErr: "",
+		},
+		{
+			name:          "valid oauth with client secret",
+			oauthClientID: "client-id",
+			oauthSecret:   "client-secret",
+			wantErr:       "",
+		},
+		{
+			name:          "valid oauth with identity token",
+			oauthClientID: "client-id",
+			idToken:       "id-token",
+			wantErr:       "",
+		},
+		{
+			name:    "all credentials empty",
+			wantErr: "credentials are empty",
+		},
+		{
+			name:          "api_key conflicts with oauth_client_id",
+			apiKey:        "test-api-key",
+			oauthClientID: "client-id",
+			wantErr:       "credentials are conflicting",
+		},
+		{
+			name:        "api_key conflicts with oauth_client_secret",
+			apiKey:      "test-api-key",
+			oauthSecret: "client-secret",
+			wantErr:     "credentials are conflicting",
+		},
+		{
+			name:    "api_key conflicts with identity_token",
+			apiKey:  "test-api-key",
+			idToken: "id-token",
+			wantErr: "credentials are conflicting",
+		},
+		{
+			name:        "oauth_client_id missing with only oauth_client_secret",
+			oauthSecret: "client-secret",
+			wantErr:     "oauth_client_id' is empty",
+		},
+		{
+			name:    "oauth_client_id missing with only identity_token",
+			idToken: "id-token",
+			wantErr: "oauth_client_id' is empty",
+		},
+		{
+			name:          "oauth_client_id without secret or token",
+			oauthClientID: "client-id",
+			wantErr:       "oauth_client_secret' or 'identity_token' are mandatory",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			diags := validateProviderCreds(tt.apiKey, tt.oauthClientID, tt.oauthSecret, tt.idToken)
+
+			if tt.wantErr == "" && diags.HasError() {
+				t.Errorf("unexpected error: %v", diags)
+
+			}
+
+			if tt.wantErr != "" && !diags.HasError() {
+				t.Errorf("expected error containing %q but got none", tt.wantErr)
+				return
+			}
+
+			if tt.wantErr != "" {
+				match := false
+				for _, d := range diags {
+					if d.Severity == diag.Error {
+						errMsg := d.Summary + d.Detail
+						if strings.Contains(errMsg, tt.wantErr) {
+							match = true
+							break
+						}
+					}
+				}
+				if !match {
+					t.Errorf("expected error containing %q but got: %v", tt.wantErr, diags)
+				}
+			}
+		})
+	}
 }
