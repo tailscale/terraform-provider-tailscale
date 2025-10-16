@@ -26,6 +26,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 			users_approval_on = true
 			users_role_allowed_to_join_external_tailnet = "member"
 			posture_identity_collection_on = true
+			https_enabled = true
 		}`
 
 	const testTailnetSettingsUpdate = `
@@ -38,6 +39,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 			users_approval_on = false
 			users_role_allowed_to_join_external_tailnet = "admin"
 			posture_identity_collection_on = false
+			https_enabled = false
 		}`
 
 	const testTailnetSettingsEmpty = `
@@ -76,6 +78,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 							UsersApprovalOn:                        true,
 							UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsMember,
 							PostureIdentityCollectionOn:            true,
+							HTTPSEnabled:                           true,
 						}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "acls_externally_managed_on", "true"),
@@ -86,6 +89,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "users_approval_on", "true"),
 					resource.TestCheckResourceAttr(resourceName, "users_role_allowed_to_join_external_tailnet", "member"),
 					resource.TestCheckResourceAttr(resourceName, "posture_identity_collection_on", "true"),
+					resource.TestCheckResourceAttr(resourceName, "https_enabled", "true"),
 				),
 			},
 			{
@@ -101,6 +105,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 							UsersApprovalOn:                        false,
 							UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsAdmin,
 							PostureIdentityCollectionOn:            false,
+							HTTPSEnabled:                           false,
 						}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "acls_externally_managed_on", "false"),
@@ -111,6 +116,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "users_approval_on", "false"),
 					resource.TestCheckResourceAttr(resourceName, "users_role_allowed_to_join_external_tailnet", "admin"),
 					resource.TestCheckResourceAttr(resourceName, "posture_identity_collection_on", "false"),
+					resource.TestCheckResourceAttr(resourceName, "https_enabled", "false"),
 				),
 			},
 			{
@@ -126,6 +132,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 							UsersApprovalOn:                        false,
 							UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsAdmin,
 							PostureIdentityCollectionOn:            false,
+							HTTPSEnabled:                           false,
 						}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "acls_externally_managed_on", "false"),
@@ -136,6 +143,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "users_approval_on", "false"),
 					resource.TestCheckResourceAttr(resourceName, "users_role_allowed_to_join_external_tailnet", "admin"),
 					resource.TestCheckResourceAttr(resourceName, "posture_identity_collection_on", "false"),
+					resource.TestCheckResourceAttr(resourceName, "https_enabled", "false"),
 				),
 			},
 			{

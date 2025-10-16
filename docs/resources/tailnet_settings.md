@@ -22,6 +22,7 @@ resource "tailscale_tailnet_settings" "sample_tailnet_settings" {
   users_approval_on                           = true
   users_role_allowed_to_join_external_tailnet = "member"
   posture_identity_collection_on              = true
+  https_enabled                               = true
 }
 ```
 
@@ -35,6 +36,7 @@ resource "tailscale_tailnet_settings" "sample_tailnet_settings" {
 - `devices_approval_on` (Boolean) Whether device approval is enabled for the tailnet
 - `devices_auto_updates_on` (Boolean) Whether auto updates are enabled for devices that belong to this tailnet
 - `devices_key_duration_days` (Number) The key expiry duration for devices on this tailnet
+- `https_enabled` (Boolean) Whether provisioning of HTTPS certificates is enabled for the tailnet
 - `network_flow_logging_on` (Boolean) Whether network flog logs are enabled for the tailnet
 - `posture_identity_collection_on` (Boolean) Whether identity collection is enabled for device posture integrations for the tailnet
 - `regional_routing_on` (Boolean) Whether regional routing is enabled for the tailnet
