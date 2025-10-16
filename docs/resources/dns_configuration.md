@@ -9,8 +9,6 @@ description: |-
 
 The dns_configuration resource allows you to manage the complete DNS configuration for your Tailscale network. See https://tailscale.com/kb/1054/dns for more information.
 
-~> **Warning:** This resource is in alpha, proceed with caution!
-
 ~> **Note:** The Tailscale Terraform provider has multiple resources for managing DNS configuration. This resource is meant to manage the entirety of a Tailnet's DNS configuration and conflicts with [tailscale_dns_nameservers](dns_nameservers.md), [tailscale_dns_preferences](dns_preferences.md), [tailscale_dns_search_paths](dns_search_paths.md), and [tailscale_dns_split_nameservers](dns_split_nameservers.md). This resource and previously mentioned resources should not be used simultaneously.
 
 ## Example Usage
