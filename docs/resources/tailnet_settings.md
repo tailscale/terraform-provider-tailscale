@@ -37,7 +37,7 @@ resource "tailscale_tailnet_settings" "sample_tailnet_settings" {
 - `devices_auto_updates_on` (Boolean) Whether auto updates are enabled for devices that belong to this tailnet
 - `devices_key_duration_days` (Number) The key expiry duration for devices on this tailnet
 - `https_enabled` (Boolean) Whether provisioning of HTTPS certificates is enabled for the tailnet
-- `network_flow_logging_on` (Boolean) Whether network flog logs are enabled for the tailnet
+- `network_flow_logging_on` (Boolean) Whether network flow logs are enabled for the tailnet
 - `posture_identity_collection_on` (Boolean) Whether identity collection is enabled for device posture integrations for the tailnet
 - `regional_routing_on` (Boolean) Whether regional routing is enabled for the tailnet
 - `users_approval_on` (Boolean) Whether user approval is enabled for this tailnet
