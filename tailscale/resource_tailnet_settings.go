@@ -77,7 +77,7 @@ func resourceTailnetSettings() *schema.Resource {
 			},
 			"network_flow_logging_on": {
 				Type:        schema.TypeBool,
-				Description: "Whether network flog logs are enabled for the tailnet",
+				Description: "Whether network flow logs are enabled for the tailnet",
 				Optional:    true,
 				Computed:    true,
 			},
