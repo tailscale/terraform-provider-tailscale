@@ -193,6 +193,13 @@ func dataSourceDeviceRead(ctx context.Context, d *schema.ResourceData, m interfa
 // resource in Terraform. This omits the "id" which is expected to be set
 // using [schema.ResourceData.SetId].
 func deviceToMap(device *tailscale.Device) map[string]any {
+	var lastSeen string
+	if device.LastSeen == nil {
+		lastSeen = ""
+	} else {
+		lastSeen = device.LastSeen.Format(time.RFC3339)
+	}
+
 	return map[string]any{
 		"name":                        device.Name,
 		"hostname":                    device.Hostname,
@@ -207,7 +214,7 @@ func deviceToMap(device *tailscale.Device) map[string]any {
 		"created":                     device.Created.Format(time.RFC3339),
 		"expires":                     device.Expires.Format(time.RFC3339),
 		"is_external":                 device.IsExternal,
-		"last_seen":                   device.LastSeen.Format(time.RFC3339),
+		"last_seen":                   lastSeen,
 		"machine_key":                 device.MachineKey,
 		"node_key":                    device.NodeKey,
 		"os":                          device.OS,
