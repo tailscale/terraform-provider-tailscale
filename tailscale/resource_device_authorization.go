@@ -42,7 +42,11 @@ func resourceDeviceAuthorizationRead(ctx context.Context, d *schema.ResourceData
 	deviceID := d.Id()
 
 	device, err := client.Devices().Get(ctx, deviceID)
-	if err != nil {
+	switch {
+	case tailscale.IsNotFound(err):
+		d.SetId("")
+		return nil
+	case err != nil:
 		return diagnosticsError(err, "Failed to fetch device")
 	}
 
