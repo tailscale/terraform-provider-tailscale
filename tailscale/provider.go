@@ -106,6 +106,7 @@ func Provider(options ...ProviderOption) *schema.Provider {
 			"tailscale_logstream_configuration": resourceLogstreamConfiguration(),
 			"tailscale_aws_external_id":         resourceAWSExternalID(),
 			"tailscale_tailnet_settings":        resourceTailnetSettings(),
+			"tailscale_federated_identity":      resourceFederatedIdentity(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"tailscale_device":  dataSourceDevice(),

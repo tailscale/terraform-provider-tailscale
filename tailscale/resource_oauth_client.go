@@ -20,7 +20,7 @@ func resourceOAuthClient() *schema.Resource {
 		ReadContext:   resourceOAuthClientRead,
 		CreateContext: resourceOAuthClientCreate,
 		DeleteContext: resourceOAuthClientDelete,
-		UpdateContext: nil,
+		UpdateContext: resourceOAuthClientUpdate,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -28,8 +28,7 @@ func resourceOAuthClient() *schema.Resource {
 			"description": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "A description of the key consisting of alphanumeric characters. Defaults to `\"\"`.",
-				ForceNew:    true,
+				Description: "A description of the OAuth client consisting of alphanumeric characters. Defaults to `\"\"`.",
 				ValidateDiagFunc: func(i interface{}, p cty.Path) diag.Diagnostics {
 					if len(i.(string)) > 50 {
 						return diagnosticsError(nil, "description must be 50 characters or less")
@@ -43,8 +42,7 @@ func resourceOAuthClient() *schema.Resource {
 					Type: schema.TypeString,
 				},
 				Required:    true,
-				Description: "Scopes to grant to the client. See https://tailscale.com/kb/1215/ for a list of available scopes.",
-				ForceNew:    true,
+				Description: "Scopes to grant to the client. See https://tailscale.com/kb/1623/ for a list of available scopes.",
 			},
 			"tags": {
 				Type: schema.TypeSet,
@@ -53,7 +51,6 @@ func resourceOAuthClient() *schema.Resource {
 				},
 				Optional:    true,
 				Description: "A list of tags that access tokens generated for the OAuth client will be able to assign to devices. Mandatory if the scopes include \"devices:core\" or \"auth_keys\".",
-				ForceNew:    true,
 			},
 			"id": {
 				Type:        schema.TypeString,
@@ -71,9 +68,14 @@ func resourceOAuthClient() *schema.Resource {
 				Description: "The creation timestamp of the key in RFC3339 format",
 				Computed:    true,
 			},
+			"updated_at": {
+				Type:        schema.TypeString,
+				Description: "The updated timestamp of the key in RFC3339 format",
+				Computed:    true,
+			},
 			"user_id": {
 				Type:        schema.TypeString,
-				Description: "ID of the user who created this key, empty for OAuth clients created by other OAuth clients.",
+				Description: "ID of the user who created this key, empty for OAuth clients created by other trust credentials.",
 				Computed:    true,
 			},
 		},
@@ -102,6 +104,10 @@ func resourceOAuthClientRead(ctx context.Context, d *schema.ResourceData, m inte
 
 	if err = d.Set("created_at", key.Created.Format(time.RFC3339)); err != nil {
 		return diagnosticsError(err, "Failed to set created_at")
+	}
+
+	if err = d.Set("updated_at", key.Updated.Format(time.RFC3339)); err != nil {
+		return diagnosticsError(err, "Failed to set updated_at")
 	}
 
 	if err = d.Set("user_id", key.UserID); err != nil {
@@ -142,6 +148,49 @@ func resourceOAuthClientCreate(ctx context.Context, d *schema.ResourceData, m in
 	}
 	if err = d.Set("created_at", key.Created.Format(time.RFC3339)); err != nil {
 		return diagnosticsError(err, "Failed to set created_at")
+	}
+	if err = d.Set("updated_at", key.Updated.Format(time.RFC3339)); err != nil {
+		return diagnosticsError(err, "Failed to set updated_at")
+	}
+	if err = d.Set("user_id", key.UserID); err != nil {
+		return diagnosticsError(err, "Failed to set user_id")
+	}
+
+	return resourceOAuthClientRead(ctx, d, m)
+}
+
+func resourceOAuthClientUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	client := m.(*tailscale.Client)
+
+	description, ok := d.GetOk("description")
+	if !ok {
+		description = ""
+	}
+	var scopes []string
+	for _, scope := range d.Get("scopes").(*schema.Set).List() {
+		scopes = append(scopes, scope.(string))
+	}
+	var tags []string
+	for _, tag := range d.Get("tags").(*schema.Set).List() {
+		tags = append(tags, tag.(string))
+	}
+
+	key, err := client.Keys().SetOAuthClient(ctx, d.Id(),
+		tailscale.SetOAuthClientRequest{
+			Description: description.(string),
+			Scopes:      scopes,
+			Tags:        tags,
+		})
+	if err != nil {
+		return diagnosticsError(err, "Failed to create oauth client")
+	}
+
+	d.SetId(key.ID)
+	if err = d.Set("created_at", key.Created.Format(time.RFC3339)); err != nil {
+		return diagnosticsError(err, "Failed to set created_at")
+	}
+	if err = d.Set("updated_at", key.Updated.Format(time.RFC3339)); err != nil {
+		return diagnosticsError(err, "Failed to set updated_at")
 	}
 	if err = d.Set("user_id", key.UserID); err != nil {
 		return diagnosticsError(err, "Failed to set user_id")
