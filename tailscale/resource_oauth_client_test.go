@@ -82,6 +82,7 @@ func TestAccTailscaleOAuthClient(t *testing.T) {
 
 			// don't compare server-side generated fields
 			actual.Created = time.Time{}
+			actual.Updated = time.Time{}
 			actual.ID = ""
 			actual.UserID = ""
 
@@ -154,6 +155,7 @@ func TestAccTailscaleOAuthClient(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "key"),
 					resource.TestCheckResourceAttrSet(resourceName, "created_at"),
+					resource.TestCheckResourceAttrSet(resourceName, "updated_at"),
 					resource.TestCheckResourceAttrSet(resourceName, "user_id"),
 				),
 			},

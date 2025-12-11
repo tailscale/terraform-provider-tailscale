@@ -1,0 +1,1 @@
+terraform import tailscale_federated_identity.example k1234511CNTRL-kZDRvszg8621CNTRL
