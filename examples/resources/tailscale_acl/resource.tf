@@ -1,6 +1,6 @@
 resource "tailscale_acl" "as_json" {
   acl = jsonencode({
-    grants : [
+    grants = [
       {
         // Allow all users access to all ports.
         src = ["*"],
@@ -18,9 +18,9 @@ resource "tailscale_acl" "as_hujson" {
     "grants": [
       {
         // Allow all users access to all ports.
-        "src" = ["*"],
-        "dst" = ["*"],
-        "ip"  = ["*"],
+        "src": ["*"],
+        "dst": ["*"],
+        "ip": ["*"],
       },
     ],
   }
