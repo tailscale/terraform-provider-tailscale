@@ -70,6 +70,76 @@ func dataSourceDevices() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
+						"authorized": {
+							Type:        schema.TypeBool,
+							Description: "Whether the device is authorized to access the tailnet",
+							Computed:    true,
+						},
+						"key_expiry_disabled": {
+							Type:        schema.TypeBool,
+							Description: "Whether the device's key expiry is disabled",
+							Computed:    true,
+						},
+						"blocks_incoming_connections": {
+							Type:        schema.TypeBool,
+							Description: "Whether the device blocks incoming connections",
+							Computed:    true,
+						},
+						"client_version": {
+							Type:        schema.TypeString,
+							Description: "The Tailscale client version running on the device",
+							Computed:    true,
+						},
+						"created": {
+							Type:        schema.TypeString,
+							Description: "The creation time of the device",
+							Computed:    true,
+						},
+						"expires": {
+							Type:        schema.TypeString,
+							Description: "The expiry time of the device's key",
+							Computed:    true,
+						},
+						"is_external": {
+							Type:        schema.TypeBool,
+							Description: "Whether the device is marked as external",
+							Computed:    true,
+						},
+						"last_seen": {
+							Type:        schema.TypeString,
+							Description: "The last seen time of the device",
+							Computed:    true,
+						},
+						"machine_key": {
+							Type:        schema.TypeString,
+							Description: "The machine key of the device",
+							Computed:    true,
+						},
+						"node_key": {
+							Type:        schema.TypeString,
+							Description: "The node key of the device",
+							Computed:    true,
+						},
+						"os": {
+							Type:        schema.TypeString,
+							Description: "The operating system of the device",
+							Computed:    true,
+						},
+						"update_available": {
+							Type:        schema.TypeBool,
+							Description: "Whether an update is available for the device",
+							Computed:    true,
+						},
+						"tailnet_lock_error": {
+							Type:        schema.TypeString,
+							Description: "The tailnet lock error for the device, if any",
+							Computed:    true,
+						},
+						"tailnet_lock_key": {
+							Type:        schema.TypeString,
+							Description: "The tailnet lock key for the device, if any",
+							Computed:    true,
+						},
 					},
 				},
 			},
