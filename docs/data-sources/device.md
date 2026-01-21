@@ -36,7 +36,21 @@ data "tailscale_device" "sample_device2" {
 ### Read-Only
 
 - `addresses` (List of String) The list of device's IPs
+- `authorized` (Boolean) Whether the device is authorized to access the tailnet
+- `blocks_incoming_connections` (Boolean) Whether the device blocks incoming connections
+- `client_version` (String) The Tailscale client version running on the device
+- `created` (String) The creation time of the device
+- `expires` (String) The expiry time of the device's key
 - `id` (String) The ID of this resource.
+- `is_external` (Boolean) Whether the device is marked as external
+- `key_expiry_disabled` (Boolean) Whether the device's key expiry is disabled
+- `last_seen` (String) The last seen time of the device
+- `machine_key` (String) The machine key of the device
 - `node_id` (String) The preferred indentifier for a device.
+- `node_key` (String) The node key of the device
+- `os` (String) The operating system of the device
 - `tags` (Set of String) The tags applied to the device
+- `tailnet_lock_error` (String) The tailnet lock error for the device, if any
+- `tailnet_lock_key` (String) The tailnet lock key for the device, if any
+- `update_available` (Boolean) Whether an update is available for the device
 - `user` (String) The user associated with the device
