@@ -47,14 +47,14 @@ func Provider(options ...ProviderOption) *schema.Provider {
 				Type:        schema.TypeString,
 				DefaultFunc: schema.MultiEnvDefaultFunc(identityTokenEnvVars, ""),
 				Optional:    true,
-				Description: "The jwt identity token to exchange for a Tailscale API token when using a federated identity client. Can be set via the TAILSCALE_IDENTITY_TOKEN environment variable. Conflicts with 'api_key' and 'oauth_client_secret'.",
+				Description: "The jwt identity token to exchange for a Tailscale API token when using a federated identity. Can be set via the TAILSCALE_IDENTITY_TOKEN environment variable. Conflicts with 'api_key' and 'oauth_client_secret'.",
 				Sensitive:   true,
 			},
 			"oauth_client_id": {
 				Type:        schema.TypeString,
 				DefaultFunc: schema.MultiEnvDefaultFunc(oauthClientIDEnvVars, ""),
 				Optional:    true,
-				Description: "The OAuth application's ID when using OAuth client credentials. Can be set via the TAILSCALE_OAUTH_CLIENT_ID environment variable. Either 'oauth_client_secret' or 'identity_token' must be set alongside 'oauth_client_id'. Conflicts with 'api_key'.",
+				Description: "The OAuth application or federated identity's ID when using OAuth client credentials or workload identity federation. Can be set via the TAILSCALE_OAUTH_CLIENT_ID environment variable. Either 'oauth_client_secret' or 'identity_token' must be set alongside 'oauth_client_id'. Conflicts with 'api_key'.",
 			},
 			"oauth_client_secret": {
 				Type:        schema.TypeString,
@@ -67,7 +67,7 @@ func Provider(options ...ProviderOption) *schema.Provider {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "The OAuth 2.0 scopes to request when generating the access token using the supplied OAuth client credentials. See https://tailscale.com/kb/1215/oauth-clients/#scopes for available scopes. Only valid when both 'oauth_client_id' and 'oauth_client_secret' are set.",
+				Description: "The OAuth 2.0 scopes to request when generating the access token using the supplied OAuth client credentials. See https://tailscale.com/kb/1623/trust-credentials#scopes for available scopes. Only valid when both 'oauth_client_id' and 'oauth_client_secret', or both are set.",
 			},
 			"tailnet": {
 				Type:        schema.TypeString,
