@@ -5,6 +5,7 @@ package tailscale
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -39,7 +40,7 @@ func resourceLogstreamConfiguration() *schema.Resource {
 			},
 			"destination_type": {
 				Type:        schema.TypeString,
-				Description: "The type of SIEM platform to stream to. Valid values are `axiom`, `cribl`, `datadog`, `elastic`, `panther`, `splunk`, and `s3`.",
+				Description: "The type of SIEM platform to stream to. Valid values are `axiom`, `cribl`, `datadog`, `elastic`, `gcs`, `panther`, `splunk`, and `s3`.",
 				Required:    true,
 				ValidateFunc: validation.StringInSlice(
 					[]string{
@@ -50,6 +51,7 @@ func resourceLogstreamConfiguration() *schema.Resource {
 						string(tailscale.LogstreamPantherEndpoint),
 						string(tailscale.LogstreamSplunkEndpoint),
 						string(tailscale.LogstreamS3Endpoint),
+						string(tailscale.LogstreamGCSEndpoint),
 					},
 					false),
 			},
@@ -137,6 +139,49 @@ func resourceLogstreamConfiguration() *schema.Resource {
 				Description: "The AWS External ID that Tailscale supplies when authenticating using role-based authentication. Required if destination_type is 's3' and s3_authentication_type is 'rolearn'. This can be obtained via the tailscale_aws_external_id resource.",
 				Optional:    true,
 			},
+			"gcs_credentials": {
+				Type:        schema.TypeString,
+				Description: "The encoded string of JSON that is used to authenticate for workload identity in GCS",
+				Optional:    true,
+				// Suppress the diff if the JSON value is semantically identical even if the content is different (e.g.,
+				// due to whitespace differences / sorting of keys in the returned JSON encoded string).
+				DiffSuppressFunc: func(k, oldValue, newValue string, d *schema.ResourceData) bool {
+					container := make(map[string]any)
+					if oldErr := json.Unmarshal([]byte(oldValue), &container); oldErr != nil {
+						return false
+					}
+					oldValueBytes, oldErr := json.Marshal(container)
+
+					if newErr := json.Unmarshal([]byte(newValue), &container); newErr != nil {
+						return false
+					}
+					newValueBytes, newErr := json.Marshal(container)
+
+					if oldErr != nil || newErr != nil {
+						return false
+					}
+					return string(oldValueBytes) == string(newValueBytes)
+				},
+				DiffSuppressOnRefresh: true,
+			},
+			"gcs_bucket": {
+				Type:        schema.TypeString,
+				Description: "The name of the GCS bucket",
+				Optional:    true,
+			},
+			"gcs_scopes": {
+				Type:        schema.TypeSet,
+				Description: "The GCS scopes needed to be able to write in the bucket",
+				Optional:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"gcs_key_prefix": {
+				Type:        schema.TypeString,
+				Description: "The GCS key prefix for the bucket",
+				Optional:    true,
+			},
 		},
 	}
 }
@@ -159,6 +204,14 @@ func resourceLogstreamConfigurationCreate(ctx context.Context, d *schema.Resourc
 	s3SecretAccessKey := d.Get("s3_secret_access_key").(string)
 	s3RoleARN := d.Get("s3_role_arn").(string)
 	s3ExternalID := d.Get("s3_external_id").(string)
+	gcsCredentials := d.Get("gcs_credentials").(string)
+	gcsKeyPrefix := d.Get("gcs_key_prefix").(string)
+	gcsBucket := d.Get("gcs_bucket").(string)
+
+	var gcsScopes []string
+	for _, scope := range d.Get("gcs_scopes").(*schema.Set).List() {
+		gcsScopes = append(gcsScopes, scope.(string))
+	}
 
 	err := client.Logging().SetLogstreamConfiguration(ctx, tailscale.LogType(logType), tailscale.SetLogstreamConfigurationRequest{
 		DestinationType:      tailscale.LogstreamEndpointType(destinationType),
@@ -175,6 +228,10 @@ func resourceLogstreamConfigurationCreate(ctx context.Context, d *schema.Resourc
 		S3SecretAccessKey:    s3SecretAccessKey,
 		S3RoleARN:            s3RoleARN,
 		S3ExternalID:         s3ExternalID,
+		GCSCredentials:       gcsCredentials,
+		GCSScopes:            gcsScopes,
+		GCSKeyPrefix:         gcsKeyPrefix,
+		GCSBucket:            gcsBucket,
 	})
 
 	if err != nil {
@@ -248,6 +305,22 @@ func resourceLogstreamConfigurationRead(ctx context.Context, d *schema.ResourceD
 
 	if err := d.Set("s3_external_id", logstream.S3ExternalID); err != nil {
 		return diagnosticsError(err, "Failed to set s3_external_id field")
+	}
+
+	if err := d.Set("gcs_credentials", logstream.GCSCredentials); err != nil {
+		return diagnosticsError(err, "Failed to set gcs_credentials field")
+	}
+
+	if err := d.Set("gcs_scopes", logstream.GCSScopes); err != nil {
+		return diagnosticsError(err, "Failed to set gcs_scopes field")
+	}
+
+	if err := d.Set("gcs_key_prefix", logstream.GCSKeyPrefix); err != nil {
+		return diagnosticsError(err, "Failed to set gcs_key_prefix field")
+	}
+
+	if err := d.Set("gcs_bucket", logstream.GCSBucket); err != nil {
+		return diagnosticsError(err, "Failed to set gcs_bucket field")
 	}
 
 	return nil

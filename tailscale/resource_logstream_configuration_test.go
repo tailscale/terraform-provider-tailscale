@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
@@ -64,6 +65,32 @@ const testLogstreamConfigurationUpdateS3AccessKey = `
 		s3_secret_access_key   = "example-secret-access-key"
 		url                    = "https://example.com/s3"
 		upload_period_minutes  = 5
+		compression_format     = "zstd"
+	}`
+
+const testLogstreamConfigurationGCS = `
+	resource "tailscale_logstream_configuration" "test_logstream_configuration" {
+		log_type               = "network"
+		destination_type       = "gcs"
+		gcs_bucket             = "example-bucket"
+        gcs_key_prefix         = "some-prefix"
+		gcs_scopes             = ["scope1", "scope2"]
+		gcs_credentials        = jsonencode({
+			type = "external_account"
+            universe_domain = "googleapis.com",
+			audience = "//iam.googleapis.com/projects/12345678/locations/global/workloadIdentityPools/test/providers/test"
+			subject_token_type = "urn:ietf:params:aws:token-type:aws4_request"
+			service_account_impersonation_url = "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/test@test.iam.gserviceaccount.com:generateAccessToken"
+			token_url = "https://sts.googleapis.com/v1/token"
+			credential_source = {
+				environment_id = "aws1"
+				region_url = "http://169.254.169.254/latest/meta-data/placement/availability-zone"
+				url = "http://169.254.169.254/latest/meta-data/iam/security-credentials"
+				regional_cred_verification_url = "https://sts.{region}.amazonaws.com?Action=GetCallerIdentity&Version=2011-06-15"
+				imdsv2_session_token_url = "http://169.254.169.254/latest/api/token"
+			}
+		})
+        upload_period_minutes  = 5
 		compression_format     = "zstd"
 	}`
 
@@ -126,6 +153,18 @@ func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
 				return fmt.Errorf("bad logstream_configuration.s3_external_id: %s", selectedConfig.S3ExternalID)
 			}
 
+			if diff := cmp.Diff(expectedConfiguration.GCSCredentials, selectedConfig.GCSCredentials); diff != "" {
+				return fmt.Errorf("%s (-want +got): %s", "bad gcs_credentials", diff)
+			}
+
+			if selectedConfig.GCSKeyPrefix != expectedConfiguration.GCSKeyPrefix {
+				return fmt.Errorf("bad logstream_configuration.gcs_key_prefix: %s", selectedConfig.GCSKeyPrefix)
+			}
+
+			if selectedConfig.GCSBucket != expectedConfiguration.GCSBucket {
+				return fmt.Errorf("bad logstream_configuration.gcs_bucket: %s", selectedConfig.GCSBucket)
+			}
+
 			if selectedConfig.User != expectedConfiguration.User {
 				// We have a default value of user = 'user'.
 				if expectedConfiguration.User != "" || selectedConfig.User != "user" {
@@ -175,6 +214,27 @@ func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "url", "https://example.com"),
 					resource.TestCheckResourceAttr(resourceName, "user", "user"),
 					resource.TestCheckResourceAttr(resourceName, "token", "some-token"),
+				),
+			},
+			{
+				Config: testLogstreamConfigurationGCS,
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(
+						resourceName,
+						checkProperties(tailscale.LogstreamConfiguration{
+							UploadPeriodMinutes: 5,
+							CompressionFormat:   tailscale.CompressionFormatZstd,
+							LogType:             tailscale.LogTypeNetwork,
+							DestinationType:     tailscale.LogstreamGCSEndpoint,
+							GCSScopes:           []string{"scope1", "scope2"},
+							GCSBucket:           "example-bucket",
+							GCSKeyPrefix:        "some-prefix",
+							GCSCredentials:      "{\"universe_domain\":\"googleapis.com\",\"type\":\"external_account\",\"audience\":\"//iam.googleapis.com/projects/12345678/locations/global/workloadIdentityPools/test/providers/test\",\"subject_token_type\":\"urn:ietf:params:aws:token-type:aws4_request\",\"service_account_impersonation_url\":\"https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/test@test.iam.gserviceaccount.com:generateAccessToken\",\"token_url\":\"https://sts.googleapis.com/v1/token\",\"credential_source\":{\"environment_id\":\"aws1\",\"region_url\":\"http://169.254.169.254/latest/meta-data/placement/availability-zone\",\"url\":\"http://169.254.169.254/latest/meta-data/iam/security-credentials\",\"regional_cred_verification_url\":\"https://sts.{region}.amazonaws.com?Action=GetCallerIdentity\\u0026Version=2011-06-15\",\"imdsv2_session_token_url\":\"http://169.254.169.254/latest/api/token\"}}",
+						}),
+					),
+					resource.TestCheckResourceAttr(resourceName, "destination_type", "gcs"),
+					resource.TestCheckResourceAttr(resourceName, "upload_period_minutes", "5"),
+					resource.TestCheckResourceAttr(resourceName, "compression_format", "zstd"),
 				),
 			},
 			{
