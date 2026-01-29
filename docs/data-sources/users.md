@@ -21,8 +21,8 @@ data "tailscale_users" "all-users" {}
 
 ### Optional
 
-- `role` (String) Filters the users list to elements whose role is the provided value.
-- `type` (String) Filters the users list to elements whose type is the provided value.
+- `role` (String) Filter the results to only include users with a specific role. Valid values are `owner`, `member`, `admin`, `it-admin`, `network-admin`, `billing-admin`, and `auditor`.
+- `type` (String) Filter the results to only include users of a specific type. Valid values are `member` or `shared`.
 
 ### Read-Only
 

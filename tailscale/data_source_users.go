@@ -21,7 +21,7 @@ func dataSourceUsers() *schema.Resource {
 			"type": {
 				Optional:    true,
 				Type:        schema.TypeString,
-				Description: "Filters the users list to elements whose type is the provided value.",
+				Description: "Filter the results to only include users of a specific type. Valid values are `member` or `shared`.",
 				ValidateFunc: validation.StringInSlice(
 					[]string{
 						string(tailscale.UserTypeMember),
@@ -33,7 +33,7 @@ func dataSourceUsers() *schema.Resource {
 			"role": {
 				Optional:    true,
 				Type:        schema.TypeString,
-				Description: "Filters the users list to elements whose role is the provided value.",
+				Description: "Filter the results to only include users with a specific role. Valid values are `owner`, `member`, `admin`, `it-admin`, `network-admin`, `billing-admin`, and `auditor`.",
 				ValidateFunc: validation.StringInSlice(
 					[]string{
 						string(tailscale.UserRoleOwner),

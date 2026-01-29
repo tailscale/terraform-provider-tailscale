@@ -27,7 +27,7 @@ resource "tailscale_posture_integration" "sample_posture_integration" {
 ### Required
 
 - `client_secret` (String) The secret (auth key, token, etc.) used to authenticate with the provider.
-- `posture_provider` (String) The type of posture integration data provider.
+- `posture_provider` (String) The third-party provider for posture data. Valid values are `falcon`, `intune`, `jamfpro`, `kandji`, `kolide`, and `sentinelone`.
 
 ### Optional
 

@@ -32,7 +32,7 @@ func resourceWebhook() *schema.Resource {
 			},
 			"provider_type": {
 				Type:        schema.TypeString,
-				Description: "The provider type of the endpoint URL. Also referred to as the 'destination' for the webhook in the admin panel. Webhook event payloads are formatted according to the provider type if it is set to a known value. Must be one of `slack`, `mattermost`, `googlechat`, or `discord` if set.",
+				Description: "The provider type of the endpoint URL. This determines the payload format sent to the destination. Valid values are `slack`, `mattermost`, `googlechat`, and `discord`.",
 				Optional:    true,
 				ForceNew:    true,
 				ValidateFunc: validation.StringInSlice(
@@ -48,7 +48,7 @@ func resourceWebhook() *schema.Resource {
 			},
 			"subscriptions": {
 				Type:        schema.TypeSet,
-				Description: "The Tailscale events to subscribe this webhook to. See https://tailscale.com/kb/1213/webhooks#events for the list of valid events.",
+				Description: "The set of events that trigger this webhook. For a full list of event types, see the [webhooks documentation](https://tailscale.com/kb/1213/webhooks#events).",
 				Required:    true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,

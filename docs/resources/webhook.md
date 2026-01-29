@@ -26,11 +26,11 @@ resource "tailscale_webhook" "sample_webhook" {
 ### Required
 
 - `endpoint_url` (String) The endpoint to send webhook events to.
-- `subscriptions` (Set of String) The Tailscale events to subscribe this webhook to. See https://tailscale.com/kb/1213/webhooks#events for the list of valid events.
+- `subscriptions` (Set of String) The set of events that trigger this webhook. For a full list of event types, see the [webhooks documentation](https://tailscale.com/kb/1213/webhooks#events).
 
 ### Optional
 
-- `provider_type` (String) The provider type of the endpoint URL. Also referred to as the 'destination' for the webhook in the admin panel. Webhook event payloads are formatted according to the provider type if it is set to a known value. Must be one of `slack`, `mattermost`, `googlechat`, or `discord` if set.
+- `provider_type` (String) The provider type of the endpoint URL. This determines the payload format sent to the destination. Valid values are `slack`, `mattermost`, `googlechat`, and `discord`.
 
 ### Read-Only
 
