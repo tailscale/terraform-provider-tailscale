@@ -60,6 +60,7 @@ func resourcePostureIntegration() *schema.Resource {
 				Type:        schema.TypeString,
 				Description: "The secret (auth key, token, etc.) used to authenticate with the provider.",
 				Required:    true,
+				Sensitive:   true,
 			},
 		},
 	}
