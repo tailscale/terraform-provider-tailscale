@@ -26,7 +26,7 @@ func resourceLogstreamConfiguration() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"log_type": {
 				Type:        schema.TypeString,
-				Description: "The type of log that is streamed to this endpoint. Either `configuration` for configuration audit logs, or `network` for network flow logs.",
+				Description: "The type of logs to stream. Valid values are `configuration` (configuration audit logs) and `network` (network flow logs).",
 				Required:    true,
 				ForceNew:    true,
 				ValidateFunc: validation.StringInSlice(
@@ -39,16 +39,16 @@ func resourceLogstreamConfiguration() *schema.Resource {
 			},
 			"destination_type": {
 				Type:        schema.TypeString,
-				Description: "The type of system to which logs are being streamed.",
+				Description: "The type of SIEM platform to stream to. Valid values are `axiom`, `cribl`, `datadog`, `elastic`, `panther`, `splunk`, and `s3`.",
 				Required:    true,
 				ValidateFunc: validation.StringInSlice(
 					[]string{
-						string(tailscale.LogstreamSplunkEndpoint),
+						string(tailscale.LogstreamAxiomEndpoint),
+						string(tailscale.LogstreamDatadogEndpoint),
+						string(tailscale.LogstreamCriblEndpoint),
 						string(tailscale.LogstreamElasticEndpoint),
 						string(tailscale.LogstreamPantherEndpoint),
-						string(tailscale.LogstreamCriblEndpoint),
-						string(tailscale.LogstreamDatadogEndpoint),
-						string(tailscale.LogstreamAxiomEndpoint),
+						string(tailscale.LogstreamSplunkEndpoint),
 						string(tailscale.LogstreamS3Endpoint),
 					},
 					false),
@@ -77,7 +77,7 @@ func resourceLogstreamConfiguration() *schema.Resource {
 			},
 			"compression_format": {
 				Type:        schema.TypeString,
-				Description: "The compression algorithm with which to compress logs. One of `none`, `zstd` or `gzip`. Defaults to `none`.",
+				Description: "The compression algorithm used for logs. Valid values are `none`, `zstd` or `gzip`. Defaults to `none`.",
 				Optional:    true,
 				Default:     string(tailscale.CompressionFormatNone),
 				ValidateFunc: validation.StringInSlice(
@@ -106,7 +106,7 @@ func resourceLogstreamConfiguration() *schema.Resource {
 			},
 			"s3_authentication_type": {
 				Type:        schema.TypeString,
-				Description: "What type of authentication to use for S3. Required if destination_type is 's3'. Tailscale recommends using 'rolearn'.",
+				Description: "The type of authentication to use for S3. Required if destination_type is `s3`. Valid values are `accesskey` and `rolearn`. Tailscale recommends using `rolearn`.",
 				Optional:    true,
 				ValidateFunc: validation.StringInSlice(
 					[]string{

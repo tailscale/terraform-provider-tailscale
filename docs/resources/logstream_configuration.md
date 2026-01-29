@@ -53,14 +53,14 @@ resource "tailscale_logstream_configuration" "sample_logstream_configuration_s3_
 
 ### Required
 
-- `destination_type` (String) The type of system to which logs are being streamed.
-- `log_type` (String) The type of log that is streamed to this endpoint. Either `configuration` for configuration audit logs, or `network` for network flow logs.
+- `destination_type` (String) The type of SIEM platform to stream to. Valid values are `axiom`, `cribl`, `datadog`, `elastic`, `panther`, `splunk`, and `s3`.
+- `log_type` (String) The type of logs to stream. Valid values are `configuration` (configuration audit logs) and `network` (network flow logs).
 
 ### Optional
 
-- `compression_format` (String) The compression algorithm with which to compress logs. One of `none`, `zstd` or `gzip`. Defaults to `none`.
+- `compression_format` (String) The compression algorithm used for logs. Valid values are `none`, `zstd` or `gzip`. Defaults to `none`.
 - `s3_access_key_id` (String) The S3 access key ID. Required if destination_type is s3 and s3_authentication_type is 'accesskey'.
-- `s3_authentication_type` (String) What type of authentication to use for S3. Required if destination_type is 's3'. Tailscale recommends using 'rolearn'.
+- `s3_authentication_type` (String) The type of authentication to use for S3. Required if destination_type is `s3`. Valid values are `accesskey` and `rolearn`. Tailscale recommends using `rolearn`.
 - `s3_bucket` (String) The S3 bucket name. Required if destination_type is 's3'.
 - `s3_external_id` (String) The AWS External ID that Tailscale supplies when authenticating using role-based authentication. Required if destination_type is 's3' and s3_authentication_type is 'rolearn'. This can be obtained via the tailscale_aws_external_id resource.
 - `s3_key_prefix` (String) An optional S3 key prefix to prepend to the auto-generated S3 key name.
