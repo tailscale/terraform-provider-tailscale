@@ -59,6 +59,7 @@ resource "tailscale_dns_configuration" "sample_configuration" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+- `magic_dns_name` (String) The tailnet/MagicDNS domain name. Null if disabled or undeterminable.
 
 <a id="nestedblock--nameservers"></a>
 ### Nested Schema for `nameservers`
