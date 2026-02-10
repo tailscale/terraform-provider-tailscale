@@ -15,6 +15,15 @@ The devices data source describes a list of devices in a tailnet
 ```terraform
 data "tailscale_devices" "sample_devices" {
   name_prefix = "example-"
+
+  filter {
+    name = "isEphemeral"
+    values = ["true"]
+  }
+  filter {
+    name = "tags"
+    values = ["tag:server", "tag:test"]
+  }
 }
 ```
 
@@ -23,12 +32,22 @@ data "tailscale_devices" "sample_devices" {
 
 ### Optional
 
+- `filter` (Block Set) Filters the device list to elements devices whose fields match the provided values. (see [below for nested schema](#nestedblock--filter))
 - `name_prefix` (String) Filters the device list to elements whose name has the provided prefix
 
 ### Read-Only
 
 - `devices` (List of Object) The list of devices in the tailnet (see [below for nested schema](#nestedatt--devices))
 - `id` (String) The ID of this resource.
+
+<a id="nestedblock--filter"></a>
+### Nested Schema for `filter`
+
+Required:
+
+- `name` (String) The name must be a top-level device property, e.g. isEphemeral, tags, hostname, etc.
+- `values` (Set of String) The list of values to filter for. Values are matched as exact matches.
+
 
 <a id="nestedatt--devices"></a>
 ### Nested Schema for `devices`

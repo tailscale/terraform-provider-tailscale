@@ -18,6 +18,28 @@ func dataSourceDevices() *schema.Resource {
 		Description: "The devices data source describes a list of devices in a tailnet",
 		ReadContext: dataSourceDevicesRead,
 		Schema: map[string]*schema.Schema{
+			"filter": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The name must be a top-level device property, e.g. isEphemeral, tags, hostname, etc.",
+						},
+						"values": {
+							Type:     schema.TypeSet,
+							Required: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "The list of values to filter for. Values are matched as exact matches.",
+						},
+					},
+				},
+				Description: "Filters the device list to elements devices whose fields match the provided values.",
+			},
 			"name_prefix": {
 				Optional:    true,
 				Type:        schema.TypeString,
@@ -150,7 +172,25 @@ func dataSourceDevices() *schema.Resource {
 func dataSourceDevicesRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*tailscale.Client)
 
-	devices, err := client.Devices().List(ctx)
+	opts := []tailscale.ListDevicesOptions{}
+	if v, ok := d.GetOk("filter"); ok {
+		filterConfigs := v.(*schema.Set).List()
+		for _, f := range filterConfigs {
+			m := f.(map[string]interface{})
+			name := m["name"].(string)
+
+			// Convert the Set of values to a slice of strings
+			rawValues := m["values"].(*schema.Set).List()
+			values := make([]string, len(rawValues))
+			for i, val := range rawValues {
+				values[i] = val.(string)
+			}
+
+			opts = append(opts, tailscale.WithFilter(name, values))
+		}
+	}
+
+	devices, err := client.Devices().List(ctx, opts...)
 	if err != nil {
 		return diagnosticsError(err, "Failed to fetch devices")
 	}

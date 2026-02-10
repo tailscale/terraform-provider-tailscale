@@ -64,24 +64,7 @@ func TestAccTailscaleDevices(t *testing.T) {
 					}
 
 					// now compare datasource attributes to expected values
-					for k, v := range rs.Attributes {
-						if strings.HasPrefix(k, "devices.") {
-							parts := strings.Split(k, ".")
-							if len(parts) != 3 {
-								continue
-							}
-							prop := parts[2]
-							if prop == "%" {
-								continue
-							}
-							idx := parts[1]
-							id := deviceIndexes[idx]
-							expected := fmt.Sprint(devicesByID[id][prop])
-							if v != expected {
-								return fmt.Errorf("wrong value of %s for device %s, want %q, got %q", prop, id, expected, v)
-							}
-						}
-					}
+					assertDeviceAttributesEqual(t, rs, deviceIndexes, devicesByID)
 
 					// Now set up device datasources for each device. This is used in the following test
 					// of the tailscale_device datasource.
@@ -134,4 +117,86 @@ func TestAccTailscaleDevices(t *testing.T) {
 			},
 		},
 	})
+
+	// Test tailscale_devices with filters applied.
+	resourceNameFiltered := "data.tailscale_devices.filtered_devices"
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories(t),
+		Steps: []resource.TestStep{
+			{
+				Config: `data "tailscale_devices" "filtered_devices" { 
+					filter { 
+						name = "isEphemeral"
+						values = ["true"]
+					}
+					filter { 
+						name = "tags"
+						values = ["tag:server", "tag:test"]
+					}
+				}`,
+				Check: func(s *terraform.State) error {
+					client := testAccProvider.Meta().(*tailscale.Client)
+					devices, err := client.Devices().List(context.Background(),
+						tailscale.WithFilter("isEphemeral", []string{"true"}),
+						tailscale.WithFilter("tags", []string{"tag:server", "tag:test"}),
+					)
+					if err != nil {
+						return fmt.Errorf("unable to list devices: %s", err)
+					}
+
+					devicesByID := make(map[string]map[string]any)
+					for _, device := range devices {
+						m := deviceToMap(&device)
+						m["id"] = device.ID
+						devicesByID[device.ID] = m
+					}
+
+					rs := s.RootModule().Resources[resourceNameFiltered].Primary
+
+					// first find indexes for devices
+					deviceIndexes := make(map[string]string)
+					for k, v := range rs.Attributes {
+						if strings.HasSuffix(k, ".id") {
+							idx := strings.Split(k, ".")[1]
+							deviceIndexes[idx] = v
+						}
+					}
+
+					// make sure we got the right number of devices
+					if len(deviceIndexes) != len(devicesByID) {
+						return fmt.Errorf("wrong number of devices in datasource, want %d, got %d", len(devicesByID), len(deviceIndexes))
+					}
+
+					// now compare datasource attributes to expected values
+					assertDeviceAttributesEqual(t, rs, deviceIndexes, devicesByID)
+
+					return nil
+				},
+			},
+		},
+	})
+}
+
+func assertDeviceAttributesEqual(t *testing.T, rs *terraform.InstanceState, gotIDs map[string]string, wantDevicesByID map[string]map[string]any) {
+	t.Helper()
+
+	for k, v := range rs.Attributes {
+		if strings.HasPrefix(k, "devices.") {
+			parts := strings.Split(k, ".")
+			if len(parts) != 3 {
+				continue
+			}
+			prop := parts[2]
+			if prop == "%" {
+				continue
+			}
+			idx := parts[1]
+			id := gotIDs[idx]
+			expected := fmt.Sprint(wantDevicesByID[id][prop])
+			if v != expected {
+				t.Errorf("wrong value of %s for device %s, want %q, got %q", prop, id, expected, v)
+			}
+		}
+	}
 }
