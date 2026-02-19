@@ -26,12 +26,14 @@ func resourcePostureIntegration() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"posture_provider": {
 				Type:        schema.TypeString,
-				Description: "The third-party provider for posture data. Valid values are `falcon`, `intune`, `jamfpro`, `kandji`, `kolide`, and `sentinelone`.",
+				Description: "The third-party provider for posture data. Valid values are `falcon`, `fleet`, `huntress`, `intune`, `jamfpro`, `kandji`, `kolide`, and `sentinelone`.",
 				Required:    true,
 				ForceNew:    true,
 				ValidateFunc: validation.StringInSlice(
 					[]string{
 						string(tailscale.PostureIntegrationProviderFalcon),
+						string(tailscale.PostureIntegrationProviderFleet),
+						string(tailscale.PostureIntegrationProviderHuntress),
 						string(tailscale.PostureIntegrationProviderIntune),
 						string(tailscale.PostureIntegrationProviderJamfPro),
 						string(tailscale.PostureIntegrationProviderKandji),
