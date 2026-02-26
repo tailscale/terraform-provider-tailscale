@@ -99,6 +99,11 @@ func resourceDNSConfiguration() *schema.Resource {
 				Optional:    true,
 				Default:     true,
 			},
+			"magic_dns_name": {
+				Description: "The tailnet/MagicDNS domain name. Null if disabled or undeterminable.",
+				Type:        schema.TypeString,
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -135,14 +140,41 @@ func resourceDNSConfigurationRead(ctx context.Context, d *schema.ResourceData, m
 		})
 	}
 
-	if diag := setProperties(d, map[string]any{
+	var magicDNSName string
+	var diags diag.Diagnostics
+	if configuration.Preferences.MagicDNS {
+		devices, err := client.Devices().List(ctx)
+		if err != nil {
+			diags = append(diags, diagnosticsError(err, "There is a MagicDNS name, but we failed to get devices")...)
+		} else if len(devices) == 0 {
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary: "There is a MagicDNS name, but we can't determine it with 0 devices",
+			})
+		} else {
+			parts := strings.Split(devices[0].Name, ".")
+			if len(parts) != 4 {
+				diags = append(diags, diag.Diagnostic{
+					Severity: diag.Error,
+					Summary: "There is a MagicDNS name, but unexpected device name format",
+				})
+			} else {
+				magicDNSName = strings.Join(parts[1:], ".")
+			}
+		}
+	}
+
+	diags = append(diags, setProperties(d, map[string]any{
 		"nameservers":        nameservers,
 		"split_dns":          splitDNS,
 		"search_paths":       configuration.SearchPaths,
 		"override_local_dns": configuration.Preferences.OverrideLocalDNS,
 		"magic_dns":          configuration.Preferences.MagicDNS,
-	}); diag != nil {
-		return diag
+		"magic_dns_name":     magicDNSName,
+	})...)
+
+	if diags != nil {
+		return diags
 	}
 
 	return []diag.Diagnostic{
