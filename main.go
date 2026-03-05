@@ -9,6 +9,7 @@ import (
 	"flag"
 	"log"
 
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5/tf5server"
 	"github.com/hashicorp/terraform-plugin-mux/tf5muxserver"
@@ -25,6 +26,7 @@ func main() {
 	flag.Parse()
 
 	providers := []func() tfprotov5.ProviderServer{
+		providerserver.NewProtocol5(tailscale.New()),
 		tailscale.Provider().GRPCProvider,
 	}
 

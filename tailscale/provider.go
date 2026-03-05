@@ -16,6 +16,11 @@ import (
 
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
+	schemav2 "github.com/hashicorp/terraform-plugin-framework/provider/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -27,7 +32,251 @@ var providerVersion = "dev"
 
 type ProviderOption func(p *schema.Provider)
 
-// Provider returns the *schema.Provider instance that implements the terraform provider.
+type tailscaleProvider struct {
+	Client tailscale.Client
+}
+
+func New() provider.Provider {
+	return &tailscaleProvider{}
+}
+
+// Metadata defines information about the provider itself.
+func (p *tailscaleProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
+	resp.TypeName = "tailscale"
+	resp.Version = providerVersion
+}
+
+// Schema defines a [schemav2.Schema] describing what data is available in the provider's
+// configuration.
+func (p *tailscaleProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
+	resp.Schema = schemav2.Schema{
+		Attributes: map[string]schemav2.Attribute{
+			"api_key": schemav2.StringAttribute{
+				Optional:    true,
+				Description: "The API key to use for authenticating requests to the API. Can be set via the TAILSCALE_API_KEY environment variable. Conflicts with 'oauth_client_id' and 'oauth_client_secret'.",
+				Sensitive:   true,
+			},
+			"identity_token": schemav2.StringAttribute{
+				Optional:    true,
+				Description: "The jwt identity token to exchange for a Tailscale API token when using a federated identity. Can be set via the TAILSCALE_IDENTITY_TOKEN environment variable. Conflicts with 'api_key' and 'oauth_client_secret'.",
+				Sensitive:   true,
+			},
+			"oauth_client_id": schemav2.StringAttribute{
+				Optional:    true,
+				Description: "The OAuth application or federated identity's ID when using OAuth client credentials or workload identity federation. Can be set via the TAILSCALE_OAUTH_CLIENT_ID environment variable. Either 'oauth_client_secret' or 'identity_token' must be set alongside 'oauth_client_id'. Conflicts with 'api_key'.",
+			},
+			"oauth_client_secret": schemav2.StringAttribute{
+				Optional:    true,
+				Description: "The OAuth application's secret when using OAuth client credentials. Can be set via the TAILSCALE_OAUTH_CLIENT_SECRET environment variable. Conflicts with 'api_key' and 'identity_token'.",
+				Sensitive:   true,
+			},
+			"scopes": schemav2.ListAttribute{
+				ElementType: types.StringType,
+				Optional:    true,
+				Description: "The OAuth 2.0 scopes to request when generating the access token using the supplied OAuth client credentials. See https://tailscale.com/kb/1623/trust-credentials#scopes for available scopes. Only valid when both 'oauth_client_id' and 'oauth_client_secret', or both are set.",
+			},
+			"tailnet": schemav2.StringAttribute{
+				Optional:    true,
+				Description: "The tailnet ID. Tailnets created before Oct 2025 can still use the legacy ID, but the Tailnet ID is the preferred identifier. Can be set via the TAILSCALE_TAILNET environment variable. Default is the tailnet that owns API credentials passed to the provider.",
+			},
+			"base_url": schemav2.StringAttribute{
+				Optional:    true,
+				Description: "The base URL of the Tailscale API. Defaults to https://api.tailscale.com. Can be set via the TAILSCALE_BASE_URL environment variable.",
+			},
+			"user_agent": schemav2.StringAttribute{
+				Optional:    true,
+				Description: "User-Agent header for API requests.",
+			},
+		},
+	}
+}
+
+type tailscaleProviderModel struct {
+	APIKey            types.String `tfsdk:"api_key"`
+	IdentityToken     types.String `tfsdk:"identity_token"`
+	OAuthClientID     types.String `tfsdk:"oauth_client_id"`
+	OAuthClientSecret types.String `tfsdk:"oauth_client_secret"`
+	Tailnet           types.String `tfsdk:"tailnet"`
+	BaseURL           types.String `tfsdk:"base_url"`
+	UserAgent         types.String `tfsdk:"user_agent"`
+	Scopes            types.List   `tfsdk:"scopes"`
+}
+
+// Configure sets up the Tailscale client based on the provider-level data.
+func (p *tailscaleProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	// Check environment variables
+	apiKey := os.Getenv("TAILSCALE_API_KEY")
+
+	// Support both sets of OAuth Env vars for backwards compatibility
+	identityToken := getMultiEnv("TAILSCALE_IDENTITY_TOKEN", "IDENTITY_TOKEN")
+	oauthClientID := getMultiEnv("TAILSCALE_OAUTH_CLIENT_ID", "OAUTH_CLIENT_ID")
+	oauthClientSecret := getMultiEnv("TAILSCALE_OAUTH_CLIENT_SECRET", "OAUTH_CLIENT_SECRET")
+
+	tailnet := "-"
+	if value, ok := os.LookupEnv("TAILSCALE_TAILNET"); ok {
+		tailnet = value
+	}
+
+	baseURL := "https://api.tailscale.com"
+	if value, ok := os.LookupEnv("TAILSCALE_BASE_URL"); ok {
+		baseURL = value
+	}
+
+	userAgent := fmt.Sprintf(
+		"Terraform/%s (+https://www.terraform.io) terraform-provider-tailscale/%s",
+		req.TerraformVersion,
+		providerVersion)
+
+	var data tailscaleProviderModel
+
+	// Read configuration data into model
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+
+	// Check configuration data, which should take precedence over
+	// environment variable data, if found.
+	if data.APIKey.ValueString() != "" {
+		apiKey = data.APIKey.ValueString()
+	}
+	if data.IdentityToken.ValueString() != "" {
+		identityToken = data.IdentityToken.ValueString()
+	}
+	if data.OAuthClientID.ValueString() != "" {
+		oauthClientID = data.OAuthClientID.ValueString()
+	}
+	if data.OAuthClientSecret.ValueString() != "" {
+		oauthClientSecret = data.OAuthClientSecret.ValueString()
+	}
+	if data.Tailnet.ValueString() != "" {
+		tailnet = data.Tailnet.ValueString()
+	}
+	if data.BaseURL.ValueString() != "" {
+		baseURL = data.BaseURL.ValueString()
+	}
+	if data.UserAgent.ValueString() != "" {
+		userAgent = data.UserAgent.ValueString()
+	}
+
+	var scopes []string
+	resp.Diagnostics.Append(data.Scopes.ElementsAs(ctx, &scopes, false)...)
+
+	parsedBaseURL, err := url.Parse(baseURL)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Could not parse base URL",
+			fmt.Sprintf("While configuring the provider, "+
+				"the base URL %q could not be parsed: %v", baseURL, err),
+		)
+	}
+
+	// TODO(alexc): I copied this check from the old provider, but if I've read the code
+	// correctly it will never be triggered: the default value for tailnet is a hyphen,
+	// not an empty string.
+	if tailnet == "" {
+		resp.Diagnostics.AddError(
+			"Missing Tailnet ID",
+			"While configuring the provider, a Tailnet ID was not found in the "+
+				"TAILSCALE_TAILNET environment variable or provider configuration block "+
+				"tailnet attribute.",
+		)
+	}
+
+	if apiKey == "" && oauthClientID == "" && oauthClientSecret == "" && identityToken == "" {
+		resp.Diagnostics.AddError(
+			"Provider credentials are missing",
+			"While configuring the provider, no provider credentials were found. Either set "+
+				"an API key, or an OAuth client ID and OAuth client secret, or an OAuth client ID "+
+				"and identity token.",
+		)
+	} else if apiKey != "" && (oauthClientID != "" || oauthClientSecret != "" || identityToken != "") {
+		resp.Diagnostics.AddError(
+			"Provider credentials are conflicting",
+			"While configuring the provider, both API key and OAuth client credentials were found. "+
+				"Only one can be used. Remove either your API key or OAuth client configuration.",
+		)
+	} else if apiKey == "" && oauthClientID == "" && !(oauthClientSecret == "" && identityToken == "") {
+		resp.Diagnostics.AddError(
+			"OAuth client ID is missing",
+			"While configuring the provider, no provider credentials were found. Set an OAuth "+
+				"client ID in the TAILSCALE_OAUTH_CLIENT_ID environment variable or provider "+
+				"configuration block oauth_client_id attribute.",
+		)
+	} else if apiKey == "" && oauthClientID != "" && (oauthClientSecret == "" && identityToken == "") {
+		resp.Diagnostics.AddError(
+			"OAuth client secret or identity token is missing",
+			"While configuring the provider, no provider credentials were found. Set either "+
+				"(1) an OAuth client secret in the TAILSCALE_OAUTH_CLIENT_SECRET environment variable "+
+				"or provider configuration block oauth_client_secret attribute, or (2) an identity token "+
+				"in the TAILSCALE_IDENTITY_TOKEN environment variable or provider configuration block "+
+				"identity_token attribute.",
+		)
+	}
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if oauthClientID != "" && oauthClientSecret != "" {
+		p.Client = tailscale.Client{
+			BaseURL:   parsedBaseURL,
+			UserAgent: userAgent,
+			Tailnet:   tailnet,
+			Auth: &tailscale.OAuth{
+				ClientID:     oauthClientID,
+				ClientSecret: oauthClientSecret,
+				Scopes:       scopes,
+			},
+		}
+	} else if oauthClientID != "" && identityToken != "" {
+		p.Client = tailscale.Client{
+			BaseURL:   parsedBaseURL,
+			UserAgent: userAgent,
+			Tailnet:   tailnet,
+			Auth: &tailscale.IdentityFederation{
+				ClientID: oauthClientID,
+				IDTokenFunc: func() (string, error) {
+					return identityToken, nil
+				},
+			},
+		}
+	} else {
+		p.Client = tailscale.Client{
+			BaseURL:   parsedBaseURL,
+			UserAgent: userAgent,
+			APIKey:    apiKey,
+			Tailnet:   tailnet,
+		}
+	}
+}
+
+// Resources returns a slice of resources.
+func (p *tailscaleProvider) Resources(_ context.Context) []func() resource.Resource {
+	return []func() resource.Resource{}
+}
+
+// DataSources returns a slice of data sources.
+func (p *tailscaleProvider) DataSources(_ context.Context) []func() datasource.DataSource {
+	return []func() datasource.DataSource{}
+}
+
+// getMultiEnv is a helper function that returns the value of the first environment
+// variable in the given list that returns a non-empty value.
+//
+// It's the multi-variate version of [os.GetEnv].
+//
+// If none of the environment variables returns a value, it returns an empty string.
+func getMultiEnv(ks ...string) string {
+	for _, key := range ks {
+		if s := os.Getenv(key); s != "" {
+			return s
+		}
+	}
+	return ""
+}
+
+// Provider returns the [schema.Provider] instance that implements the terraform provider.
+//
+// This implements the SDKv2 version of the Terraform provider, and will gradually be
+// removed and eventually deleted as we migrate to the plugin framework.
 func Provider(options ...ProviderOption) *schema.Provider {
 	// Support both sets of OAuth Env vars for backwards compatibility
 	oauthClientIDEnvVars := []string{"TAILSCALE_OAUTH_CLIENT_ID", "OAUTH_CLIENT_ID"}

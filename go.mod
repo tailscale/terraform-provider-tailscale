@@ -16,6 +16,7 @@ require (
 )
 
 require (
+	github.com/hashicorp/terraform-plugin-framework v1.18.0
 	github.com/hashicorp/terraform-plugin-go v0.30.0
 	github.com/hashicorp/terraform-plugin-mux v0.22.0
 	github.com/pkg/errors v0.9.1
