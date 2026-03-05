@@ -15,7 +15,11 @@ require (
 	tailscale.com/client/tailscale/v2 v2.8.0
 )
 
-require github.com/pkg/errors v0.9.1
+require (
+	github.com/hashicorp/terraform-plugin-go v0.30.0
+	github.com/hashicorp/terraform-plugin-mux v0.22.0
+	github.com/pkg/errors v0.9.1
+)
 
 require (
 	dario.cat/mergo v1.0.1 // indirect
@@ -50,7 +54,6 @@ require (
 	github.com/hashicorp/logutils v1.0.0 // indirect
 	github.com/hashicorp/terraform-exec v0.25.0 // indirect
 	github.com/hashicorp/terraform-json v0.27.2 // indirect
-	github.com/hashicorp/terraform-plugin-go v0.30.0 // indirect
 	github.com/hashicorp/terraform-plugin-log v0.10.0 // indirect
 	github.com/hashicorp/terraform-registry-address v0.4.0 // indirect
 	github.com/hashicorp/terraform-svchost v0.1.1 // indirect
