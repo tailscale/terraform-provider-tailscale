@@ -40,7 +40,7 @@ func TestProvider_TailscaleWebhook(t *testing.T) {
 				EndpointID: "12345",
 			}
 		},
-		ProviderFactories: testProviderFactories(t),
+		ProtoV5ProviderFactories: testProviderFactories(t),
 		Steps: []resource.TestStep{
 			testResourceCreated("tailscale_webhook.test_webhook", testWebhook),
 			testResourceDestroyed("tailscale_webhook.test_webhook", testWebhook),
@@ -76,8 +76,8 @@ func TestAccTailscaleWebhook(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
 		CheckDestroy: checkResourceDestroyed(resourceName, func(client *tailscale.Client, rs *terraform.ResourceState) error {
 			_, err := client.Webhooks().Get(context.Background(), rs.Primary.ID)
 			if err == nil {

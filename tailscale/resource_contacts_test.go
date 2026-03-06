@@ -95,8 +95,8 @@ func TestAccTailscaleContacts(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
 		// Contacts are not destroyed in the control plane upon resource deletion since
 		// contacts cannot be empty, so make sure that contacts are still the updated contacts.
 		CheckDestroy: checkResourceDestroyed(resourceName, checkProperties(expectedContactsUpdated)),

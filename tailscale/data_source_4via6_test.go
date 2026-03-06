@@ -30,9 +30,9 @@ data "tailscale_4via6" "invalid" {
 `
 
 func TestProvider_DataSourceTailscale4Via6(t *testing.T) {
-	resource.ParallelTest(t, resource.TestCase{
-		IsUnitTest:        true,
-		ProviderFactories: testProviderFactories(t),
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		ProtoV5ProviderFactories: testProviderFactories(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSource4Via6,
@@ -43,9 +43,9 @@ func TestProvider_DataSourceTailscale4Via6(t *testing.T) {
 }
 
 func TestProvider_DataSourceTailscale4Via6_InvalidSite(t *testing.T) {
-	resource.ParallelTest(t, resource.TestCase{
-		IsUnitTest:        true,
-		ProviderFactories: testProviderFactories(t),
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		ProtoV5ProviderFactories: testProviderFactories(t),
 		Steps: []resource.TestStep{
 			{
 				Config:      testDataSource4Via6InvalidSite,

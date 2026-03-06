@@ -17,8 +17,8 @@ func TestAccTailscaleAWSExternalID(t *testing.T) {
 	const resourceName = "tailscale_aws_external_id.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAWSExternalID,

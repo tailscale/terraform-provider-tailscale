@@ -71,8 +71,8 @@ func TestAccTailscaleDeviceKey(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
 		// After delete, device key should revert to its default properties
 		// This is probably not how we actually want things to work, but it's the released behavior.
 		// See https://github.com/tailscale/terraform-provider-tailscale/issues/401.
@@ -157,8 +157,8 @@ func TestAccTailscaleDeviceKey_UsesNodeID(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
 		// After delete, device key should revert to its default properties
 		// This is probably not how we actually want things to work, but it's the released behavior.
 		// See https://github.com/tailscale/terraform-provider-tailscale/issues/401.

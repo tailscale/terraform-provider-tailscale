@@ -78,8 +78,8 @@ func TestAccTailscaleDeviceTags(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
 		Steps: []resource.TestStep{
 			{
 				PreConfig: func() {
@@ -184,8 +184,8 @@ func TestAccTailscaleDeviceTags_UsesNodeID(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
 		Steps: []resource.TestStep{
 			{
 				PreConfig: func() {

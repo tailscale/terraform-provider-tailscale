@@ -36,7 +36,7 @@ func TestProvider_TailscaleDNSSearchPaths(t *testing.T) {
 			testServer.ResponseCode = http.StatusOK
 			testServer.ResponseBody = nil
 		},
-		ProviderFactories: testProviderFactories(t),
+		ProtoV5ProviderFactories: testProviderFactories(t),
 		Steps: []resource.TestStep{
 			testResourceCreated("tailscale_dns_search_paths.test_search_paths", testSearchPathsCreate),
 			testResourceDestroyed("tailscale_dns_search_paths.test_search_paths", testSearchPathsCreate),
@@ -63,9 +63,9 @@ func TestAccTailscaleDNSSearchPaths(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy:      checkResourceDestroyed(resourceName, checkProperties([]string{})),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
+		CheckDestroy:             checkResourceDestroyed(resourceName, checkProperties([]string{})),
 		Steps: []resource.TestStep{
 			{
 				Config: testSearchPathsCreate,

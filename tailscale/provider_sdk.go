@@ -27,7 +27,12 @@ var providerVersion = "dev"
 
 type ProviderOption func(p *schema.Provider)
 
-// Provider returns the *schema.Provider instance that implements the terraform provider.
+// Provider returns the [schema.Provider] instance that implements the terraform provider.
+//
+// This implements the SDKv2 version of the Terraform provider, and will gradually be
+// removed and eventually deleted as we migrate to the plugin framework.
+//
+// Remove this when we close https://github.com/tailscale/corp/issues/37032
 func Provider(options ...ProviderOption) *schema.Provider {
 	// Support both sets of OAuth Env vars for backwards compatibility
 	oauthClientIDEnvVars := []string{"TAILSCALE_OAUTH_CLIENT_ID", "OAUTH_CLIENT_ID"}
@@ -155,52 +160,19 @@ func providerConfigure(_ context.Context, provider *schema.Provider, d *schema.R
 		userAgent = provider.UserAgent("terraform-provider-tailscale", providerVersion)
 	}
 
+	var scopes []string
 	if oauthClientID != "" && oauthClientSecret != "" {
-		var oauthScopes []string
 		oauthScopesFromConfig := d.Get("scopes").([]interface{})
 		if len(oauthScopesFromConfig) > 0 {
-			oauthScopes = make([]string, len(oauthScopesFromConfig))
+			scopes = make([]string, len(oauthScopesFromConfig))
 		}
 		for i, scope := range oauthScopesFromConfig {
-			oauthScopes[i] = scope.(string)
+			scopes[i] = scope.(string)
 		}
-
-		client := &tailscale.Client{
-			BaseURL:   parsedBaseURL,
-			UserAgent: userAgent,
-			Tailnet:   tailnet,
-			Auth: &tailscale.OAuth{
-				ClientID:     oauthClientID,
-				ClientSecret: oauthClientSecret,
-				Scopes:       oauthScopes,
-			},
-		}
-
-		return client, nil
 	}
 
-	if oauthClientID != "" && idToken != "" {
-		return &tailscale.Client{
-			BaseURL:   parsedBaseURL,
-			UserAgent: userAgent,
-			Tailnet:   tailnet,
-			Auth: &tailscale.IdentityFederation{
-				ClientID: oauthClientID,
-				IDTokenFunc: func() (string, error) {
-					return idToken, nil
-				},
-			},
-		}, nil
-	}
-
-	client := &tailscale.Client{
-		BaseURL:   parsedBaseURL,
-		UserAgent: userAgent,
-		APIKey:    apiKey,
-		Tailnet:   tailnet,
-	}
-
-	return client, nil
+	client := createTailscaleClient(parsedBaseURL, userAgent, tailnet, apiKey, oauthClientID, oauthClientSecret, idToken, scopes)
+	return &client, nil
 }
 
 func validateProviderCreds(apiKey string, oauthClientID string, oauthClientSecret string, idToken string) diag.Diagnostics {

@@ -40,7 +40,7 @@ func TestProvider_TailscaleTailnetKey(t *testing.T) {
 				Key:     "thisisatestkey",
 			}
 		},
-		ProviderFactories: testProviderFactories(t),
+		ProtoV5ProviderFactories: testProviderFactories(t),
 		Steps: []resource.TestStep{
 			testResourceCreated("tailscale_tailnet_key.example_key", testTailnetKey),
 			testResourceDestroyed("tailscale_tailnet_key.example_key", testTailnetKey),
@@ -142,7 +142,7 @@ func TestProvider_TailscaleTailnetKeyInvalid(t *testing.T) {
 				Key:     "thisisatestkey",
 			}
 		},
-		ProviderFactories: testProviderFactories(t),
+		ProtoV5ProviderFactories: testProviderFactories(t),
 		Steps: []resource.TestStep{
 			// Create a reusable key.
 			setKeyStep(true, ""),
@@ -246,8 +246,8 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 	expectedKeyUpdated.Capabilities.Devices.Create.Tags = []string{"tag:b"}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
 		Steps: []resource.TestStep{
 			{
 				PreConfig: func() {

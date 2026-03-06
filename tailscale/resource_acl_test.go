@@ -82,7 +82,7 @@ func TestProvider_TailscaleACL(t *testing.T) {
 			testServer.ResponseCode = http.StatusOK
 			testServer.ResponseBody = nil
 		},
-		ProviderFactories: testProviderFactories(t),
+		ProtoV5ProviderFactories: testProviderFactories(t),
 		Steps: []resource.TestStep{
 			testResourceCreated("tailscale_acl.test_acl", testACL),
 			testResourceDestroyed("tailscale_acl.test_acl", testACL),
@@ -115,8 +115,8 @@ func TestProvider_TailscaleACLDiffs(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		IsUnitTest:        true,
-		ProviderFactories: testProviderFactories(t),
+		IsUnitTest:               true,
+		ProtoV5ProviderFactories: testProviderFactories(t),
 		PreCheck: func() {
 			testServer.ResponseCode = http.StatusOK
 			testServer.ResponseBody = []byte("{}")
@@ -183,8 +183,8 @@ func TestAccACL(t *testing.T) {
 		}`
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testACLCreate,
@@ -246,8 +246,8 @@ func TestAccACL_resetOnDestroy(t *testing.T) {
 		}`
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
 		CheckDestroy: checkResourceDestroyed(resourceName, func(client *tailscale.Client, rs *terraform.ResourceState) error {
 			aclAfterDestroy, err := client.PolicyFile().Raw(context.Background())
 			if err != nil {

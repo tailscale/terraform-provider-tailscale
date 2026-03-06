@@ -33,7 +33,7 @@ func TestProvider_TailscaleOAuthClient(t *testing.T) {
 				Key: "thisisatestclient",
 			}
 		},
-		ProviderFactories: testProviderFactories(t),
+		ProtoV5ProviderFactories: testProviderFactories(t),
 		Steps: []resource.TestStep{
 			testResourceCreated("tailscale_oauth_client.example_oauth_client", testOAuthClient),
 			testResourceDestroyed("tailscale_oauth_client.example_oauth_client", testOAuthClient),
@@ -111,9 +111,9 @@ func TestAccTailscaleOAuthClient(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy:      checkResourceDestroyed(resourceName, checkOAuthClientDeleted),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
+		CheckDestroy:             checkResourceDestroyed(resourceName, checkOAuthClientDeleted),
 		Steps: []resource.TestStep{
 			{
 				PreConfig: func() {

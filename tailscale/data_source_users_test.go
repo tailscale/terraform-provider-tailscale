@@ -24,8 +24,8 @@ func TestAccTailscaleUsers(t *testing.T) {
 	// First test the tailscale_users datasource, which will give us a list of
 	// all user IDs.
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
 		Steps: []resource.TestStep{
 			{
 				Config: `data "tailscale_users" "all_users" {}`,
@@ -93,8 +93,8 @@ func TestAccTailscaleUsers(t *testing.T) {
 	// Now test the individual tailscale_user data sources for each user,
 	// making sure that it pulls in the relevant details for each user.
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
 		Steps: []resource.TestStep{
 			{
 				Config: userDataSources.String(),
