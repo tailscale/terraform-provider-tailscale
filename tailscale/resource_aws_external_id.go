@@ -6,29 +6,38 @@ package tailscale
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
-	"tailscale.com/client/tailscale/v2"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func resourceAWSExternalID() *schema.Resource {
-	return &schema.Resource{
-		Description:   "The aws_external_id resource allows you to mint an AWS External ID that Tailscale can use to assume an AWS IAM role that you create for the purposes of allowing Tailscale to stream logs to your S3 bucket. See the logstream_configuration resource for more details.",
-		CreateContext: resourceAWSExternalIDCreate,
+// NewAWSExternalIDResource returns a new AWS External ID resource.
+func NewAWSExternalIDResource() resource.Resource {
+	return &awsExternalIDResource{}
+}
 
-		// No GET or DELETE endpoints in the API. This is a create-only resource.
-		ReadContext:   schema.NoopContext,
-		DeleteContext: schema.NoopContext,
+type awsExternalIDResource struct {
+	ResourceBase
+}
 
-		Schema: map[string]*schema.Schema{
-			"external_id": {
-				Type:        schema.TypeString,
+// Metadata defines the resource name as it appears in Terraform configurations.
+func (r *awsExternalIDResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_aws_external_id"
+}
+
+// Schema defines a schema describing what fields can be defined in the resource.
+func (r *awsExternalIDResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		Description: "The aws_external_id resource allows you to mint an AWS External ID that Tailscale can use to assume an AWS IAM role that you create for the purposes of allowing Tailscale to stream logs to your S3 bucket. See the logstream_configuration resource for more details.",
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed: true,
+			},
+			"external_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "The External ID that Tailscale will supply when assuming your role. You must reference this in your IAM role's trust policy. See https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_common-scenarios_third-party.html for more information on external IDs.",
 			},
-			"tailscale_aws_account_id": {
-				Type:        schema.TypeString,
+			"tailscale_aws_account_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "The AWS account from which Tailscale will assume your role. You must reference this in your IAM role's trust policy. See https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_common-scenarios_third-party.html for more information on external IDs.",
 			},
@@ -36,26 +45,42 @@ func resourceAWSExternalID() *schema.Resource {
 	}
 }
 
-func resourceAWSExternalIDCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+type awsExternalIDResourceData struct {
+	ID                    types.String `tfsdk:"id"`
+	ExternalID            types.String `tfsdk:"external_id"`
+	TailscaleAWSAccountID types.String `tfsdk:"tailscale_aws_account_id"`
+}
 
+// Create creates a new AWS external ID.
+func (r *awsExternalIDResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	// We pass "reusable: false" on purpose. Otherwise, two tailscale_aws_external_id resources
 	// could end up with the same resource ID (because we use the actual external ID).
 	//
 	// Also, "reusable: true" is an optimization intended for the admin console UI's usage
 	// pattern, and it's not really necessary for Terraform use cases.
-	aid, err := client.Logging().CreateOrGetAwsExternalId(ctx, false)
+	aid, err := r.Client.Logging().CreateOrGetAwsExternalId(ctx, false)
 	if err != nil {
-		return diagnosticsError(err, "Failed to create AWS External ID")
+		resp.Diagnostics.AddError(
+			"Error creating AWS External ID",
+			"Could not create AWS external ID, received error:"+err.Error(),
+		)
+		return
 	}
 
-	d.SetId(aid.ExternalID)
-	if err = d.Set("external_id", aid.ExternalID); err != nil {
-		return diagnosticsError(err, "Failed to set externalId")
-	}
-	if err = d.Set("tailscale_aws_account_id", aid.TailscaleAWSAccountID); err != nil {
-		return diagnosticsError(err, "Failed to set AWSAccountID")
+	data := awsExternalIDResourceData{
+		ID:                    types.StringValue(aid.ExternalID),
+		ExternalID:            types.StringValue(aid.ExternalID),
+		TailscaleAWSAccountID: types.StringValue(aid.TailscaleAWSAccountID),
 	}
 
-	return nil
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+// There are no GET or DELETE endpoints in the API; this is a create-only resource.
+// These methods are no-ops.
+func (r *awsExternalIDResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+}
+func (r *awsExternalIDResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+}
+func (r *awsExternalIDResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 }
