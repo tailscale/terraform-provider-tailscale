@@ -109,7 +109,6 @@ func Provider(options ...ProviderOption) *schema.Provider {
 			"tailscale_contacts":                resourceContacts(),
 			"tailscale_posture_integration":     resourcePostureIntegration(),
 			"tailscale_logstream_configuration": resourceLogstreamConfiguration(),
-			"tailscale_aws_external_id":         resourceAWSExternalID(),
 			"tailscale_tailnet_settings":        resourceTailnetSettings(),
 			"tailscale_federated_identity":      resourceFederatedIdentity(),
 		},
