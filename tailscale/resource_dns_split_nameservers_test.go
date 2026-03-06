@@ -29,7 +29,7 @@ func TestProvider_TailscaleSplitDNSNameservers(t *testing.T) {
 			testServer.ResponseCode = http.StatusOK
 			testServer.ResponseBody = nil
 		},
-		ProviderFactories: testProviderFactories(t),
+		ProtoV5ProviderFactories: testProviderFactories(t),
 		Steps: []resource.TestStep{
 			testResourceCreated("tailscale_dns_split_nameservers.test_nameservers", testSplitNameservers),
 			testResourceDestroyed("tailscale_dns_split_nameservers.test_nameservers", testSplitNameservers),
@@ -74,9 +74,9 @@ func TestAccTailscaleDNSSplitNameservers(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy:      checkResourceDestroyed(resourceName, checkProperties(tailscale.SplitDNSResponse{})),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
+		CheckDestroy:             checkResourceDestroyed(resourceName, checkProperties(tailscale.SplitDNSResponse{})),
 		Steps: []resource.TestStep{
 			{
 				Config: testSplitNameserversCreate,

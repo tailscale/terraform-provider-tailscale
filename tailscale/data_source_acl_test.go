@@ -20,8 +20,8 @@ func TestAccTailscaleACL(t *testing.T) {
 	resourceName := "data.tailscale_acl.acl"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
 		Steps: []resource.TestStep{
 			{
 				Config: `data "tailscale_acl" "acl" {}`,

@@ -44,7 +44,7 @@ func TestProvider_TailscaleFederatedIdentity(t *testing.T) {
 				},
 			}
 		},
-		ProviderFactories: testProviderFactories(t),
+		ProtoV5ProviderFactories: testProviderFactories(t),
 		Steps: []resource.TestStep{
 			testResourceCreated("tailscale_federated_identity.example_federated_identity", testFederatedIdentity),
 			testResourceDestroyed("tailscale_federated_identity.example_federated_identity", testFederatedIdentity),
@@ -139,9 +139,9 @@ func TestAccTailscaleFederatedIdentity(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy:      checkResourceDestroyed(resourceName, checkFederatedIdentityDeleted),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
+		CheckDestroy:             checkResourceDestroyed(resourceName, checkFederatedIdentityDeleted),
 		Steps: []resource.TestStep{
 			{
 				PreConfig: func() {

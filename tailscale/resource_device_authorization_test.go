@@ -57,8 +57,8 @@ func TestAccTailscaleDeviceAuthorization(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
 		// Devices are not currently deauthorized when this resource is deleted,
 		// expect that the device both exists and is still authorized.
 		CheckDestroy: checkResourceDestroyed(resourceName, checkAuthorized),
@@ -122,8 +122,8 @@ func TestAccTailscaleDeviceAuthorization_UsesNodeID(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
 		// Devices are not currently deauthorized when this resource is deleted,
 		// expect that the device both exists and is still authorized.
 		CheckDestroy: checkResourceDestroyed(resourceName, checkAuthorized),

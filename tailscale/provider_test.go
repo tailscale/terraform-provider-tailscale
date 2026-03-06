@@ -12,6 +12,10 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	"github.com/hashicorp/terraform-plugin-mux/tf5muxserver"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -51,12 +55,29 @@ func testAccPreCheck(t *testing.T) {
 	}
 }
 
-func testAccProviderFactories(t *testing.T) map[string]func() (*schema.Provider, error) {
+// testAccProviderFactories creates a mux server that serves both the SDKv2 and
+// the plugin framework providers.
+//
+// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/mux#protocol-version-5
+func testAccProviderFactories(t *testing.T) map[string]func() (tfprotov5.ProviderServer, error) {
 	t.Helper()
 
-	return map[string]func() (*schema.Provider, error){
-		"tailscale": func() (*schema.Provider, error) {
-			return Provider(), nil
+	return map[string]func() (tfprotov5.ProviderServer, error){
+		"tailscale": func() (tfprotov5.ProviderServer, error) {
+			ctx := context.Background()
+
+			providers := []func() tfprotov5.ProviderServer{
+				providerserver.NewProtocol5(NewFrameworkProvider()),
+				Provider().GRPCProvider,
+			}
+
+			muxServer, err := tf5muxserver.NewMuxServer(ctx, providers...)
+
+			if err != nil {
+				return nil, err
+			}
+
+			return muxServer.ProviderServer(), nil
 		},
 	}
 }
@@ -69,23 +90,40 @@ func TestProvider(t *testing.T) {
 
 func TestProvider_Implemented(t *testing.T) {
 	var _ *schema.Provider = Provider()
+	var _ provider.Provider = NewFrameworkProvider()
 }
 
-func testProviderFactories(t *testing.T) map[string]func() (*schema.Provider, error) {
+// testProviderFactories creates a mux server that serves both the SDKv2 and
+// the plugin framework providers.
+//
+// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/mux#protocol-version-5
+func testProviderFactories(t *testing.T) map[string]func() (tfprotov5.ProviderServer, error) {
 	t.Helper()
 
 	testClient, testServer = NewTestHarness(t)
-	return map[string]func() (*schema.Provider, error){
-		"tailscale": func() (*schema.Provider, error) {
-			return Provider(func(p *schema.Provider) {
-				// Set up a test harness for the provider
-				p.ConfigureContextFunc = func(ctx context.Context, data *schema.ResourceData) (interface{}, diag.Diagnostics) {
-					return testClient, nil
-				}
+	return map[string]func() (tfprotov5.ProviderServer, error){
+		"tailscale": func() (tfprotov5.ProviderServer, error) {
+			ctx := context.Background()
 
-				// Don't require any of the global configuration
-				p.Schema = nil
-			}), nil
+			t.Setenv("TAILSCALE_API_KEY", "api_123")
+
+			providers := []func() tfprotov5.ProviderServer{
+				providerserver.NewProtocol5(NewFrameworkProvider()),
+				Provider(func(p *schema.Provider) {
+					// Set up a test harness for the provider
+					p.ConfigureContextFunc = func(ctx context.Context, data *schema.ResourceData) (interface{}, diag.Diagnostics) {
+						return testClient, nil
+					}
+				}).GRPCProvider,
+			}
+
+			muxServer, err := tf5muxserver.NewMuxServer(ctx, providers...)
+
+			if err != nil {
+				return nil, err
+			}
+
+			return muxServer.ProviderServer(), nil
 		},
 	}
 }

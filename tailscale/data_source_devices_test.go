@@ -28,8 +28,8 @@ func TestAccTailscaleDevices(t *testing.T) {
 	// First test the tailscale_devices datasource, which will give us a list of
 	// all device IDs.
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
 		Steps: []resource.TestStep{
 			{
 				Config: `data "tailscale_devices" "all_devices" {}`,
@@ -85,8 +85,8 @@ func TestAccTailscaleDevices(t *testing.T) {
 	// Now test the individual tailscale_device data sources for each device,
 	// making sure that it pulls in the relevant details for each device.
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
 		Steps: []resource.TestStep{
 			{
 				Config: devicesDataSources.String(),
@@ -121,8 +121,8 @@ func TestAccTailscaleDevices(t *testing.T) {
 	// Test tailscale_devices with filters applied.
 	resourceNameFiltered := "data.tailscale_devices.filtered_devices"
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
 		Steps: []resource.TestStep{
 			{
 				Config: `data "tailscale_devices" "filtered_devices" { 

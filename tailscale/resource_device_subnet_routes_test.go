@@ -65,9 +65,9 @@ func TestAccTailscaleDeviceSubnetRoutes(t *testing.T) {
 
 	var deviceId string
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy:      checkResourceDestroyed(resourceName, checkProperties([]string{})),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
+		CheckDestroy:             checkResourceDestroyed(resourceName, checkProperties([]string{})),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testDeviceSubnetRoutesCreate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
@@ -212,9 +212,9 @@ func TestAccTailscaleDeviceSubnetRoutes_WithNodeID(t *testing.T) {
 
 	var deviceId string
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy:      checkResourceDestroyed(resourceName, checkProperties([]string{})),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
+		CheckDestroy:             checkResourceDestroyed(resourceName, checkProperties([]string{})),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testDeviceSubnetRoutesCreate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
@@ -374,9 +374,9 @@ func TestAccTailscaleDeviceSubnetRoutes_LegacyIDToNodeID(t *testing.T) {
 
 	var deviceId string
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy:      checkResourceDestroyed(resourceName, checkProperties([]string{})),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
+		CheckDestroy:             checkResourceDestroyed(resourceName, checkProperties([]string{})),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testDeviceSubnetRoutesCreate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),

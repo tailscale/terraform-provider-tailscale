@@ -69,7 +69,7 @@ func TestProvider_TailscaleDNSConfiguration(t *testing.T) {
 			testServer.ResponseCode = http.StatusOK
 			testServer.ResponseBody = nil
 		},
-		ProviderFactories: testProviderFactories(t),
+		ProtoV5ProviderFactories: testProviderFactories(t),
 		Steps: []resource.TestStep{
 			testResourceCreated("tailscale_dns_configuration.test_configuration", testDNSConfigurationCreate),
 			testResourceDestroyed("tailscale_dns_configuration.test_configuration", testDNSConfigurationCreate),
@@ -96,9 +96,9 @@ func TestAccTailscaleDNSConfiguration(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy:      checkResourceDestroyed(resourceName, checkProperties(&tailscale.DNSConfiguration{})),
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
+		CheckDestroy:             checkResourceDestroyed(resourceName, checkProperties(&tailscale.DNSConfiguration{})),
 		Steps: []resource.TestStep{
 			{
 				Config: testDNSConfigurationCreate,
