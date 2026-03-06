@@ -368,3 +368,29 @@ func checkDataSourceIsUnchangedInPluginFramework(t *testing.T, config string) {
 		},
 	})
 }
+
+// checkResourceIsUnchangedInPluginFramework runs a migration test to check
+// that a resource created by the plugin SDK is a no-op plan in the framework.
+//
+// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#external-providers
+func checkResourceIsUnchangedInPluginFramework(t *testing.T, config string, check resource.TestCheckFunc) {
+	resource.Test(t, resource.TestCase{
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"tailscale": {
+						VersionConstraint: "0.28.0",
+						Source:            "tailscale/tailscale",
+					},
+				},
+				Config: config,
+				Check:  check,
+			},
+			{
+				ProtoV5ProviderFactories: testAccProviderFactories(t),
+				Config:                   config,
+				PlanOnly:                 true,
+			},
+		},
+	})
+}
