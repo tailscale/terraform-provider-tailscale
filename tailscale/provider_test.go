@@ -342,3 +342,29 @@ func TestValidateProviderCreds(t *testing.T) {
 		})
 	}
 }
+
+// checkDataSourceIsUnchangedInPluginFramework runs a migration test to check
+// that a data source returns the same data from the plugin SDK and
+// the plugin framework.
+//
+// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#terraform-data-resource-example
+func checkDataSourceIsUnchangedInPluginFramework(t *testing.T, config string) {
+	resource.Test(t, resource.TestCase{
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"tailscale": {
+						VersionConstraint: "0.28.0",
+						Source:            "tailscale/tailscale",
+					},
+				},
+				Config: config,
+			},
+			{
+				ProtoV5ProviderFactories: testAccProviderFactories(t),
+				Config:                   config,
+				PlanOnly:                 true,
+			},
+		},
+	})
+}

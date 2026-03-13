@@ -11,4 +11,8 @@ description: |-
 
 ~> **Note:** The naming of this data source predates Tailscale's usage of the term "policy file" to refer to the centralized configuration file for a tailnet. This data source fetches a tailnet's entire policy file and not just the ACLs section within it.
 
+## Example Usage
+
+{{ tffile (printf "examples/data-sources/%s/data-source.tf" .Name)}}
+
 {{ .SchemaMarkdown | trimspace }}

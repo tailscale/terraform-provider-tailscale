@@ -117,7 +117,6 @@ func Provider(options ...ProviderOption) *schema.Provider {
 			"tailscale_device":  dataSourceDevice(),
 			"tailscale_devices": dataSourceDevices(),
 			"tailscale_4via6":   dataSource4Via6(),
-			"tailscale_acl":     dataSourceACL(),
 			"tailscale_user":    dataSourceUser(),
 			"tailscale_users":   dataSourceUsers(),
 		},
