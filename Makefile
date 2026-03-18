@@ -39,6 +39,10 @@ testacc:
 testacc_local:
 	TF_ACC=1 TAILSCALE_BASE_URL="http://localhost:31544" TAILSCALE_API_KEY=$$(jq -r .apiKey /tmp/terraform-api-key.json) TAILSCALE_TEST_DEVICE_NAME=$$(jq -r .name /tmp/terraform-device-info.json) go test $(TEST) -v $(TESTARGS) -timeout 120m
 
+.PHONY: docs
+docs:
+	go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate
+
 format:
 	go fmt ./...
 	goimports -w -local github.com/tailscale .
