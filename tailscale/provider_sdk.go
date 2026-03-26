@@ -113,7 +113,6 @@ func Provider(options ...ProviderOption) *schema.Provider {
 			"tailscale_federated_identity":      resourceFederatedIdentity(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			"tailscale_device":  dataSourceDevice(),
 			"tailscale_devices": dataSourceDevices(),
 			"tailscale_4via6":   dataSource4Via6(),
 			"tailscale_user":    dataSourceUser(),
