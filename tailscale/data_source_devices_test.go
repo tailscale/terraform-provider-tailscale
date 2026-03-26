@@ -20,6 +20,10 @@ func TestAccTailscaleDevices(t *testing.T) {
 
 	// This is a string containing tailscale_device datasource configurations
 	devicesDataSources := &strings.Builder{}
+	// This is a string containing terraform_data resource configurations.
+	// We use it to monitor for unintended drift during the migration to the
+	// Terraform Plugin Framework.
+	devicesTerraformData := &strings.Builder{}
 
 	toResourceComponent := func(str string) string {
 		return strings.ReplaceAll(str, " ", "_")
@@ -66,13 +70,15 @@ func TestAccTailscaleDevices(t *testing.T) {
 					// now compare datasource attributes to expected values
 					assertDeviceAttributesEqual(t, rs, deviceIndexes, devicesByID)
 
-					// Now set up device datasources for each device. This is used in the following test
-					// of the tailscale_device datasource.
+					// Now set up a config with a datasource and terraform_data reference for each device.
+					// This is used in the following tests of the tailscale_device datasource.
 					for _, device := range devices {
 						if device.Hostname != "" {
 							devicesDataSources.WriteString(fmt.Sprintf("\ndata \"tailscale_device\" \"%s\" {\n  hostname = \"%s\"\n}\n", toResourceComponent(device.Hostname), device.Hostname))
+							devicesTerraformData.WriteString(fmt.Sprintf("\nresource \"terraform_data\" \"%s\" {\n  input = data.tailscale_device.%s\n  lifecycle {ignore_changes = [ input.last_seen ]}\n}\n", toResourceComponent(device.Hostname), toResourceComponent(device.Hostname)))
 						} else {
 							devicesDataSources.WriteString(fmt.Sprintf("\ndata \"tailscale_device\" \"%s\" {\n  name = \"%s\"\n}\n", toResourceComponent(device.Name), device.Name))
+							devicesTerraformData.WriteString(fmt.Sprintf("\nresource \"terraform_data\" \"%s\" {\n  input = data.tailscale_device.%s\n  lifecycle {ignore_changes = [ input.last_seen ]}\n}\n", toResourceComponent(device.Name), toResourceComponent(device.Name)))
 						}
 					}
 
@@ -117,6 +123,10 @@ func TestAccTailscaleDevices(t *testing.T) {
 			},
 		},
 	})
+
+	// Check that the data source behaves the same between the plugin SDK
+	// and the plugin framework.
+	checkDataSourceIsUnchangedInPluginFramework(t, devicesDataSources.String()+"\n"+devicesTerraformData.String())
 
 	// Test tailscale_devices with filters applied.
 	resourceNameFiltered := "data.tailscale_devices.filtered_devices"

@@ -349,6 +349,8 @@ func TestValidateProviderCreds(t *testing.T) {
 //
 // See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#terraform-data-resource-example
 func checkDataSourceIsUnchangedInPluginFramework(t *testing.T, config string) {
+	t.Helper()
+
 	resource.Test(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
