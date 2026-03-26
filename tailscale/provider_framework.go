@@ -103,7 +103,7 @@ func (p *tailscaleProvider) Configure(ctx context.Context, req provider.Configur
 	baseURL := coalesce(data.BaseURL, os.Getenv("TAILSCALE_BASE_URL"), "https://api.tailscale.com")
 
 	// Support both sets of OAuth Env vars for backwards compatibility
-	identityToken := coalesce(data.IdentityToken, os.Getenv("TAILSCALE_IDENTITY_TOKEN"), os.Getenv("IDENTITY_TOKEN"))
+	identityToken := coalesce(data.IdentityToken, os.Getenv("TAILSCALE_IDENTITY_TOKEN"), os.Getenv("IDENTITY_TOKEN"), os.Getenv("TFC_WORKLOAD_IDENTITY_TOKEN_TAILSCALE"))
 	oauthClientID := coalesce(data.OAuthClientID, os.Getenv("TAILSCALE_OAUTH_CLIENT_ID"), os.Getenv("OAUTH_CLIENT_ID"))
 	oauthClientSecret := coalesce(data.OAuthClientSecret, os.Getenv("TAILSCALE_OAUTH_CLIENT_SECRET"), os.Getenv("OAUTH_CLIENT_SECRET"))
 
