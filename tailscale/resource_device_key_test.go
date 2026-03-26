@@ -101,6 +101,25 @@ func TestAccTailscaleDeviceKey(t *testing.T) {
 			},
 		},
 	})
+
+	// Migration test to ensure the resource is unchanged when migrating
+	// from the plugin SDK to the plugin framework.
+	//
+	// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#terraform-data-resource-example
+	checkResourceIsUnchangedInPluginFramework(t,
+		fmt.Sprintf(testDeviceKeyCreate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+		resource.ComposeTestCheckFunc(
+			checkResourceRemoteProperties(resourceName, checkProperties(false)),
+			checkResourceRemoteProperties(resourceName, checkLegacyID),
+			resource.TestCheckResourceAttr(resourceName, "key_expiry_disabled", "false"),
+		))
+	checkResourceIsUnchangedInPluginFramework(t,
+		fmt.Sprintf(testDeviceKeyUpdate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+		resource.ComposeTestCheckFunc(
+			checkResourceRemoteProperties(resourceName, checkProperties(true)),
+			checkResourceRemoteProperties(resourceName, checkLegacyID),
+			resource.TestCheckResourceAttr(resourceName, "key_expiry_disabled", "true"),
+		))
 }
 func TestAccTailscaleDeviceKey_UsesNodeID(t *testing.T) {
 	const resourceName = "tailscale_device_key.test_key"
@@ -187,4 +206,23 @@ func TestAccTailscaleDeviceKey_UsesNodeID(t *testing.T) {
 			},
 		},
 	})
+
+	// Migration test to ensure the resource is unchanged when migrating
+	// from the plugin SDK to the plugin framework.
+	//
+	// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#terraform-data-resource-example
+	checkResourceIsUnchangedInPluginFramework(t,
+		fmt.Sprintf(testDeviceKeyCreate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+		resource.ComposeTestCheckFunc(
+			checkResourceRemoteProperties(resourceName, checkProperties(false)),
+			checkResourceRemoteProperties(resourceName, checkNodeID),
+			resource.TestCheckResourceAttr(resourceName, "key_expiry_disabled", "false"),
+		))
+	checkResourceIsUnchangedInPluginFramework(t,
+		fmt.Sprintf(testDeviceKeyUpdate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+		resource.ComposeTestCheckFunc(
+			checkResourceRemoteProperties(resourceName, checkProperties(true)),
+			checkResourceRemoteProperties(resourceName, checkNodeID),
+			resource.TestCheckResourceAttr(resourceName, "key_expiry_disabled", "true"),
+		))
 }
