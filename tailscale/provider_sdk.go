@@ -37,7 +37,7 @@ func Provider(options ...ProviderOption) *schema.Provider {
 	// Support both sets of OAuth Env vars for backwards compatibility
 	oauthClientIDEnvVars := []string{"TAILSCALE_OAUTH_CLIENT_ID", "OAUTH_CLIENT_ID"}
 	oauthClientSecretEnvVars := []string{"TAILSCALE_OAUTH_CLIENT_SECRET", "OAUTH_CLIENT_SECRET"}
-	identityTokenEnvVars := []string{"TAILSCALE_IDENTITY_TOKEN", "IDENTITY_TOKEN"}
+	identityTokenEnvVars := []string{"TAILSCALE_IDENTITY_TOKEN", "IDENTITY_TOKEN", "TFC_WORKLOAD_IDENTITY_TOKEN_TAILSCALE"}
 
 	provider := &schema.Provider{
 		Schema: map[string]*schema.Schema{
