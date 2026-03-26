@@ -119,6 +119,16 @@ which will correctly populate the necessary environment variables for you.
 make testacc_local
 ```
 
+## Generating documentation
+
+The documentation is generated with [terraform-plugin-docs](https://github.com/hashicorp/terraform-plugin-docs).
+
+To update the documentation, run
+```
+go generate ./...
+```
+Review and commit the changes.
+
 ## Releasing
 
 Our releases follow sem-ver format and follow the recommended versioning practices [as documented by HashiCorp](https://developer.hashicorp.com/terraform/plugin/best-practices/versioning). 
