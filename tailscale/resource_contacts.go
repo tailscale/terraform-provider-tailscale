@@ -30,7 +30,7 @@ func resourceContacts() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"account": {
 				Type:        schema.TypeSet,
-				Description: "Configuration for communications about important changes to your tailnet",
+				Description: "Configuration for about important changes to your tailnet",
 				Required:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
@@ -45,7 +45,7 @@ func resourceContacts() *schema.Resource {
 			},
 			"support": {
 				Type:        schema.TypeSet,
-				Description: "Configuration for communications about misconfigurations in your tailnet",
+				Description: "Configuration for communications about in your tailnet",
 				Required:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
