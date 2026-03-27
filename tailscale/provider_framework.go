@@ -49,8 +49,12 @@ func (p *tailscaleProvider) Schema(_ context.Context, _ provider.SchemaRequest, 
 			},
 			"identity_token": schema.StringAttribute{
 				Optional:    true,
-				Description: "The jwt identity token to exchange for a Tailscale API token when using a federated identity. Can be set via the TAILSCALE_IDENTITY_TOKEN environment variable. Conflicts with 'api_key' and 'oauth_client_secret'.",
+				Description: "The jwt identity token to exchange for a Tailscale API token when using a federated identity. Can be set via the TAILSCALE_IDENTITY_TOKEN environment variable. Conflicts with 'api_key', 'oauth_client_secret', and 'identity_token_environment_variable_name'.",
 				Sensitive:   true,
+			},
+			"identity_token_environment_variable_name": schema.StringAttribute{
+				Optional:    true,
+				Description: "The name of an environment variable to read the identity token from. This is useful when the identity token is provided by an external system (such as Terraform Cloud workload identity) in an environment variable you do not control. Conflicts with 'identity_token'.",
 			},
 			"oauth_client_id": schema.StringAttribute{
 				Optional:    true,
@@ -83,14 +87,15 @@ func (p *tailscaleProvider) Schema(_ context.Context, _ provider.SchemaRequest, 
 }
 
 type tailscaleProviderModel struct {
-	APIKey            types.String `tfsdk:"api_key"`
-	IdentityToken     types.String `tfsdk:"identity_token"`
-	OAuthClientID     types.String `tfsdk:"oauth_client_id"`
-	OAuthClientSecret types.String `tfsdk:"oauth_client_secret"`
-	Tailnet           types.String `tfsdk:"tailnet"`
-	BaseURL           types.String `tfsdk:"base_url"`
-	UserAgent         types.String `tfsdk:"user_agent"`
-	Scopes            types.List   `tfsdk:"scopes"`
+	APIKey                               types.String `tfsdk:"api_key"`
+	IdentityToken                        types.String `tfsdk:"identity_token"`
+	IdentityTokenEnvironmentVariableName types.String `tfsdk:"identity_token_environment_variable_name"`
+	OAuthClientID                        types.String `tfsdk:"oauth_client_id"`
+	OAuthClientSecret                    types.String `tfsdk:"oauth_client_secret"`
+	Tailnet                              types.String `tfsdk:"tailnet"`
+	BaseURL                              types.String `tfsdk:"base_url"`
+	UserAgent                            types.String `tfsdk:"user_agent"`
+	Scopes                               types.List   `tfsdk:"scopes"`
 }
 
 // Configure sets up the Tailscale client based on the provider-level data.
@@ -103,7 +108,11 @@ func (p *tailscaleProvider) Configure(ctx context.Context, req provider.Configur
 	baseURL := coalesce(data.BaseURL, os.Getenv("TAILSCALE_BASE_URL"), "https://api.tailscale.com")
 
 	// Support both sets of OAuth Env vars for backwards compatibility
-	identityToken := coalesce(data.IdentityToken, os.Getenv("TAILSCALE_IDENTITY_TOKEN"), os.Getenv("IDENTITY_TOKEN"), os.Getenv("TFC_WORKLOAD_IDENTITY_TOKEN_TAILSCALE"))
+	identityTokenFallbacks := []string{os.Getenv("TAILSCALE_IDENTITY_TOKEN"), os.Getenv("IDENTITY_TOKEN")}
+	if envVarName := data.IdentityTokenEnvironmentVariableName.ValueString(); envVarName != "" {
+		identityTokenFallbacks = append(identityTokenFallbacks, os.Getenv(envVarName))
+	}
+	identityToken := coalesce(data.IdentityToken, identityTokenFallbacks...)
 	oauthClientID := coalesce(data.OAuthClientID, os.Getenv("TAILSCALE_OAUTH_CLIENT_ID"), os.Getenv("OAUTH_CLIENT_ID"))
 	oauthClientSecret := coalesce(data.OAuthClientSecret, os.Getenv("TAILSCALE_OAUTH_CLIENT_SECRET"), os.Getenv("OAUTH_CLIENT_SECRET"))
 
