@@ -37,7 +37,7 @@ func Provider(options ...ProviderOption) *schema.Provider {
 	// Support both sets of OAuth Env vars for backwards compatibility
 	oauthClientIDEnvVars := []string{"TAILSCALE_OAUTH_CLIENT_ID", "OAUTH_CLIENT_ID"}
 	oauthClientSecretEnvVars := []string{"TAILSCALE_OAUTH_CLIENT_SECRET", "OAUTH_CLIENT_SECRET"}
-	identityTokenEnvVars := []string{"TAILSCALE_IDENTITY_TOKEN", "IDENTITY_TOKEN", "TFC_WORKLOAD_IDENTITY_TOKEN_TAILSCALE"}
+	identityTokenEnvVars := []string{"TAILSCALE_IDENTITY_TOKEN", "IDENTITY_TOKEN"}
 
 	provider := &schema.Provider{
 		Schema: map[string]*schema.Schema{
@@ -49,11 +49,18 @@ func Provider(options ...ProviderOption) *schema.Provider {
 				Sensitive:   true,
 			},
 			"identity_token": {
-				Type:        schema.TypeString,
-				DefaultFunc: schema.MultiEnvDefaultFunc(identityTokenEnvVars, ""),
-				Optional:    true,
-				Description: "The jwt identity token to exchange for a Tailscale API token when using a federated identity. Can be set via the TAILSCALE_IDENTITY_TOKEN environment variable. Conflicts with 'api_key' and 'oauth_client_secret'.",
-				Sensitive:   true,
+				Type:          schema.TypeString,
+				DefaultFunc:   schema.MultiEnvDefaultFunc(identityTokenEnvVars, ""),
+				Optional:      true,
+				Description:   "The jwt identity token to exchange for a Tailscale API token when using a federated identity. Can be set via the TAILSCALE_IDENTITY_TOKEN environment variable. Conflicts with 'api_key', 'oauth_client_secret', and 'identity_token_environment_variable_name'.",
+				Sensitive:     true,
+				ConflictsWith: []string{"identity_token_environment_variable_name"},
+			},
+			"identity_token_environment_variable_name": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "The name of an environment variable to read the identity token from. This is useful when the identity token is provided by an external system (such as Terraform Cloud workload identity) in an environment variable you do not control. Conflicts with 'identity_token'.",
+				ConflictsWith: []string{"identity_token"},
 			},
 			"oauth_client_id": {
 				Type:        schema.TypeString,
@@ -148,6 +155,11 @@ func providerConfigure(_ context.Context, provider *schema.Provider, d *schema.R
 	oauthClientID := d.Get("oauth_client_id").(string)
 	oauthClientSecret := d.Get("oauth_client_secret").(string)
 	idToken := d.Get("identity_token").(string)
+	if idToken == "" {
+		if envVarName := d.Get("identity_token_environment_variable_name").(string); envVarName != "" {
+			idToken = os.Getenv(envVarName)
+		}
+	}
 
 	if diags := validateProviderCreds(apiKey, oauthClientID, oauthClientSecret, idToken); diags != nil && diags.HasError() {
 		return nil, diags
