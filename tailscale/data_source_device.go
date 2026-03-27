@@ -288,14 +288,6 @@ func toDeviceDataSourceModel(ctx context.Context, device *tailscale.Device) (dev
 	data.Addresses = addresses
 
 	tags, diagnostics := types.SetValueFrom(ctx, types.StringType, device.Tags)
-	if diagnostics.HasError() {
-		return deviceDataSourceModel{}, diagnostics
-	}
-	// Replace empty tags by explicit empty list to avoid phantom drift
-	// in the course of migrating to the Terraform Plugin Framework.
-	if tags.IsNull() {
-		tags, _ = types.SetValueFrom(ctx, types.StringType, []string{})
-	}
 	data.Tags = tags
 
 	return data, diag.Diagnostics{}
