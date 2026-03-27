@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"tailscale.com/client/tailscale/v2"
+	"tailscale.com/types/bools"
 )
 
 type deviceDataSourceModel struct {
@@ -287,7 +288,16 @@ func toDeviceDataSourceModel(ctx context.Context, device *tailscale.Device) (dev
 	}
 	data.Addresses = addresses
 
-	tags, diagnostics := types.SetValueFrom(ctx, types.StringType, device.Tags)
+	// Normalize nil to empty slice before converting it to plugin framework
+	// types.
+	// This is to avoid drift when upgrading from a provider version that
+	// is still backed by SDKv2.
+	deviceTags := bools.IfElse(device.Tags != nil, device.Tags, []string{})
+
+	tags, diagnostics := types.SetValueFrom(ctx, types.StringType, deviceTags)
+	if diagnostics.HasError() {
+		return deviceDataSourceModel{}, diagnostics
+	}
 	data.Tags = tags
 
 	return data, diag.Diagnostics{}
