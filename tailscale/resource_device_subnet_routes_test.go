@@ -149,6 +149,26 @@ func TestAccTailscaleDeviceSubnetRoutes(t *testing.T) {
 			},
 		},
 	})
+
+	// Migration test to ensure the resource is unchanged when migrating
+	// from the plugin SDK to the plugin framework.
+	//
+	// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#terraform-data-resource-example
+	checkResourceIsUnchangedInPluginFramework(t,
+		fmt.Sprintf(testDeviceSubnetRoutesCreate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+		resource.ComposeTestCheckFunc(
+			checkResourceRemoteProperties(resourceName, checkProperties([]string{"2.0.0.0/24", "10.0.1.0/24"})),
+			resource.TestCheckTypeSetElemAttr(resourceName, "routes.*", "10.0.1.0/24"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "routes.*", "2.0.0.0/24"),
+		))
+	checkResourceIsUnchangedInPluginFramework(t,
+		fmt.Sprintf(testDeviceSubnetRoutesUpdate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+		resource.ComposeTestCheckFunc(
+			checkResourceRemoteProperties(resourceName, checkProperties([]string{"1.2.0.0/16", "2.0.0.0/24", "10.0.1.0/24"})),
+			resource.TestCheckTypeSetElemAttr(resourceName, "routes.*", "10.0.1.0/24"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "routes.*", "1.2.0.0/16"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "routes.*", "2.0.0.0/24"),
+		))
 }
 func TestAccTailscaleDeviceSubnetRoutes_WithNodeID(t *testing.T) {
 	const resourceName = "tailscale_device_subnet_routes.test_subnet_routes"
@@ -298,6 +318,26 @@ func TestAccTailscaleDeviceSubnetRoutes_WithNodeID(t *testing.T) {
 			},
 		},
 	})
+
+	// Migration test to ensure the resource is unchanged when migrating
+	// from the plugin SDK to the plugin framework.
+	//
+	// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#terraform-data-resource-example
+	checkResourceIsUnchangedInPluginFramework(t,
+		fmt.Sprintf(testDeviceSubnetRoutesCreate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+		resource.ComposeTestCheckFunc(
+			checkResourceRemoteProperties(resourceName, checkProperties([]string{"2.0.0.0/24", "10.0.1.0/24"})),
+			resource.TestCheckTypeSetElemAttr(resourceName, "routes.*", "10.0.1.0/24"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "routes.*", "2.0.0.0/24"),
+		))
+	checkResourceIsUnchangedInPluginFramework(t,
+		fmt.Sprintf(testDeviceSubnetRoutesUpdate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+		resource.ComposeTestCheckFunc(
+			checkResourceRemoteProperties(resourceName, checkProperties([]string{"1.2.0.0/16", "2.0.0.0/24", "10.0.1.0/24"})),
+			resource.TestCheckTypeSetElemAttr(resourceName, "routes.*", "10.0.1.0/24"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "routes.*", "1.2.0.0/16"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "routes.*", "2.0.0.0/24"),
+		))
 }
 func TestAccTailscaleDeviceSubnetRoutes_LegacyIDToNodeID(t *testing.T) {
 	const resourceName = "tailscale_device_subnet_routes.test_subnet_routes"
