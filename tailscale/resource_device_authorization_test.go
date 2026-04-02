@@ -78,6 +78,15 @@ func TestAccTailscaleDeviceAuthorization(t *testing.T) {
 			},
 		},
 	})
+
+	checkResourceIsUnchangedInPluginFramework(t,
+		fmt.Sprintf(testDeviceAuthorization, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+		resource.ComposeTestCheckFunc(
+			checkResourceRemoteProperties(resourceName, checkLegacyID),
+			checkResourceRemoteProperties(resourceName, checkAuthorized),
+			resource.TestCheckResourceAttr(resourceName, "authorized", "true"),
+		),
+	)
 }
 
 func TestAccTailscaleDeviceAuthorization_UsesNodeID(t *testing.T) {
@@ -143,4 +152,13 @@ func TestAccTailscaleDeviceAuthorization_UsesNodeID(t *testing.T) {
 			},
 		},
 	})
+
+	checkResourceIsUnchangedInPluginFramework(t,
+		fmt.Sprintf(testDeviceAuthorization, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+		resource.ComposeTestCheckFunc(
+			checkResourceRemoteProperties(resourceName, checkNodeID),
+			checkResourceRemoteProperties(resourceName, checkAuthorized),
+			resource.TestCheckResourceAttr(resourceName, "authorized", "true"),
+		),
+	)
 }
