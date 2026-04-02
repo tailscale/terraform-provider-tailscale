@@ -170,11 +170,13 @@ func (p *tailscaleProvider) Resources(_ context.Context) []func() resource.Resou
 		NewDeviceAuthorizationResource,
 		NewDeviceKeyResource,
 		NewDeviceSubnetRoutesResource,
+
 		NewDeviceTagsResource,
 		NewDNSNameserversResource,
 		NewDNSPreferencesResource,
 		NewDNSSearchPathsResource,
 		NewDNSSplitNameserversResource,
+		NewFederatedIdentityResource,
 	}
 }
 
