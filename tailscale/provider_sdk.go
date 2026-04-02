@@ -102,9 +102,7 @@ func Provider(options ...ProviderOption) *schema.Provider {
 				Description: "User-Agent header for API requests.",
 			},
 		},
-		ResourcesMap: map[string]*schema.Resource{
-			"tailscale_federated_identity": resourceFederatedIdentity(),
-		},
+		ResourcesMap: map[string]*schema.Resource{},
 	}
 
 	provider.ConfigureContextFunc = func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
