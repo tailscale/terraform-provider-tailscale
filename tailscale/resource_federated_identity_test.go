@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"testing"
 	"time"
 
@@ -34,11 +35,12 @@ func TestProvider_TailscaleFederatedIdentity(t *testing.T) {
 		PreCheck: func() {
 			testServer.ResponseCode = http.StatusOK
 			testServer.ResponseBody = tailscale.Key{
-				ID:      "test",
-				Scopes:  []string{"auth_keys", "devices:core"},
-				Tags:    []string{"tag:test"},
-				Issuer:  "https://example.com",
-				Subject: "example-sub-*",
+				ID:          "test",
+				Description: "Example federated identity",
+				Scopes:      []string{"auth_keys", "devices:core"},
+				Tags:        []string{"tag:test"},
+				Issuer:      "https://example.com",
+				Subject:     "example-sub-*",
 				CustomClaimRules: map[string]string{
 					"repo_name": "example-repo-name",
 				},
@@ -46,10 +48,49 @@ func TestProvider_TailscaleFederatedIdentity(t *testing.T) {
 		},
 		ProtoV5ProviderFactories: testProviderFactories(t),
 		Steps: []resource.TestStep{
-			testResourceCreated("tailscale_federated_identity.example_federated_identity", testFederatedIdentity),
+			{
+				Config: testFederatedIdentity,
+				Check: func(s *terraform.State) error {
+					rs, ok := s.RootModule().Resources["tailscale_federated_identity.example_federated_identity"]
+					if !ok {
+						return fmt.Errorf("not found: tailscale_federated_identity.example_federated_identity")
+					}
+					if rs.Primary.ID == "" {
+						return errors.New("no ID set")
+					}
+					return nil
+				},
+			},
 			testResourceDestroyed("tailscale_federated_identity.example_federated_identity", testFederatedIdentity),
 		},
 	})
+}
+
+func TestProvider_TailscaleFederatedIdentity_ReservedCustomClaimKeys(t *testing.T) {
+	for _, reservedKey := range []string{"sub", "iss"} {
+		t.Run(reservedKey, func(t *testing.T) {
+			config := fmt.Sprintf(`
+			resource "tailscale_federated_identity" "test" {
+				scopes  = ["auth_keys"]
+				issuer  = "https://example.com"
+				subject = "example-sub-*"
+				custom_claim_rules = {
+					%s = "some-value"
+				}
+			}`, reservedKey)
+
+			resource.Test(t, resource.TestCase{
+				IsUnitTest:               true,
+				ProtoV5ProviderFactories: testProviderFactories(t),
+				Steps: []resource.TestStep{
+					{
+						Config:      config,
+						ExpectError: regexp.MustCompile(`Reserved claim key`),
+					},
+				},
+			})
+		})
+	}
 }
 
 func TestAccTailscaleFederatedIdentity(t *testing.T) {
@@ -199,4 +240,36 @@ func TestAccTailscaleFederatedIdentity(t *testing.T) {
 			},
 		},
 	})
+}
+
+// Migration test to ensure the resource is unchanged when migrating
+// from the plugin SDK to the plugin framework.
+//
+// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#terraform-data-resource-example
+func TestAccTailscaleFederatedIdentity_UpgradeToPluginFramework(t *testing.T) {
+	const resourceName = "tailscale_federated_identity.test_federated_identity"
+
+	const testFederatedIdentity = `
+		resource "tailscale_federated_identity" "test_federated_identity" {
+			description = "Example federated identity"
+			scopes      = ["devices:core:read"]
+			issuer      = "https://example.com"
+			subject     = "example-sub-*"
+			custom_claim_rules = {
+				repo_name = "example-repo-name"
+			}
+		}`
+
+	testFederatedIdentityCheck := resource.ComposeTestCheckFunc(
+		resource.TestCheckResourceAttr(resourceName, "description", "Example federated identity"),
+		resource.TestCheckResourceAttr(resourceName, "scopes.#", "1"),
+		resource.TestCheckResourceAttr(resourceName, "issuer", "https://example.com"),
+		resource.TestCheckResourceAttr(resourceName, "subject", "example-sub-*"),
+		resource.TestCheckResourceAttr(resourceName, "custom_claim_rules.repo_name", "example-repo-name"),
+		resource.TestCheckResourceAttrSet(resourceName, "id"),
+		resource.TestCheckResourceAttrSet(resourceName, "created_at"),
+		resource.TestCheckResourceAttrSet(resourceName, "user_id"),
+	)
+
+	checkResourceIsUnchangedInPluginFramework(t, testFederatedIdentity, testFederatedIdentityCheck)
 }
