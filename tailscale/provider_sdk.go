@@ -110,12 +110,14 @@ func Provider(options ...ProviderOption) *schema.Provider {
 			"tailscale_logstream_configuration": resourceLogstreamConfiguration(),
 			"tailscale_tailnet_settings":        resourceTailnetSettings(),
 			"tailscale_federated_identity":      resourceFederatedIdentity(),
+			"tailscale_service":                 resourceService(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"tailscale_devices": dataSourceDevices(),
 			"tailscale_4via6":   dataSource4Via6(),
 			"tailscale_user":    dataSourceUser(),
 			"tailscale_users":   dataSourceUsers(),
+			"tailscale_service": dataSourceService(),
 		},
 	}
 
