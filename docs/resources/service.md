@@ -37,4 +37,4 @@ resource "tailscale_service" "example" {
 ### Read-Only
 
 - `addrs` (List of String) The IP addresses assigned to the Service.
-- `id` (String) The ID of this resource.
+- `id` (String) The Service name, e.g. 'svc:my-service'.

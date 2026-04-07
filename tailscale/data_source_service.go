@@ -22,6 +22,11 @@ func dataSourceService() *schema.Resource {
 				Description: "The name of the Service (e.g. `svc:my-service`).",
 				Required:    true,
 			},
+			"id": {
+				Type:        schema.TypeString,
+				Description: "The Service name, e.g. 'svc:my-service'.",
+				Computed:    true,
+			},
 			"addrs": {
 				Type:        schema.TypeList,
 				Description: "The IP addresses assigned to the Service.",
