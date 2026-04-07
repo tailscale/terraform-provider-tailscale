@@ -103,7 +103,6 @@ func Provider(options ...ProviderOption) *schema.Provider {
 			"tailscale_device_authorization":    resourceDeviceAuthorization(),
 			"tailscale_tailnet_key":             resourceTailnetKey(),
 			"tailscale_device_tags":             resourceDeviceTags(),
-			"tailscale_device_key":              resourceDeviceKey(),
 			"tailscale_oauth_client":            resourceOAuthClient(),
 			"tailscale_webhook":                 resourceWebhook(),
 			"tailscale_contacts":                resourceContacts(),
