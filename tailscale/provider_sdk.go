@@ -241,7 +241,7 @@ func createUUID() string {
 	return val
 }
 
-func readWithWaitFor(fn schema.ReadContextFunc) schema.ReadContextFunc {
+func readWithWaitForLegacy(fn schema.ReadContextFunc) schema.ReadContextFunc {
 	return func(ctx context.Context, data *schema.ResourceData, i interface{}) diag.Diagnostics {
 		var d diag.Diagnostics
 

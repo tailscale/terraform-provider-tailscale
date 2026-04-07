@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -224,6 +225,56 @@ func createTailscaleClient(baseURL *url.URL, userAgent string, tailnet string, a
 			UserAgent: userAgent,
 			APIKey:    apiKey,
 			Tailnet:   tailnet,
+		}
+	}
+}
+
+type providerReadFunc func(context.Context, datasource.ReadRequest, *datasource.ReadResponse)
+
+func readWithWaitFor(fn providerReadFunc) providerReadFunc {
+	return func(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+		var data deviceDataSourceModel
+		resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		// Do an initial check in case we don't need to wait at all.
+		fn(ctx, req, resp)
+		if !resp.Diagnostics.HasError() {
+			return
+		}
+
+		waitFor := data.WaitFor.ValueString()
+		if waitFor == "" {
+			return
+		}
+
+		dur, err := time.ParseDuration(waitFor)
+		if err != nil {
+			resp.Diagnostics.AddError("failed to parse wait_for", err.Error())
+			return
+		}
+
+		maxTicker := time.NewTicker(dur)
+		defer maxTicker.Stop()
+		intervalTicker := time.NewTicker(time.Second)
+		defer intervalTicker.Stop()
+
+		// Check every second for the data, until we reach the maximum specified duration.
+		for {
+			select {
+			case <-ctx.Done():
+				resp.Diagnostics.AddError("failed to fetch devices", ctx.Err().Error())
+			case <-maxTicker.C:
+				return
+			case <-intervalTicker.C:
+				fn(ctx, req, resp)
+				if resp.Diagnostics.HasError() {
+					continue
+				}
+				return
+			}
 		}
 	}
 }
