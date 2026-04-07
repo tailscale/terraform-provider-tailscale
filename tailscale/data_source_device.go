@@ -238,7 +238,7 @@ func (d deviceDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	}
 
 	if selected == nil {
-		resp.Diagnostics.AddError("Could not find device with %s", filterDesc)
+		resp.Diagnostics.AddError("Could not find device", "Could not find device using filter "+filterDesc)
 		return
 	}
 
