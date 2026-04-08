@@ -10,6 +10,9 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"tailscale.com/net/tsaddr"
@@ -49,7 +52,7 @@ func TestProvider_DataSourceTailscale4Via6_InvalidSite(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testDataSource4Via6InvalidSite,
-				ExpectError: regexp.MustCompile(`expected site to be in the range \(0 - 65535\), got 70000`),
+				ExpectError: regexp.MustCompile(`Attribute site value must be between 0 and 65535, got: 70000`),
 			},
 		},
 	})
@@ -105,5 +108,61 @@ func check4Via6Result(n string) resource.TestCheckFunc {
 		}
 
 		return nil
+	}
+}
+
+// Check that the data source behaves the same between the plugin SDK
+// and the plugin framework.
+func TestAccTailscale4via6_UpgradeToPluginFramework(t *testing.T) {
+	checkDataSourceIsUnchangedInPluginFramework(t, testDataSource4Via6)
+}
+
+func TestCIDRValidator(t *testing.T) {
+	tests := []struct {
+		name    string
+		cidr    string
+		wantErr bool
+	}{
+		{
+			name: "valid-cidr",
+			cidr: "1.2.3.4/28",
+		},
+		{
+			name:    "invalid-value",
+			cidr:    "1234567890",
+			wantErr: true,
+		},
+		{
+			name:    "no-slash",
+			cidr:    "1.2.3.4",
+			wantErr: true,
+		},
+		{
+			name:    "empty",
+			cidr:    "",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		cidrValidator := cidrValidator{}
+
+		req := validator.StringRequest{
+			ConfigValue: types.StringValue(tt.cidr),
+		}
+
+		resp := validator.StringResponse{
+			Diagnostics: diag.Diagnostics{},
+		}
+
+		t.Run(tt.name, func(t *testing.T) {
+			cidrValidator.ValidateString(t.Context(), req, &resp)
+
+			hasError := resp.Diagnostics.HasError()
+			if hasError && !tt.wantErr {
+				t.Errorf("got unexpected error from validator: %v", resp.Diagnostics.Errors())
+			} else if !hasError && tt.wantErr {
+				t.Errorf("validator passed, expected failure")
+			}
+		})
 	}
 }

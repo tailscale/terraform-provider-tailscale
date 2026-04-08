@@ -166,6 +166,7 @@ func (p *tailscaleProvider) Resources(_ context.Context) []func() resource.Resou
 // DataSources returns a slice of data sources.
 func (p *tailscaleProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		New4Via6DataSource,
 		NewACLDataSource,
 		NewDeviceDataSource,
 	}
