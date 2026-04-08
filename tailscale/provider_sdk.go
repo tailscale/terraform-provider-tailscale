@@ -113,7 +113,6 @@ func Provider(options ...ProviderOption) *schema.Provider {
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"tailscale_devices": dataSourceDevices(),
-			"tailscale_4via6":   dataSource4Via6(),
 			"tailscale_user":    dataSourceUser(),
 			"tailscale_users":   dataSourceUsers(),
 			"tailscale_service": dataSourceService(),
