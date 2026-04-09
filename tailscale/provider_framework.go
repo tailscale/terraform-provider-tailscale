@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -225,37 +224,6 @@ func createTailscaleClient(baseURL *url.URL, userAgent string, tailnet string, a
 			UserAgent: userAgent,
 			APIKey:    apiKey,
 			Tailnet:   tailnet,
-		}
-	}
-}
-
-// retryWithDeadline retries fn until it succeeds or maxWait elapses.
-// It waits for the duration of retryInterval between attempts.
-func retryWithDeadline(ctx context.Context, maxWait time.Duration, retryInterval time.Duration, fn func(context.Context) error) error {
-	// Do an initial check in case we don't need to wait at all.
-	err := fn(ctx)
-	if err == nil {
-		return nil
-	}
-
-	maxTicker := time.NewTicker(maxWait)
-	defer maxTicker.Stop()
-	intervalTicker := time.NewTicker(retryInterval)
-	defer intervalTicker.Stop()
-
-	// Check for the data at intervals, until we reach the maximum specified duration.
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-maxTicker.C:
-			return fmt.Errorf("failed after maximum of retries within %v: %w", maxWait, err)
-		case <-intervalTicker.C:
-			err = fn(ctx)
-			if err != nil {
-				continue
-			}
-			return nil
 		}
 	}
 }

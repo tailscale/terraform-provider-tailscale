@@ -245,7 +245,7 @@ func (d deviceDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		return nil
 	}
 
-	err := retryWithDeadline(ctx, deadline, 1*time.Second, poll)
+	err := retryWithDeadline(ctx, poll, deadline, 1*time.Second)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to fetch devices", err.Error())
 		return
@@ -344,5 +344,39 @@ func deviceToMap(device *tailscale.Device) map[string]any {
 		"update_available":            device.UpdateAvailable,
 		"tailnet_lock_error":          device.TailnetLockError,
 		"tailnet_lock_key":            device.TailnetLockKey,
+	}
+}
+
+// retryWithDeadline calls fn once. If fn errors and maxWait and retryInterval are positive, it retries fn until fn
+// succeeds or maxWait elapses, waiting for the duration of retryInterval between attempts.
+func retryWithDeadline(ctx context.Context, fn func(context.Context) error, maxWait time.Duration, retryInterval time.Duration) error {
+	// Do an initial check in case we don't need to wait at all.
+	err := fn(ctx)
+	if err == nil {
+		return nil
+	}
+	if maxWait <= 0 || retryInterval <= 0 {
+		return err
+	}
+
+	maxTicker := time.NewTicker(maxWait)
+	defer maxTicker.Stop()
+	intervalTicker := time.NewTicker(retryInterval)
+	defer intervalTicker.Stop()
+
+	// Check for the data at intervals, until we reach the maximum specified duration.
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-maxTicker.C:
+			return fmt.Errorf("failed after maximum of retries within %v: %w", maxWait, err)
+		case <-intervalTicker.C:
+			err = fn(ctx)
+			if err != nil {
+				continue
+			}
+			return nil
+		}
 	}
 }

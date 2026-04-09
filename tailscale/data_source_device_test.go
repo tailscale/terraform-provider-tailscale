@@ -4,9 +4,15 @@
 package tailscale
 
 import (
+	"context"
+	"errors"
+	"net/http"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/stretchr/testify/assert"
 	tsclient "tailscale.com/client/tailscale/v2"
 	"tailscale.com/tstest"
@@ -116,4 +122,126 @@ func TestDeviceToMap_LastSeenNil(t *testing.T) {
 	assert.Equal(t, dev.UpdateAvailable, m["update_available"].(bool))
 	assert.Equal(t, dev.TailnetLockError, m["tailnet_lock_error"].(string))
 	assert.Equal(t, dev.TailnetLockKey, m["tailnet_lock_key"].(string))
+}
+
+func TestDeviceRetry_EventualSuccess(t *testing.T) {
+	const cfg = `
+		data "tailscale_device" "test_device" {
+		  hostname = "target"
+		  wait_for = "4s"
+		}
+	`
+
+	targetDevice := tsclient.Device{Name: "target.example.ts.net", Hostname: "target", NodeID: "node-123"}
+
+	resource.Test(t, resource.TestCase{
+		IsUnitTest: true,
+		PreCheck: func() {
+			// The first response is an error, the second one empty, the third one succeeds.
+			testServer.Responses = []TestResponse{
+				{Code: http.StatusInternalServerError, Body: map[string]string{"message": "oh no"}},
+				{Code: http.StatusOK, Body: map[string][]tsclient.Device{
+					"devices": {},
+				}},
+				{Code: http.StatusOK, Body: map[string][]tsclient.Device{
+					"devices": {targetDevice},
+				}},
+			}
+		},
+		ProtoV5ProviderFactories: testProviderFactories(t),
+		Steps: []resource.TestStep{
+			{
+				Config: cfg,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("data.tailscale_device.test_device", "hostname", "target"),
+					resource.TestCheckResourceAttr("data.tailscale_device.test_device", "name", "target.example.ts.net"),
+					resource.TestCheckResourceAttr("data.tailscale_device.test_device", "node_id", "node-123"),
+				),
+			},
+		},
+	})
+}
+
+func TestDeviceRetry_PersistentFailure(t *testing.T) {
+	const cfg = `
+		data "tailscale_device" "test_device" {
+		  hostname = "target"
+		  wait_for = "4s"
+		}
+	`
+
+	resource.Test(t, resource.TestCase{
+		IsUnitTest: true,
+		PreCheck: func() {
+			testServer.Responses = []TestResponse{
+				{Code: http.StatusInternalServerError, Body: map[string]string{"message": "oh no"}},
+			}
+		},
+		ProtoV5ProviderFactories: testProviderFactories(t),
+		Steps: []resource.TestStep{
+			{
+				Config:      cfg,
+				ExpectError: regexp.MustCompile(`.*oh no`),
+			},
+		},
+	})
+}
+
+func TestRetryWithDeadline_SucceedsEventually(t *testing.T) {
+	ctx := context.Background()
+
+	var calls int32
+	err := retryWithDeadline(ctx, func(ctx context.Context) error {
+		calls += 1
+		if calls < 2 {
+			return errors.New("not found")
+		}
+		return nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
+	if err != nil {
+		t.Fatalf("want no error but got one: %v", err)
+	}
+
+	if got := calls; got < 2 {
+		t.Fatalf("want at least 2 calls but got %d", got)
+	}
+}
+
+func TestRetryWithDeadline_WrapsEventualErrorOnFailure(t *testing.T) {
+	ctx := context.Background()
+
+	var calls int32
+	err := retryWithDeadline(ctx, func(ctx context.Context) error {
+		calls += 1
+		if calls < 2 {
+			return errors.New("not found")
+		}
+		return errors.New("something else went wrong")
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
+	if err == nil {
+		t.Fatal("want error but got none")
+	}
+
+	if got := err.Error(); !strings.Contains(got, "something else went wrong") {
+		t.Fatalf("want error to contain \"something else went wrong\" but got %v", got)
+	}
+}
+
+func TestRetryWithDeadline_NoRetryWhenWaitForIsZero(t *testing.T) {
+	ctx := context.Background()
+
+	var calls int32
+	err := retryWithDeadline(ctx, func(ctx context.Context) error {
+		calls += 1
+		if calls < 2 {
+			return nil
+		}
+		return errors.New("shouldn't have retried")
+	}, 0*time.Millisecond, 10*time.Millisecond)
+
+	if err != nil {
+		t.Fatalf("want no error but got one: %v", err)
+	}
 }
