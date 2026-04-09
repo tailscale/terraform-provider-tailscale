@@ -12,7 +12,6 @@ import (
 	"maps"
 	"net/url"
 	"os"
-	"time"
 
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-uuid"
@@ -239,51 +238,6 @@ func createUUID() string {
 		panic(err)
 	}
 	return val
-}
-
-func readWithWaitForLegacy(fn schema.ReadContextFunc) schema.ReadContextFunc {
-	return func(ctx context.Context, data *schema.ResourceData, i interface{}) diag.Diagnostics {
-		var d diag.Diagnostics
-
-		// Do an initial check in case we don't need to wait at all.
-		d = fn(ctx, data, i)
-		if !d.HasError() {
-			return d
-		}
-
-		waitFor := data.Get("wait_for").(string)
-		if waitFor == "" {
-			return fn(ctx, data, i)
-		}
-
-		dur, err := time.ParseDuration(waitFor)
-		if err != nil {
-			return diagnosticsError(err, "failed to parse wait_for")
-		}
-
-		maxTicker := time.NewTicker(dur)
-		defer maxTicker.Stop()
-
-		intervalTicker := time.NewTicker(time.Second)
-		defer intervalTicker.Stop()
-
-		// Check every second for the data, until we reach the maximum specified duration.
-		for {
-			select {
-			case <-ctx.Done():
-				return diag.FromErr(ctx.Err())
-			case <-maxTicker.C:
-				return d
-			case <-intervalTicker.C:
-				d = fn(ctx, data, i)
-				if d.HasError() {
-					continue
-				}
-
-				return d
-			}
-		}
-	}
 }
 
 // setProperties sets the properties of a ResourceData from the values in the

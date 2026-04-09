@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -396,4 +397,46 @@ func checkResourceIsUnchangedInPluginFramework(t *testing.T, config string, chec
 			},
 		},
 	})
+}
+
+func TestRetryWithDeadline_SucceedsEventually(t *testing.T) {
+	ctx := context.Background()
+
+	var calls int32
+	err := retryWithDeadline(ctx, 100*time.Millisecond, 10*time.Millisecond, func(ctx context.Context) error {
+		calls += 1
+		if calls < 2 {
+			return errors.New("not found")
+		}
+		return nil
+	})
+
+	if err != nil {
+		t.Fatalf("want no error but got one: %v", err)
+	}
+
+	if got := calls; got < 2 {
+		t.Fatalf("want at least 2 calls but got %d", got)
+	}
+}
+
+func TestRetryWithDeadline_WrapsEventualErrorOnFailure(t *testing.T) {
+	ctx := context.Background()
+
+	var calls int32
+	err := retryWithDeadline(ctx, 100*time.Millisecond, 10*time.Millisecond, func(ctx context.Context) error {
+		calls += 1
+		if calls < 2 {
+			return errors.New("not found")
+		}
+		return errors.New("something else went wrong")
+	})
+
+	if err == nil {
+		t.Fatal("want error but got none")
+	}
+
+	if got := err.Error(); !strings.Contains(got, "something else went wrong") {
+		t.Fatalf("want error to contain \"something else went wrong\" but got %v", got)
+	}
 }

@@ -5,6 +5,7 @@ package tailscale
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -206,39 +207,47 @@ func (d deviceDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		return
 	}
 
-	var filter func(d tailscale.Device) bool
+	var filter tailscale.ListDevicesOptions
 	var filterDesc string
 
 	if !device.Name.IsNull() {
-		filter = func(d tailscale.Device) bool {
-			return d.Name == device.Name.ValueString()
-		}
+		filter = tailscale.WithFilter("name", []string{device.Name.ValueString()})
 		filterDesc = fmt.Sprintf("name=%q", device.Name.ValueString())
 	}
 
 	if !device.Hostname.IsNull() {
-		filter = func(d tailscale.Device) bool {
-			return d.Hostname == device.Hostname.ValueString()
-		}
-		filterDesc = fmt.Sprintf("name=%q", device.Hostname.ValueString())
+		filter = tailscale.WithFilter("hostname", []string{device.Hostname.ValueString()})
+		filterDesc = fmt.Sprintf("hostname=%q", device.Hostname.ValueString())
 	}
 
-	devices, err := d.Client.Devices().List(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError("Failed to fetch devices", err.Error())
-		return
+	var deadline time.Duration
+	if !device.WaitFor.IsNull() {
+		parsed, err := time.ParseDuration(device.WaitFor.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError("Failed to parse wait_for", err.Error())
+			return
+		}
+		deadline = parsed
 	}
 
 	var selected *tailscale.Device
-	for _, candidate := range devices {
-		if filter(candidate) {
-			selected = &candidate
-			break
+	poll := func(ctx context.Context) error {
+		devices, err := d.Client.Devices().List(ctx, filter)
+		if err != nil {
+			return err
 		}
+
+		if len(devices) == 0 {
+			return errors.New("could not find device with" + filterDesc)
+		}
+
+		selected = &devices[0]
+		return nil
 	}
 
-	if selected == nil {
-		resp.Diagnostics.AddError("Could not find device", "Could not find device using filter "+filterDesc)
+	err := retryWithDeadline(ctx, deadline, 1*time.Second, poll)
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to fetch devices", err.Error())
 		return
 	}
 

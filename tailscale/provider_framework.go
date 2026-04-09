@@ -229,52 +229,33 @@ func createTailscaleClient(baseURL *url.URL, userAgent string, tailnet string, a
 	}
 }
 
-type providerReadFunc func(context.Context, datasource.ReadRequest, *datasource.ReadResponse)
+// retryWithDeadline retries fn until it succeeds or maxWait elapses.
+// It waits for the duration of retryInterval between attempts.
+func retryWithDeadline(ctx context.Context, maxWait time.Duration, retryInterval time.Duration, fn func(context.Context) error) error {
+	// Do an initial check in case we don't need to wait at all.
+	err := fn(ctx)
+	if err == nil {
+		return nil
+	}
 
-func readWithWaitFor(fn providerReadFunc) providerReadFunc {
-	return func(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-		var data deviceDataSourceModel
-		resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+	maxTicker := time.NewTicker(maxWait)
+	defer maxTicker.Stop()
+	intervalTicker := time.NewTicker(retryInterval)
+	defer intervalTicker.Stop()
 
-		// Do an initial check in case we don't need to wait at all.
-		fn(ctx, req, resp)
-		if !resp.Diagnostics.HasError() {
-			return
-		}
-
-		waitFor := data.WaitFor.ValueString()
-		if waitFor == "" {
-			return
-		}
-
-		dur, err := time.ParseDuration(waitFor)
-		if err != nil {
-			resp.Diagnostics.AddError("failed to parse wait_for", err.Error())
-			return
-		}
-
-		maxTicker := time.NewTicker(dur)
-		defer maxTicker.Stop()
-		intervalTicker := time.NewTicker(time.Second)
-		defer intervalTicker.Stop()
-
-		// Check every second for the data, until we reach the maximum specified duration.
-		for {
-			select {
-			case <-ctx.Done():
-				resp.Diagnostics.AddError("failed to fetch devices", ctx.Err().Error())
-			case <-maxTicker.C:
-				return
-			case <-intervalTicker.C:
-				fn(ctx, req, resp)
-				if resp.Diagnostics.HasError() {
-					continue
-				}
-				return
+	// Check for the data at intervals, until we reach the maximum specified duration.
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-maxTicker.C:
+			return fmt.Errorf("failed after maximum of retries within %v: %w", maxWait, err)
+		case <-intervalTicker.C:
+			err = fn(ctx)
+			if err != nil {
+				continue
 			}
+			return nil
 		}
 	}
 }
