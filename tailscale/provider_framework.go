@@ -160,6 +160,7 @@ func (p *tailscaleProvider) Resources(_ context.Context) []func() resource.Resou
 		NewAWSExternalIDResource,
 		NewDeviceKeyResource,
 		NewDeviceSubnetRoutesResource,
+		NewDNSPreferencesResource,
 	}
 }
 

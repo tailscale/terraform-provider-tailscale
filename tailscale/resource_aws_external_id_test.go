@@ -14,10 +14,9 @@ const testAWSExternalID = `
 `
 
 var (
-	resourceName           = "tailscale_aws_external_id.test"
 	testAWSExternalIDCheck = resource.ComposeTestCheckFunc(
-		resource.TestCheckResourceAttrSet(resourceName, "external_id"),
-		resource.TestCheckResourceAttrSet(resourceName, "tailscale_aws_account_id"),
+		resource.TestCheckResourceAttrSet("tailscale_aws_external_id.test", "external_id"),
+		resource.TestCheckResourceAttrSet("tailscale_aws_external_id.test", "tailscale_aws_account_id"),
 	)
 )
 

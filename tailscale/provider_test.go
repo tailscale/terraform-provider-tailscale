@@ -106,6 +106,7 @@ func testProviderFactories(t *testing.T) map[string]func() (tfprotov5.ProviderSe
 			ctx := context.Background()
 
 			t.Setenv("TAILSCALE_API_KEY", "api_123")
+			t.Setenv("TAILSCALE_BASE_URL", testClient.BaseURL.String())
 
 			providers := []func() tfprotov5.ProviderServer{
 				providerserver.NewProtocol5(NewFrameworkProvider()),
