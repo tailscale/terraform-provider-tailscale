@@ -190,7 +190,7 @@ func TestAccACL(t *testing.T) {
 				Config: testACLCreate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkProperties(&tailscale.ACL{
+						checkACLProperties(&tailscale.ACL{
 							ACLs: []tailscale.ACLEntry{
 								{
 									Action: "accept",
@@ -206,7 +206,7 @@ func TestAccACL(t *testing.T) {
 				Config: testACLUpdate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkProperties(&tailscale.ACL{
+						checkACLProperties(&tailscale.ACL{
 							TagOwners: map[string][]string{
 								"tag:example": {"autogroup:member"},
 							},
@@ -276,7 +276,7 @@ func TestAccACL_resetOnDestroy(t *testing.T) {
 				Config: testACLCreate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkProperties(&tailscale.ACL{
+						checkACLProperties(&tailscale.ACL{
 							ACLs: []tailscale.ACLEntry{
 								{
 									Action: "accept",
@@ -292,7 +292,7 @@ func TestAccACL_resetOnDestroy(t *testing.T) {
 	})
 }
 
-func checkProperties(expected *tailscale.ACL) func(client *tailscale.Client, rs *terraform.ResourceState) error {
+func checkACLProperties(expected *tailscale.ACL) func(client *tailscale.Client, rs *terraform.ResourceState) error {
 	return func(client *tailscale.Client, rs *terraform.ResourceState) error {
 		actual, err := client.PolicyFile().Get(context.Background())
 		if err != nil {
