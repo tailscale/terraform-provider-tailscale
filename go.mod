@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.40.0
 	github.com/stretchr/testify v1.11.1
 	github.com/tailscale/hujson v0.0.0-20221223112325-20486734a56a
-	golang.org/x/tools v0.43.0
+	golang.org/x/tools v0.44.0
 	tailscale.com v1.96.5
 	tailscale.com/client/tailscale/v2 v2.9.0
 )
@@ -84,15 +84,15 @@ require (
 	go.abhg.dev/goldmark/frontmatter v0.2.0 // indirect
 	go4.org/mem v0.0.0-20240501181205-ae6ca9944745 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
-	golang.org/x/crypto v0.49.0 // indirect
+	golang.org/x/crypto v0.50.0 // indirect
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
-	golang.org/x/mod v0.34.0 // indirect
-	golang.org/x/net v0.52.0 // indirect
+	golang.org/x/mod v0.35.0 // indirect
+	golang.org/x/net v0.53.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.42.0 // indirect
-	golang.org/x/telemetry v0.0.0-20260311193753-579e4da9a98c // indirect
-	golang.org/x/text v0.35.0 // indirect
+	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/telemetry v0.0.0-20260409153401-be6f6cb8b1fa // indirect
+	golang.org/x/text v0.36.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251222181119-0a764e51fe1b // indirect
 	google.golang.org/grpc v1.79.3 // indirect
