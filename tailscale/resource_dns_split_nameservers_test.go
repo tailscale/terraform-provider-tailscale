@@ -58,31 +58,16 @@ func TestAccTailscaleDNSSplitNameservers(t *testing.T) {
 			nameservers = ["8.8.7.7", "8.8.9.9"]
 		}`
 
-	checkProperties := func(expected tailscale.SplitDNSResponse) func(client *tailscale.Client, rs *terraform.ResourceState) error {
-		return func(client *tailscale.Client, rs *terraform.ResourceState) error {
-			actual, err := client.DNS().SplitDNS(context.Background())
-			if err != nil {
-				return err
-			}
-
-			if diff := cmp.Diff(actual, expected); diff != "" {
-				return fmt.Errorf("wrong split dns: (-got+want) \n%s", diff)
-			}
-
-			return nil
-		}
-	}
-
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy:             checkResourceDestroyed(resourceName, checkProperties(tailscale.SplitDNSResponse{})),
+		CheckDestroy:             checkResourceDestroyed(resourceName, checkSplitDNSProperties(tailscale.SplitDNSResponse{})),
 		Steps: []resource.TestStep{
 			{
 				Config: testSplitNameserversCreate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkProperties(tailscale.SplitDNSResponse{
+						checkSplitDNSProperties(tailscale.SplitDNSResponse{
 							"example.com": []string{"1.2.3.4", "4.5.6.7"},
 						}),
 					),
@@ -95,7 +80,7 @@ func TestAccTailscaleDNSSplitNameservers(t *testing.T) {
 				Config: testSplitNameserversUpdate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkProperties(tailscale.SplitDNSResponse{
+						checkSplitDNSProperties(tailscale.SplitDNSResponse{
 							"sub.example.com": []string{"8.8.9.9"},
 						}),
 					),
@@ -107,7 +92,7 @@ func TestAccTailscaleDNSSplitNameservers(t *testing.T) {
 				Config: testSplitNameserversUpdateSameDomain,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkProperties(tailscale.SplitDNSResponse{
+						checkSplitDNSProperties(tailscale.SplitDNSResponse{
 							"sub.example.com": []string{"8.8.7.7", "8.8.9.9"},
 						}),
 					),
@@ -123,4 +108,43 @@ func TestAccTailscaleDNSSplitNameservers(t *testing.T) {
 			},
 		},
 	})
+}
+
+func checkSplitDNSProperties(expected tailscale.SplitDNSResponse) func(client *tailscale.Client, rs *terraform.ResourceState) error {
+	return func(client *tailscale.Client, rs *terraform.ResourceState) error {
+		actual, err := client.DNS().SplitDNS(context.Background())
+		if err != nil {
+			return err
+		}
+
+		if diff := cmp.Diff(actual, expected); diff != "" {
+			return fmt.Errorf("wrong split dns: (-got+want) \n%s", diff)
+		}
+
+		return nil
+	}
+}
+
+// Migration test to ensure the resource is unchanged when migrating
+// from the plugin SDK to the plugin framework.
+//
+// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#terraform-data-resource-example
+func TestAccTailscaleDNSSplitNameServers_UpgradeToPluginFramework(t *testing.T) {
+	resourceName := "tailscale_dns_split_nameservers.test_nameservers"
+
+	checkResourceIsUnchangedInPluginFramework(t,
+		`resource "tailscale_dns_split_nameservers" "test_nameservers" {
+			domain = "example.com"
+			nameservers = ["1.2.3.4", "4.5.6.7"]
+		}`,
+		resource.ComposeTestCheckFunc(
+			checkResourceRemoteProperties(resourceName,
+				checkSplitDNSProperties(tailscale.SplitDNSResponse{
+					"example.com": []string{"1.2.3.4", "4.5.6.7"},
+				}),
+			),
+			resource.TestCheckResourceAttr(resourceName, "domain", "example.com"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "nameservers.*", "1.2.3.4"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "nameservers.*", "4.5.6.7"),
+		))
 }
