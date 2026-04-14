@@ -121,6 +121,15 @@ func TestAccTailscaleDeviceTags(t *testing.T) {
 			},
 		},
 	})
+
+	checkResourceIsUnchangedInPluginFramework(t,
+		fmt.Sprintf(testDeviceTagsCreate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+		resource.ComposeTestCheckFunc(
+			checkResourceRemoteProperties(resourceName, checkProperties([]string{"tag:a", "tag:b"})),
+			checkResourceRemoteProperties(resourceName, checkLegacyID),
+			resource.TestCheckTypeSetElemAttr(resourceName, "tags.*", "tag:a"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "tags.*", "tag:b"),
+		))
 }
 func TestAccTailscaleDeviceTags_UsesNodeID(t *testing.T) {
 	const resourceName = "tailscale_device_tags.test_tags"
@@ -227,4 +236,13 @@ func TestAccTailscaleDeviceTags_UsesNodeID(t *testing.T) {
 			},
 		},
 	})
+
+	checkResourceIsUnchangedInPluginFramework(t,
+		fmt.Sprintf(testDeviceTagsCreate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+		resource.ComposeTestCheckFunc(
+			checkResourceRemoteProperties(resourceName, checkProperties([]string{"tag:a", "tag:b"})),
+			checkResourceRemoteProperties(resourceName, checkNodeID),
+			resource.TestCheckTypeSetElemAttr(resourceName, "tags.*", "tag:a"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "tags.*", "tag:b"),
+		))
 }
