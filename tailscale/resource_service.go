@@ -29,6 +29,15 @@ func resourceService() *schema.Resource {
 				Required:    true,
 				ForceNew:    true,
 			},
+			"id": {
+				Type: schema.TypeString,
+				// The ID must be predictable to support importing existing
+				// Services, e.g. 'terraform import tailscale_service.my_service
+				// svc:my-service'. The Service name will be a known value and
+				// is the ID used by the API anyway.
+				Description: "The Service name, e.g. 'svc:my-service'.",
+				Computed:    true,
+			},
 			"addrs": {
 				Type:        schema.TypeList,
 				Description: "The IP addresses assigned to the Service.",

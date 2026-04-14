@@ -29,6 +29,6 @@ data "tailscale_service" "example" {
 
 - `addrs` (List of String) The IP addresses assigned to the Service.
 - `comment` (String) A comment describing the Service.
-- `id` (String) The ID of this resource.
+- `id` (String) The Service name, e.g. 'svc:my-service'.
 - `ports` (List of String) The ports that the Service listens on.
 - `tags` (Set of String) The ACL tags applied to the Service.
