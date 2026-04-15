@@ -6,28 +6,39 @@ package tailscale
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
-	"tailscale.com/client/tailscale/v2"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func resourceDNSSearchPaths() *schema.Resource {
-	return &schema.Resource{
-		Description:   "The dns_nameservers resource allows you to configure DNS nameservers for your Tailscale network. See https://tailscale.com/kb/1054/dns for more information.",
-		ReadContext:   resourceDNSSearchPathsRead,
-		UpdateContext: resourceDNSSearchPathsUpdate,
-		DeleteContext: resourceDNSSearchPathsDelete,
-		CreateContext: resourceDNSSearchPathsCreate,
-		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
-		},
-		Schema: map[string]*schema.Schema{
-			"search_paths": {
-				Type: schema.TypeList,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
+var _ resource.ResourceWithImportState = &dnsSearchPathsResource{}
+
+// NewDNSPreferencesResource returns a new DNS search paths resources.
+func NewDNSSearchPathsResource() resource.Resource {
+	return &dnsSearchPathsResource{}
+}
+
+type dnsSearchPathsResource struct {
+	ResourceBase
+}
+
+// Metadata defines the resource name as it appears in Terraform configurations.
+func (r *dnsSearchPathsResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_dns_search_paths"
+}
+
+// Schema defines a schema describing what fields can be defined in the resource.
+func (r *dnsSearchPathsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		Description: "The dns_search_paths resource allows you to configure DNS search paths for your Tailscale network. See https://tailscale.com/kb/1054/dns for more information.",
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed: true,
+			},
+			"search_paths": schema.ListAttribute{
+				ElementType: types.StringType,
 				Required:    true,
 				Description: "Devices on your network will use these domain suffixes to resolve DNS names.",
 			},
@@ -35,63 +46,106 @@ func resourceDNSSearchPaths() *schema.Resource {
 	}
 }
 
-func resourceDNSSearchPathsRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
-	paths, err := client.DNS().SearchPaths(ctx)
+type dnsSearchPathsResourceData struct {
+	ID          types.String `tfsdk:"id"`
+	SearchPaths types.List   `tfsdk:"search_paths"`
+}
+
+func (r *dnsSearchPathsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state dnsSearchPathsResourceData
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	paths, err := r.Client.DNS().SearchPaths(ctx)
 	if err != nil {
-		return diagnosticsError(err, "Failed to fetch dns search paths")
+		resp.Diagnostics.AddError(
+			"Error fetching DNS search paths",
+			"Failed to fetch DNS search paths: "+err.Error(),
+		)
+		return
 	}
 
-	if err = d.Set("search_paths", paths); err != nil {
-		return diag.FromErr(err)
+	searchPaths, diags := types.ListValueFrom(ctx, types.StringType, paths)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
 	}
 
-	return nil
+	state.SearchPaths = searchPaths
+	diags = resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
 }
 
-func resourceDNSSearchPathsCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
-	paths := d.Get("search_paths").([]interface{})
-
-	searchPaths := make([]string, len(paths))
-	for i, path := range paths {
-		searchPaths[i] = path.(string)
+func (r *dnsSearchPathsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan dnsSearchPathsResourceData
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	if err := client.DNS().SetSearchPaths(ctx, searchPaths); err != nil {
-		return diagnosticsError(err, "Failed to fetch set search paths")
+	plan.ID = types.StringValue(createUUID())
+
+	r.updateDNSSearchPaths(ctx, &plan, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	d.SetId(createUUID())
-	return resourceDNSSearchPathsRead(ctx, d, m)
+	diags = resp.State.Set(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
 }
 
-func resourceDNSSearchPathsUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	if !d.HasChange("search_paths") {
-		return resourceDNSSearchPathsRead(ctx, d, m)
+func (r *dnsSearchPathsResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan, state dnsSearchPathsResourceData
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	client := m.(*tailscale.Client)
-	paths := d.Get("search_paths").([]interface{})
+	plan.ID = state.ID
 
-	searchPaths := make([]string, len(paths))
-	for i, path := range paths {
-		searchPaths[i] = path.(string)
+	if !plan.SearchPaths.Equal(state.SearchPaths) {
+		r.updateDNSSearchPaths(ctx, &plan, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
-	if err := client.DNS().SetSearchPaths(ctx, searchPaths); err != nil {
-		return diagnosticsError(err, "Failed to fetch set search paths")
-	}
-
-	return resourceDNSSearchPathsRead(ctx, d, m)
+	diags := resp.State.Set(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
 }
 
-func resourceDNSSearchPathsDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+func (r *dnsSearchPathsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	plan := dnsSearchPathsResourceData{}
 
-	if err := client.DNS().SetSearchPaths(ctx, []string{}); err != nil {
-		return diagnosticsError(err, "Failed to fetch set search paths")
+	r.updateDNSSearchPaths(ctx, &plan, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
+func (r *dnsSearchPathsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+// updateDNSSearchPaths calls the Tailscale API to update the DNS search paths based
+// on the given input.
+func (r *dnsSearchPathsResource) updateDNSSearchPaths(ctx context.Context, data *dnsSearchPathsResourceData, diags *diag.Diagnostics) {
+	var searchPaths []string
+
+	if !data.SearchPaths.IsNull() {
+		diags.Append(data.SearchPaths.ElementsAs(ctx, &searchPaths, false)...)
+		if diags.HasError() {
+			return
+		}
 	}
 
-	return nil
+	if err := r.Client.DNS().SetSearchPaths(ctx, searchPaths); err != nil {
+		diags.AddError("Failed to set DNS search paths", "Failed to set DNS search paths: "+err.Error())
+	}
 }

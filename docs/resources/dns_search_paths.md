@@ -3,12 +3,12 @@
 page_title: "tailscale_dns_search_paths Resource - terraform-provider-tailscale"
 subcategory: ""
 description: |-
-  The dns_nameservers resource allows you to configure DNS nameservers for your Tailscale network. See https://tailscale.com/kb/1054/dns for more information.
+  The dns_search_paths resource allows you to configure DNS search paths for your Tailscale network. See https://tailscale.com/kb/1054/dns for more information.
 ---
 
 # tailscale_dns_search_paths (Resource)
 
-The dns_nameservers resource allows you to configure DNS nameservers for your Tailscale network. See https://tailscale.com/kb/1054/dns for more information.
+The dns_search_paths resource allows you to configure DNS search paths for your Tailscale network. See https://tailscale.com/kb/1054/dns for more information.
 
 ## Example Usage
 

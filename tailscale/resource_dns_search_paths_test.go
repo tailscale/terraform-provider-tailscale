@@ -93,4 +93,16 @@ func TestAccTailscaleDNSSearchPaths(t *testing.T) {
 			},
 		},
 	})
+
+	// Migration test to ensure the resource is unchanged when migrating
+	// from the plugin SDK to the plugin framework.
+	//
+	// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#terraform-data-resource-example
+	checkResourceIsUnchangedInPluginFramework(t, testSearchPathsCreate, resource.ComposeTestCheckFunc(
+		checkResourceRemoteProperties(resourceName,
+			checkProperties([]string{"sub1.example.com", "sub2.example.com"}),
+		),
+		resource.TestCheckTypeSetElemAttr(resourceName, "search_paths.*", "sub1.example.com"),
+		resource.TestCheckTypeSetElemAttr(resourceName, "search_paths.*", "sub2.example.com"),
+	))
 }
