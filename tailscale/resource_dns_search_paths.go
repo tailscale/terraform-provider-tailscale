@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -36,6 +38,9 @@ func (r *dnsSearchPathsResource) Schema(_ context.Context, _ resource.SchemaRequ
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"search_paths": schema.ListAttribute{
 				ElementType: types.StringType,
@@ -107,8 +112,6 @@ func (r *dnsSearchPathsResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	plan.ID = state.ID
-
 	if !plan.SearchPaths.Equal(state.SearchPaths) {
 		r.updateDNSSearchPaths(ctx, &plan, &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
@@ -121,11 +124,8 @@ func (r *dnsSearchPathsResource) Update(ctx context.Context, req resource.Update
 }
 
 func (r *dnsSearchPathsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	plan := dnsSearchPathsResourceData{}
-
-	r.updateDNSSearchPaths(ctx, &plan, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
+	if err := r.Client.DNS().SetSearchPaths(ctx, []string{}); err != nil {
+		resp.Diagnostics.AddError("Failed to delete DNS search paths", err.Error())
 	}
 }
 
@@ -138,11 +138,9 @@ func (r *dnsSearchPathsResource) ImportState(ctx context.Context, req resource.I
 func (r *dnsSearchPathsResource) updateDNSSearchPaths(ctx context.Context, data *dnsSearchPathsResourceData, diags *diag.Diagnostics) {
 	var searchPaths []string
 
-	if !data.SearchPaths.IsNull() {
-		diags.Append(data.SearchPaths.ElementsAs(ctx, &searchPaths, false)...)
-		if diags.HasError() {
-			return
-		}
+	diags.Append(data.SearchPaths.ElementsAs(ctx, &searchPaths, false)...)
+	if diags.HasError() {
+		return
 	}
 
 	if err := r.Client.DNS().SetSearchPaths(ctx, searchPaths); err != nil {

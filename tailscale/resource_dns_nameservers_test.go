@@ -93,4 +93,16 @@ func TestAccTailscaleDNSNameservers(t *testing.T) {
 			},
 		},
 	})
+
+	// Migration test to ensure the resource is unchanged when migrating
+	// from the plugin SDK to the plugin framework.
+	//
+	// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#terraform-data-resource-example
+	checkResourceIsUnchangedInPluginFramework(t, testNameserversCreate, resource.ComposeTestCheckFunc(
+		checkResourceRemoteProperties(resourceName,
+			checkProperties([]string{"8.8.8.8", "8.8.4.4"}),
+		),
+		resource.TestCheckTypeSetElemAttr(resourceName, "nameservers.*", "8.8.8.8"),
+		resource.TestCheckTypeSetElemAttr(resourceName, "nameservers.*", "8.8.4.4"),
+	))
 }

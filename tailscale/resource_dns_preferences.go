@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"tailscale.com/client/tailscale/v2"
@@ -38,6 +40,9 @@ func (r *dnsPreferencesResource) Schema(_ context.Context, _ resource.SchemaRequ
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"magic_dns": schema.BoolAttribute{
 				Description: "Whether or not to enable magic DNS",
@@ -101,8 +106,6 @@ func (r *dnsPreferencesResource) Update(ctx context.Context, req resource.Update
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	plan.ID = state.ID
 
 	if !plan.MagicDNS.Equal(state.MagicDNS) {
 		r.updateDNSPreferences(ctx, &plan, &resp.Diagnostics)

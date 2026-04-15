@@ -43,6 +43,9 @@ func (r *dnsSplitNameserversResource) Schema(_ context.Context, _ resource.Schem
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"domain": schema.StringAttribute{
 				Description: "Domain to configure split DNS for. Requests for this domain will be resolved using the provided nameservers. Changing this will force the resource to be recreated.",
@@ -88,6 +91,10 @@ func (r *dnsSplitNameserversResource) Read(ctx context.Context, req resource.Rea
 
 	nsSet, diags := types.SetValueFrom(ctx, types.StringType, nameservers)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	state.Nameservers = nsSet
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -109,14 +116,11 @@ func (r *dnsSplitNameserversResource) Create(ctx context.Context, req resource.C
 }
 
 func (r *dnsSplitNameserversResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan, state dnsSplitNameserversResourceData
+	var plan dnsSplitNameserversResourceData
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	plan.ID = state.ID
 
 	r.updateSplitDNSConfig(ctx, &plan, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
