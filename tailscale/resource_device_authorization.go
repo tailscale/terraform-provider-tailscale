@@ -48,6 +48,9 @@ func (d deviceAuthorizationResource) Schema(_ context.Context, _ resource.Schema
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"device_id": schema.StringAttribute{
 				Required:    true,
@@ -106,13 +109,11 @@ func (d deviceAuthorizationResource) Create(ctx context.Context, req resource.Cr
 	deviceID := plan.DeviceID.ValueString()
 	authorized := plan.Authorized.ValueBool()
 
-	if authorized {
-		if err := d.Client.Devices().SetAuthorized(ctx, deviceID, true); err != nil {
-			resp.Diagnostics.AddError(
-				"Failed to authorize device",
-				"Could not authorize device with ID "+deviceID+": "+err.Error(),
-			)
-		}
+	if err := d.Client.Devices().SetAuthorized(ctx, deviceID, authorized); err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to authorize device",
+			"Could not authorize device with ID "+deviceID+": "+err.Error(),
+		)
 	}
 
 	plan.ID = types.StringValue(deviceID)
@@ -130,30 +131,15 @@ func (d deviceAuthorizationResource) Update(ctx context.Context, req resource.Up
 
 	deviceID := plan.DeviceID.ValueString()
 
-	device, err := d.Client.Devices().Get(ctx, deviceID)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Failed to fetch device",
-			"Could not fetch device with device with ID"+deviceID+": "+err.Error(),
-		)
-		return
-	}
+	authorized := plan.Authorized.ValueBool()
 
-	// Currently, the Tailscale API only supports authorizing a device, but not un-authorizing one. So if the device
-	// data from the API states it is authorized then we can't do anything else here.
-	if device.Authorized {
-		plan.Authorized = types.BoolValue(true)
-		return
-	}
-
-	if err = d.Client.Devices().SetAuthorized(ctx, deviceID, true); err != nil {
+	if err := d.Client.Devices().SetAuthorized(ctx, deviceID, authorized); err != nil {
 		resp.Diagnostics.AddError(
 			"Failed to authorize device",
 			"Could not authorize device with ID"+deviceID+": "+err.Error(),
 		)
 		return
 	}
-	plan.Authorized = types.BoolValue(true)
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
