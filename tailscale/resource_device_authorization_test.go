@@ -18,7 +18,7 @@ import (
 func TestAccTailscaleDeviceAuthorization(t *testing.T) {
 	const resourceName = "tailscale_device_authorization.test_authorization"
 
-	const testDeviceAuthorization = `
+	const testDeviceAuthorizationCreate = `
 		data "tailscale_device" "test_device" {
 			name = "%s"
 		}
@@ -28,18 +28,39 @@ func TestAccTailscaleDeviceAuthorization(t *testing.T) {
 			authorized = true
 		}`
 
-	checkAuthorized := func(client *tailscale.Client, rs *terraform.ResourceState) error {
-		// Check that the device both exists and is still authorized.
-		device, err := client.Devices().Get(context.Background(), rs.Primary.ID)
-		if err != nil {
-			return err
+	const testDeviceAuthorizationUpdate = `
+		data "tailscale_device" "test_device" {
+			name = "%s"
 		}
+		
+		resource "tailscale_device_authorization" "test_authorization" {
+			device_id = data.tailscale_device.test_device.id
+			authorized = false
+		}`
 
-		if device.Authorized != true {
-			return fmt.Errorf("device with id %q is not authorized", rs.Primary.ID)
+	const testDeviceAuthorizationNextUpdate = `
+		data "tailscale_device" "test_device" {
+			name = "%s"
 		}
+		
+		resource "tailscale_device_authorization" "test_authorization" {
+			device_id = data.tailscale_device.test_device.id
+			authorized = true
+		}`
 
-		return nil
+	checkAuthorized := func(wantAuthorized bool) func(client *tailscale.Client, rs *terraform.ResourceState) error {
+		return func(client *tailscale.Client, rs *terraform.ResourceState) error {
+			device, err := client.Devices().Get(context.Background(), rs.Primary.ID)
+			if err != nil {
+				return err
+			}
+
+			if device.Authorized != wantAuthorized {
+				return fmt.Errorf("device with id %q is not authorized", rs.Primary.ID)
+			}
+
+			return nil
+		}
 	}
 
 	checkLegacyID := func(client *tailscale.Client, rs *terraform.ResourceState) error {
@@ -60,14 +81,31 @@ func TestAccTailscaleDeviceAuthorization(t *testing.T) {
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProviderFactories(t),
 		// Devices are not currently deauthorized when this resource is deleted,
+		// so if the resource is authorized when the resource gets deleted,
 		// expect that the device both exists and is still authorized.
-		CheckDestroy: checkResourceDestroyed(resourceName, checkAuthorized),
+		CheckDestroy: checkResourceDestroyed(resourceName, checkAuthorized(true)),
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(testDeviceAuthorization, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+				Config: fmt.Sprintf(testDeviceAuthorizationCreate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName, checkLegacyID),
-					checkResourceRemoteProperties(resourceName, checkAuthorized),
+					checkResourceRemoteProperties(resourceName, checkAuthorized(true)),
+					resource.TestCheckResourceAttr(resourceName, "authorized", "true"),
+				),
+			},
+			{
+				Config: fmt.Sprintf(testDeviceAuthorizationUpdate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName, checkLegacyID),
+					checkResourceRemoteProperties(resourceName, checkAuthorized(false)),
+					resource.TestCheckResourceAttr(resourceName, "authorized", "false"),
+				),
+			},
+			{
+				Config: fmt.Sprintf(testDeviceAuthorizationNextUpdate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName, checkLegacyID),
+					checkResourceRemoteProperties(resourceName, checkAuthorized(true)),
 					resource.TestCheckResourceAttr(resourceName, "authorized", "true"),
 				),
 			},
@@ -80,10 +118,10 @@ func TestAccTailscaleDeviceAuthorization(t *testing.T) {
 	})
 
 	checkResourceIsUnchangedInPluginFramework(t,
-		fmt.Sprintf(testDeviceAuthorization, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+		fmt.Sprintf(testDeviceAuthorizationCreate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
 		resource.ComposeTestCheckFunc(
 			checkResourceRemoteProperties(resourceName, checkLegacyID),
-			checkResourceRemoteProperties(resourceName, checkAuthorized),
+			checkResourceRemoteProperties(resourceName, checkAuthorized(true)),
 			resource.TestCheckResourceAttr(resourceName, "authorized", "true"),
 		),
 	)
@@ -92,7 +130,7 @@ func TestAccTailscaleDeviceAuthorization(t *testing.T) {
 func TestAccTailscaleDeviceAuthorization_UsesNodeID(t *testing.T) {
 	const resourceName = "tailscale_device_authorization.test_authorization"
 
-	const testDeviceAuthorization = `
+	const testDeviceAuthorizationCreate = `
 		data "tailscale_device" "test_device" {
 			name = "%s"
 		}
@@ -102,18 +140,39 @@ func TestAccTailscaleDeviceAuthorization_UsesNodeID(t *testing.T) {
 			authorized = true
 		}`
 
-	checkAuthorized := func(client *tailscale.Client, rs *terraform.ResourceState) error {
-		// Check that the device both exists and is still authorized.
-		device, err := client.Devices().Get(context.Background(), rs.Primary.ID)
-		if err != nil {
-			return err
+	const testDeviceAuthorizationUpdate = `
+		data "tailscale_device" "test_device" {
+			name = "%s"
 		}
+		
+		resource "tailscale_device_authorization" "test_authorization" {
+			device_id = data.tailscale_device.test_device.node_id
+			authorized = false
+		}`
 
-		if device.Authorized != true {
-			return fmt.Errorf("device with id %q is not authorized", rs.Primary.ID)
+	const testDeviceAuthorizationNextUpdate = `
+		data "tailscale_device" "test_device" {
+			name = "%s"
 		}
+		
+		resource "tailscale_device_authorization" "test_authorization" {
+			device_id = data.tailscale_device.test_device.node_id
+			authorized = true
+		}`
 
-		return nil
+	checkAuthorized := func(wantAuthorized bool) func(client *tailscale.Client, rs *terraform.ResourceState) error {
+		return func(client *tailscale.Client, rs *terraform.ResourceState) error {
+			device, err := client.Devices().Get(context.Background(), rs.Primary.ID)
+			if err != nil {
+				return err
+			}
+
+			if device.Authorized != wantAuthorized {
+				return fmt.Errorf("device with id %q is not authorized", rs.Primary.ID)
+			}
+
+			return nil
+		}
 	}
 
 	checkNodeID := func(client *tailscale.Client, rs *terraform.ResourceState) error {
@@ -134,13 +193,30 @@ func TestAccTailscaleDeviceAuthorization_UsesNodeID(t *testing.T) {
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProviderFactories(t),
 		// Devices are not currently deauthorized when this resource is deleted,
+		// so if the resource is authorized when the resource gets deleted,
 		// expect that the device both exists and is still authorized.
-		CheckDestroy: checkResourceDestroyed(resourceName, checkAuthorized),
+		CheckDestroy: checkResourceDestroyed(resourceName, checkAuthorized(true)),
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(testDeviceAuthorization, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+				Config: fmt.Sprintf(testDeviceAuthorizationCreate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
 				Check: resource.ComposeTestCheckFunc(
-					checkResourceRemoteProperties(resourceName, checkAuthorized),
+					checkResourceRemoteProperties(resourceName, checkAuthorized(true)),
+					checkResourceRemoteProperties(resourceName, checkNodeID),
+					resource.TestCheckResourceAttr(resourceName, "authorized", "true"),
+				),
+			},
+			{
+				Config: fmt.Sprintf(testDeviceAuthorizationUpdate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName, checkAuthorized(false)),
+					checkResourceRemoteProperties(resourceName, checkNodeID),
+					resource.TestCheckResourceAttr(resourceName, "authorized", "false"),
+				),
+			},
+			{
+				Config: fmt.Sprintf(testDeviceAuthorizationNextUpdate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName, checkAuthorized(true)),
 					checkResourceRemoteProperties(resourceName, checkNodeID),
 					resource.TestCheckResourceAttr(resourceName, "authorized", "true"),
 				),
@@ -154,10 +230,10 @@ func TestAccTailscaleDeviceAuthorization_UsesNodeID(t *testing.T) {
 	})
 
 	checkResourceIsUnchangedInPluginFramework(t,
-		fmt.Sprintf(testDeviceAuthorization, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+		fmt.Sprintf(testDeviceAuthorizationCreate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
 		resource.ComposeTestCheckFunc(
 			checkResourceRemoteProperties(resourceName, checkNodeID),
-			checkResourceRemoteProperties(resourceName, checkAuthorized),
+			checkResourceRemoteProperties(resourceName, checkAuthorized(true)),
 			resource.TestCheckResourceAttr(resourceName, "authorized", "true"),
 		),
 	)
