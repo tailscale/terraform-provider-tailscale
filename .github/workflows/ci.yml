@@ -33,8 +33,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
+
       - name: Run tests
-        run: go test -race ./...
+        run: TF_ACC_TERRAFORM_PATH="$(command -v terraform)" go test -race ./...
 
   generate:
     runs-on: ubuntu-latest
@@ -63,8 +66,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
+
       - name: Generate documentation
-        run: go generate ./...
+        run: TF_ACC_TERRAFORM_PATH="$(command -v terraform)" go generate ./...
 
       - name: Check for uncommitted changes
         run: |
