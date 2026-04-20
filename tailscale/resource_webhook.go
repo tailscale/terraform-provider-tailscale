@@ -6,54 +6,80 @@ package tailscale
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"tailscale.com/client/tailscale/v2"
 )
 
-func resourceWebhook() *schema.Resource {
-	return &schema.Resource{
-		Description:   "The webhook resource allows you to configure webhook endpoints for your Tailscale network. See https://tailscale.com/kb/1213/webhooks for more information.",
-		ReadContext:   resourceWebhookRead,
-		CreateContext: resourceWebhookCreate,
-		UpdateContext: resourceWebhookUpdate,
-		DeleteContext: resourceWebhookDelete,
-		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
-		},
-		Schema: map[string]*schema.Schema{
-			"endpoint_url": {
-				Type:        schema.TypeString,
+var (
+	_ resource.Resource                = &webhookResource{}
+	_ resource.ResourceWithImportState = &webhookResource{}
+)
+
+// NewWebhookResource returns a new webhook resource.
+func NewWebhookResource() resource.Resource {
+	return &webhookResource{}
+}
+
+type webhookResource struct {
+	ResourceBase
+}
+
+// Metadata defines the resource name as it appears in Terraform configurations.
+func (r *webhookResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_webhook"
+}
+
+// Schema defines a schema describing what fields can be defined in the resource.
+func (r *webhookResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		Description: "The webhook resource allows you to configure webhook endpoints for your Tailscale network. See https://tailscale.com/kb/1213/webhooks for more information.",
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"endpoint_url": schema.StringAttribute{
 				Description: "The endpoint to send webhook events to.",
 				Required:    true,
-				ForceNew:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
-			"provider_type": {
-				Type:        schema.TypeString,
+			"provider_type": schema.StringAttribute{
 				Description: "The provider type of the endpoint URL. This determines the payload format sent to the destination. Valid values are `slack`, `mattermost`, `googlechat`, and `discord`.",
 				Optional:    true,
-				ForceNew:    true,
-				ValidateFunc: validation.StringInSlice(
-					[]string{
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.OneOf(
 						string(tailscale.WebhookEmptyProviderType),
 						string(tailscale.WebhookSlackProviderType),
 						string(tailscale.WebhookMattermostProviderType),
 						string(tailscale.WebhookGoogleChatProviderType),
 						string(tailscale.WebhookDiscordProviderType),
-					},
-					false,
-				),
+					),
+				},
 			},
-			"subscriptions": {
-				Type:        schema.TypeSet,
+			"subscriptions": schema.SetAttribute{
 				Description: "The set of events that trigger this webhook. For a full list of event types, see the [webhooks documentation](https://tailscale.com/kb/1213/webhooks#events).",
 				Required:    true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-					ValidateFunc: validation.StringInSlice(
-						[]string{
+				ElementType: types.StringType,
+				Validators: []validator.Set{
+					setvalidator.ValueStringsAre(
+						stringvalidator.OneOf(
 							string(tailscale.WebhookCategoryTailnetManagement),
 							string(tailscale.WebhookNodeCreated),
 							string(tailscale.WebhookNodeNeedsApproval),
@@ -72,31 +98,57 @@ func resourceWebhook() *schema.Resource {
 							string(tailscale.WebhookCategoryDeviceMisconfigurations),
 							string(tailscale.WebhookSubnetIPForwardingNotEnabled),
 							string(tailscale.WebhookExitNodeIPForwardingNotEnabled),
-						},
-						false,
+						),
 					),
 				},
 			},
-			"secret": {
-				Type:        schema.TypeString,
+			"secret": schema.StringAttribute{
 				Description: "The secret used for signing webhook payloads. Only set on resource creation. See https://tailscale.com/kb/1213/webhooks#webhook-secret for more information.",
 				Sensitive:   true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
 }
 
-func resourceWebhookCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+type webhookResourceData struct {
+	ID            types.String `tfsdk:"id"`
+	Secret        types.String `tfsdk:"secret"`
+	EndpointURL   types.String `tfsdk:"endpoint_url"`
+	ProviderType  types.String `tfsdk:"provider_type"`
+	Subscriptions types.Set    `tfsdk:"subscriptions"`
+}
 
-	endpointURL := d.Get("endpoint_url").(string)
-	providerType := tailscale.WebhookProviderType(d.Get("provider_type").(string))
-	subscriptions := d.Get("subscriptions").(*schema.Set).List()
-
+// requestSubscriptions gets a list of subscriptions in a type that
+// can be passed to the Tailscale API.
+func (d webhookResourceData) requestSubscriptions(ctx context.Context, diags diag.Diagnostics) []tailscale.WebhookSubscriptionType {
+	var subscriptions []string
+	diags.Append(d.Subscriptions.ElementsAs(ctx, &subscriptions, false)...)
+	if diags.HasError() {
+		return nil
+	}
 	var requestSubscriptions []tailscale.WebhookSubscriptionType
 	for _, subscription := range subscriptions {
-		requestSubscriptions = append(requestSubscriptions, tailscale.WebhookSubscriptionType(subscription.(string)))
+		requestSubscriptions = append(requestSubscriptions, tailscale.WebhookSubscriptionType(subscription))
+	}
+	return requestSubscriptions
+}
+
+func (r *webhookResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan webhookResourceData
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	endpointURL := plan.EndpointURL.ValueString()
+	providerType := tailscale.WebhookProviderType(plan.ProviderType.ValueString())
+	requestSubscriptions := plan.requestSubscriptions(ctx, resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	request := tailscale.CreateWebhookRequest{
@@ -105,73 +157,92 @@ func resourceWebhookCreate(ctx context.Context, d *schema.ResourceData, m interf
 		Subscriptions: requestSubscriptions,
 	}
 
-	webhook, err := client.Webhooks().Create(ctx, request)
+	webhook, err := r.Client.Webhooks().Create(ctx, request)
 	if err != nil {
-		return diagnosticsError(err, "Failed to create webhook")
+		resp.Diagnostics.AddError("Failed to create webhook", err.Error())
+		return
 	}
 
-	d.SetId(webhook.EndpointID)
+	plan.ID = types.StringValue(webhook.EndpointID)
+
 	// Secret is only returned on create.
-	d.Set("secret", webhook.Secret)
+	if secret := webhook.Secret; secret != nil {
+		plan.Secret = types.StringValue(*secret)
+	} else {
+		resp.Diagnostics.AddError("Failed to get webhook secret", "Expected Create() call to return webhook secret, but got nil")
+		return
+	}
 
-	return resourceWebhookRead(ctx, d, m)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-func resourceWebhookRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+func (r *webhookResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state webhookResourceData
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	webhook, err := client.Webhooks().Get(ctx, d.Id())
+	webhook, err := r.Client.Webhooks().Get(ctx, state.ID.ValueString())
 	if err != nil {
-		return diagnosticsError(err, "Failed to fetch webhook")
+		resp.Diagnostics.AddError("Error fetching webhook", err.Error())
+		return
 	}
 
-	if err = d.Set("endpoint_url", webhook.EndpointURL); err != nil {
-		return diagnosticsError(err, "Failed to set endpoint_url field")
-	}
+	state.EndpointURL = types.StringValue(webhook.EndpointURL)
+	state.ProviderType = types.StringValue(string(webhook.ProviderType))
 
-	if err = d.Set("provider_type", webhook.ProviderType); err != nil {
-		return diagnosticsError(err, "Failed to set provider_type field")
-	}
+	subscriptions, diags := types.SetValueFrom(ctx, types.StringType, webhook.Subscriptions)
+	resp.Diagnostics.Append(diags...)
+	state.Subscriptions = subscriptions
 
-	if err = d.Set("subscriptions", webhook.Subscriptions); err != nil {
-		return diagnosticsError(err, "Failed to set subscriptions field")
-	}
-
-	if err = d.Set("secret", d.Get("secret").(string)); err != nil {
-		return diagnosticsError(err, "Failed to set secret field")
-	}
-
-	return nil
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func resourceWebhookUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	if !d.HasChange("subscriptions") {
-		return resourceWebhookRead(ctx, d, m)
+func (r *webhookResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan, state webhookResourceData
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	client := m.(*tailscale.Client)
-	subscriptions := d.Get("subscriptions").(*schema.Set).List()
-
-	var requestSubscriptions []tailscale.WebhookSubscriptionType
-	for _, subscription := range subscriptions {
-		requestSubscriptions = append(requestSubscriptions, tailscale.WebhookSubscriptionType(subscription.(string)))
+	if plan.Subscriptions.Equal(state.Subscriptions) {
+		return
 	}
 
-	_, err := client.Webhooks().Update(ctx, d.Id(), requestSubscriptions)
+	endpointID := plan.ID.ValueString()
+	requestSubscriptions := plan.requestSubscriptions(ctx, resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	_, err := r.Client.Webhooks().Update(ctx, endpointID, requestSubscriptions)
 	if err != nil {
-		return diagnosticsError(err, "Failed to update webhook")
+		resp.Diagnostics.AddError("Failed to update webhook", err.Error())
+		return
 	}
 
-	return resourceWebhookRead(ctx, d, m)
+	diags := resp.State.Set(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
 }
 
-func resourceWebhookDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
-
-	err := client.Webhooks().Delete(ctx, d.Id())
-	if err != nil {
-		return diagnosticsError(err, "Failed to delete webhook")
+func (r *webhookResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state webhookResourceData
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	return nil
+	endpointID := state.ID.ValueString()
+
+	if err := r.Client.Webhooks().Delete(ctx, endpointID); err != nil {
+		resp.Diagnostics.AddError("Failed to delete webhook", err.Error())
+		return
+	}
+}
+
+func (r *webhookResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
