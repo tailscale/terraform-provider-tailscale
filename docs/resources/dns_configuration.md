@@ -78,7 +78,10 @@ Optional:
 Required:
 
 - `domain` (String) The nameservers will be used only for this domain.
-- `nameservers` (Block List, Min: 1) Set the nameservers used by devices on your network to resolve DNS queries. (see [below for nested schema](#nestedblock--split_dns--nameservers))
+
+Optional:
+
+- `nameservers` (Block List) Set the nameservers used by devices on your network to resolve DNS queries. (see [below for nested schema](#nestedblock--split_dns--nameservers))
 
 <a id="nestedblock--split_dns--nameservers"></a>
 ### Nested Schema for `split_dns.nameservers`

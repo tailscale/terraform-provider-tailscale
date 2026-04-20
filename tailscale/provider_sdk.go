@@ -98,7 +98,6 @@ func Provider(options ...ProviderOption) *schema.Provider {
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"tailscale_acl":                     resourceACL(),
-			"tailscale_dns_configuration":       resourceDNSConfiguration(),
 			"tailscale_tailnet_key":             resourceTailnetKey(),
 			"tailscale_oauth_client":            resourceOAuthClient(),
 			"tailscale_webhook":                 resourceWebhook(),

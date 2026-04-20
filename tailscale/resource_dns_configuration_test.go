@@ -95,6 +95,39 @@ func TestAccTailscaleDNSConfiguration(t *testing.T) {
 		}
 	}
 
+	createCheck := resource.ComposeTestCheckFunc(
+		checkResourceRemoteProperties(resourceName,
+			checkProperties(&tailscale.DNSConfiguration{
+				Nameservers: []tailscale.DNSConfigurationResolver{{Address: "8.8.8.8"}, {Address: "1.1.1.1", UseWithExitNode: true}},
+				SplitDNS: map[string][]tailscale.DNSConfigurationResolver{
+					"bar.example.com": {{Address: "8.8.8.2", UseWithExitNode: true}},
+					"foo.example.com": {{Address: "1.1.1.2", UseWithExitNode: true}, {Address: "1.1.1.3"}},
+				},
+				SearchPaths: []string{"example.com", "anotherexample.com"},
+				Preferences: tailscale.DNSConfigurationPreferences{
+					OverrideLocalDNS: true,
+					MagicDNS:         true,
+				},
+			}),
+		),
+		resource.TestCheckResourceAttr(resourceName, "nameservers.0.address", "8.8.8.8"),
+		resource.TestCheckResourceAttr(resourceName, "nameservers.0.use_with_exit_node", "false"),
+		resource.TestCheckResourceAttr(resourceName, "nameservers.1.address", "1.1.1.1"),
+		resource.TestCheckResourceAttr(resourceName, "nameservers.1.use_with_exit_node", "true"),
+		resource.TestCheckResourceAttr(resourceName, "split_dns.0.domain", "foo.example.com"),
+		resource.TestCheckResourceAttr(resourceName, "split_dns.0.nameservers.0.address", "1.1.1.2"),
+		resource.TestCheckResourceAttr(resourceName, "split_dns.0.nameservers.0.use_with_exit_node", "true"),
+		resource.TestCheckResourceAttr(resourceName, "split_dns.0.nameservers.1.address", "1.1.1.3"),
+		resource.TestCheckResourceAttr(resourceName, "split_dns.0.nameservers.1.use_with_exit_node", "false"),
+		resource.TestCheckResourceAttr(resourceName, "split_dns.1.domain", "bar.example.com"),
+		resource.TestCheckResourceAttr(resourceName, "split_dns.1.nameservers.0.address", "8.8.8.2"),
+		resource.TestCheckResourceAttr(resourceName, "split_dns.1.nameservers.0.use_with_exit_node", "true"),
+		resource.TestCheckResourceAttr(resourceName, "search_paths.0", "example.com"),
+		resource.TestCheckResourceAttr(resourceName, "search_paths.1", "anotherexample.com"),
+		resource.TestCheckResourceAttr(resourceName, "override_local_dns", "true"),
+		resource.TestCheckResourceAttr(resourceName, "magic_dns", "true"),
+	)
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProviderFactories(t),
@@ -102,38 +135,7 @@ func TestAccTailscaleDNSConfiguration(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testDNSConfigurationCreate,
-				Check: resource.ComposeTestCheckFunc(
-					checkResourceRemoteProperties(resourceName,
-						checkProperties(&tailscale.DNSConfiguration{
-							Nameservers: []tailscale.DNSConfigurationResolver{{Address: "8.8.8.8"}, {Address: "1.1.1.1", UseWithExitNode: true}},
-							SplitDNS: map[string][]tailscale.DNSConfigurationResolver{
-								"bar.example.com": {{Address: "8.8.8.2", UseWithExitNode: true}},
-								"foo.example.com": {{Address: "1.1.1.2", UseWithExitNode: true}, {Address: "1.1.1.3"}},
-							},
-							SearchPaths: []string{"example.com", "anotherexample.com"},
-							Preferences: tailscale.DNSConfigurationPreferences{
-								OverrideLocalDNS: true,
-								MagicDNS:         true,
-							},
-						}),
-					),
-					resource.TestCheckResourceAttr(resourceName, "nameservers.0.address", "8.8.8.8"),
-					resource.TestCheckResourceAttr(resourceName, "nameservers.0.use_with_exit_node", "false"),
-					resource.TestCheckResourceAttr(resourceName, "nameservers.1.address", "1.1.1.1"),
-					resource.TestCheckResourceAttr(resourceName, "nameservers.1.use_with_exit_node", "true"),
-					resource.TestCheckResourceAttr(resourceName, "split_dns.0.domain", "foo.example.com"),
-					resource.TestCheckResourceAttr(resourceName, "split_dns.0.nameservers.0.address", "1.1.1.2"),
-					resource.TestCheckResourceAttr(resourceName, "split_dns.0.nameservers.0.use_with_exit_node", "true"),
-					resource.TestCheckResourceAttr(resourceName, "split_dns.0.nameservers.1.address", "1.1.1.3"),
-					resource.TestCheckResourceAttr(resourceName, "split_dns.0.nameservers.1.use_with_exit_node", "false"),
-					resource.TestCheckResourceAttr(resourceName, "split_dns.1.domain", "bar.example.com"),
-					resource.TestCheckResourceAttr(resourceName, "split_dns.1.nameservers.0.address", "8.8.8.2"),
-					resource.TestCheckResourceAttr(resourceName, "split_dns.1.nameservers.0.use_with_exit_node", "true"),
-					resource.TestCheckResourceAttr(resourceName, "search_paths.0", "example.com"),
-					resource.TestCheckResourceAttr(resourceName, "search_paths.1", "anotherexample.com"),
-					resource.TestCheckResourceAttr(resourceName, "override_local_dns", "true"),
-					resource.TestCheckResourceAttr(resourceName, "magic_dns", "true"),
-				),
+				Check:  createCheck,
 			},
 			{
 				Config: testDNSConfigurationUpdate,
@@ -168,4 +170,10 @@ func TestAccTailscaleDNSConfiguration(t *testing.T) {
 			},
 		},
 	})
+
+	// Migration test to ensure the resource is unchanged when migrating
+	// from the plugin SDK to the plugin framework.
+	//
+	// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#terraform-data-resource-example
+	checkResourceIsUnchangedInPluginFramework(t, testDNSConfigurationCreate, createCheck)
 }
