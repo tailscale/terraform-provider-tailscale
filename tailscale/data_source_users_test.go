@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -119,4 +120,24 @@ func TestAccTailscaleUsers(t *testing.T) {
 			},
 		},
 	})
+}
+
+// userToMap converts the given user into a map representing the user as a
+// resource in Terraform. This omits the "id" which is expected to be set
+// using [schema.ResourceData.SetId].
+func userToMap(user *tailscale.User) map[string]any {
+	return map[string]any{
+		"id":                  user.ID,
+		"display_name":        user.DisplayName,
+		"login_name":          user.LoginName,
+		"profile_pic_url":     user.ProfilePicURL,
+		"tailnet_id":          user.TailnetID,
+		"created":             user.Created.Format(time.RFC3339),
+		"type":                user.Type,
+		"role":                user.Role,
+		"status":              user.Status,
+		"device_count":        user.DeviceCount,
+		"last_seen":           user.LastSeen.Format(time.RFC3339),
+		"currently_connected": user.CurrentlyConnected,
+	}
 }
