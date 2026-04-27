@@ -107,7 +107,6 @@ func Provider(options ...ProviderOption) *schema.Provider {
 			"tailscale_service":                 resourceService(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			"tailscale_devices": dataSourceDevices(),
 			"tailscale_service": dataSourceService(),
 		},
 	}

@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/stretchr/testify/assert"
+	"tailscale.com/client/tailscale/v2"
 	tsclient "tailscale.com/client/tailscale/v2"
 	"tailscale.com/tstest"
 )
@@ -243,5 +244,40 @@ func TestRetryWithDeadline_NoRetryWhenWaitForIsZero(t *testing.T) {
 
 	if err != nil {
 		t.Fatalf("want no error but got one: %v", err)
+	}
+}
+
+// deviceToMap converts the given device into a map representing the device as a
+// resource in Terraform. This omits the "id" which is expected to be set
+// using [schema.ResourceData.SetId].
+func deviceToMap(device *tailscale.Device) map[string]any {
+	var lastSeen string
+	if device.LastSeen == nil {
+		lastSeen = ""
+	} else {
+		lastSeen = device.LastSeen.Format(time.RFC3339)
+	}
+
+	return map[string]any{
+		"name":                        device.Name,
+		"hostname":                    device.Hostname,
+		"user":                        device.User,
+		"node_id":                     device.NodeID,
+		"addresses":                   device.Addresses,
+		"tags":                        device.Tags,
+		"authorized":                  device.Authorized,
+		"key_expiry_disabled":         device.KeyExpiryDisabled,
+		"blocks_incoming_connections": device.BlocksIncomingConnections,
+		"client_version":              device.ClientVersion,
+		"created":                     device.Created.Format(time.RFC3339),
+		"expires":                     device.Expires.Format(time.RFC3339),
+		"is_external":                 device.IsExternal,
+		"last_seen":                   lastSeen,
+		"machine_key":                 device.MachineKey,
+		"node_key":                    device.NodeKey,
+		"os":                          device.OS,
+		"update_available":            device.UpdateAvailable,
+		"tailnet_lock_error":          device.TailnetLockError,
+		"tailnet_lock_key":            device.TailnetLockKey,
 	}
 }
