@@ -5,212 +5,140 @@ package tailscale
 
 import (
 	"context"
+	"maps"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+
+	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"tailscale.com/client/tailscale/v2"
 )
 
-func dataSourceDevices() *schema.Resource {
-	return &schema.Resource{
+// NewMultipleDevicesDataSource returns a new multiple-users data data source.
+func NewMultipleDevicesDataSource() datasource.DataSource {
+	return &multipleDevicesDataSource{}
+}
+
+type multipleDevicesDataSource struct {
+	DataSourceBase
+}
+
+type multipleDevicesDataSourceModel struct {
+	ID         types.String            `tfsdk:"id"`
+	NamePrefix types.String            `tfsdk:"name_prefix"`
+	Filters    []filterModel           `tfsdk:"filter"`
+	Devices    []deviceDataSourceModel `tfsdk:"devices"`
+}
+
+type filterModel struct {
+	Name   types.String `tfsdk:"name"`
+	Values types.Set    `tfsdk:"values"`
+}
+
+// Metadata defines the data source name as it appears in Terraform configurations.
+func (d multipleDevicesDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_devices"
+}
+
+// Schema defines a schema describing what data is available in the data source response.
+func (d multipleDevicesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	nestedDeviceAttributes := map[string]schema.Attribute{
+		"name": schema.StringAttribute{
+
+			Description: "The full name of the device (e.g. `hostname.domain.ts.net`)",
+			Computed:    true,
+		},
+		"hostname": schema.StringAttribute{
+			Description: "The short hostname of the device",
+			Computed:    true,
+		},
+	}
+	maps.Copy(nestedDeviceAttributes, deviceSchema)
+
+	resp.Schema = schema.Schema{
 		Description: "The devices data source describes a list of devices in a tailnet",
-		ReadContext: dataSourceDevicesRead,
-		Schema: map[string]*schema.Schema{
-			"filter": {
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": {
-							Type:        schema.TypeString,
-							Required:    true,
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed: true,
+			},
+			"name_prefix": schema.StringAttribute{
+				Optional:    true,
+				Description: "Filters the device list to elements whose name has the provided prefix",
+			},
+		},
+		Blocks: map[string]schema.Block{
+			"filter": schema.SetNestedBlock{
+				Description: "Filters the device list to elements devices whose fields match the provided values.",
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"name": schema.StringAttribute{
 							Description: "The name must be a top-level device property, e.g. isEphemeral, tags, hostname, etc.",
+							Required:    true,
 						},
-						"values": {
-							Type:     schema.TypeSet,
-							Required: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
+						"values": schema.SetAttribute{
 							Description: "The list of values to filter for. Values are matched as exact matches.",
+							ElementType: types.StringType,
+							Required:    true,
 						},
 					},
 				},
-				Description: "Filters the device list to elements devices whose fields match the provided values.",
 			},
-			"name_prefix": {
-				Optional:    true,
-				Type:        schema.TypeString,
-				Description: "Filters the device list to elements whose name has the provided prefix",
-			},
-			"devices": {
-				Computed:    true,
-				Type:        schema.TypeList,
+			"devices": schema.ListNestedBlock{
 				Description: "The list of devices in the tailnet",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": {
-							Type:        schema.TypeString,
-							Description: "The full name of the device (e.g. `hostname.domain.ts.net`)",
-							Computed:    true,
-						},
-						"hostname": {
-							Type:        schema.TypeString,
-							Description: "The short hostname of the device",
-							Computed:    true,
-						},
-						"user": {
-							Type:        schema.TypeString,
-							Description: "The user associated with the device",
-							Computed:    true,
-						},
-						"id": {
-							Type:        schema.TypeString,
-							Description: "The legacy identifier of the device. Use node_id instead for new resources.",
-							Computed:    true,
-						},
-						"node_id": {
-							Type:        schema.TypeString,
-							Description: "The preferred indentifier for a device.",
-							Computed:    true,
-						},
-						"addresses": {
-							Computed:    true,
-							Type:        schema.TypeList,
-							Description: "The list of device's IPs",
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						"tags": {
-							Type:        schema.TypeSet,
-							Description: "The tags applied to the device",
-							Computed:    true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						"authorized": {
-							Type:        schema.TypeBool,
-							Description: "Whether the device is authorized to access the tailnet",
-							Computed:    true,
-						},
-						"key_expiry_disabled": {
-							Type:        schema.TypeBool,
-							Description: "Whether the device's key expiry is disabled",
-							Computed:    true,
-						},
-						"blocks_incoming_connections": {
-							Type:        schema.TypeBool,
-							Description: "Whether the device blocks incoming connections",
-							Computed:    true,
-						},
-						"client_version": {
-							Type:        schema.TypeString,
-							Description: "The Tailscale client version running on the device",
-							Computed:    true,
-						},
-						"created": {
-							Type:        schema.TypeString,
-							Description: "The creation time of the device",
-							Computed:    true,
-						},
-						"expires": {
-							Type:        schema.TypeString,
-							Description: "The expiry time of the device's key",
-							Computed:    true,
-						},
-						"is_external": {
-							Type:        schema.TypeBool,
-							Description: "Whether the device is marked as external",
-							Computed:    true,
-						},
-						"last_seen": {
-							Type:        schema.TypeString,
-							Description: "The last seen time of the device",
-							Computed:    true,
-						},
-						"machine_key": {
-							Type:        schema.TypeString,
-							Description: "The machine key of the device",
-							Computed:    true,
-						},
-						"node_key": {
-							Type:        schema.TypeString,
-							Description: "The node key of the device",
-							Computed:    true,
-						},
-						"os": {
-							Type:        schema.TypeString,
-							Description: "The operating system of the device",
-							Computed:    true,
-						},
-						"update_available": {
-							Type:        schema.TypeBool,
-							Description: "Whether an update is available for the device",
-							Computed:    true,
-						},
-						"tailnet_lock_error": {
-							Type:        schema.TypeString,
-							Description: "The tailnet lock error for the device, if any",
-							Computed:    true,
-						},
-						"tailnet_lock_key": {
-							Type:        schema.TypeString,
-							Description: "The tailnet lock key for the device, if any",
-							Computed:    true,
-						},
-					},
+				NestedObject: schema.NestedBlockObject{
+					Attributes: nestedDeviceAttributes,
 				},
 			},
 		},
 	}
 }
 
-func dataSourceDevicesRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+// Read fetches the data from the Tailscale API.
+func (d multipleDevicesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var data multipleDevicesDataSourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	opts := []tailscale.ListDevicesOptions{}
-	if v, ok := d.GetOk("filter"); ok {
-		filterConfigs := v.(*schema.Set).List()
-		for _, f := range filterConfigs {
-			m := f.(map[string]interface{})
-			name := m["name"].(string)
+	opts := make([]tailscale.ListDevicesOptions, 0, len(data.Filters))
+	for _, f := range data.Filters {
+		var values []string
 
-			// Convert the Set of values to a slice of strings
-			rawValues := m["values"].(*schema.Set).List()
-			values := make([]string, len(rawValues))
-			for i, val := range rawValues {
-				values[i] = val.(string)
-			}
-
-			opts = append(opts, tailscale.WithFilter(name, values))
+		diags := f.Values.ElementsAs(ctx, &values, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
 		}
+
+		opts = append(opts, tailscale.WithFilter(f.Name.ValueString(), values))
 	}
 
-	devices, err := client.Devices().List(ctx, opts...)
+	devices, err := d.Client.Devices().List(ctx, opts...)
 	if err != nil {
-		return diagnosticsError(err, "Failed to fetch devices")
+		resp.Diagnostics.AddError("Failed to fetch devices", err.Error())
+		return
 	}
 
-	namePrefix, _ := d.Get("name_prefix").(string)
-	deviceMaps := make([]map[string]interface{}, 0)
-	for _, device := range devices {
-		if namePrefix != "" && !strings.HasPrefix(device.Name, namePrefix) {
+	prefix := data.NamePrefix.ValueString()
+	data.Devices = make([]deviceDataSourceModel, 0)
+
+	for _, dev := range devices {
+		if prefix != "" && !strings.HasPrefix(dev.Name, prefix) {
 			continue
 		}
 
-		m := deviceToMap(&device)
-		m["id"] = device.ID
-		deviceMaps = append(deviceMaps, m)
+		deviceModel, diagnostics := toDeviceDataSourceModel(ctx, &dev)
+		if diagnostics.HasError() {
+			resp.Diagnostics.Append(diagnostics...)
+			return
+		}
+
+		data.Devices = append(data.Devices, deviceModel)
 	}
 
-	if err = d.Set("devices", deviceMaps); err != nil {
-		return diag.FromErr(err)
-	}
-
-	d.SetId(createUUID())
-	return nil
+	data.ID = types.StringValue(createUUID())
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
