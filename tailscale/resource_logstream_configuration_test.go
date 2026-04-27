@@ -217,6 +217,168 @@ func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
 		}
 	}
 
+	steps := []resource.TestStep{
+		{
+			Config: testLogStreamConfiguration,
+			Check: resource.ComposeTestCheckFunc(
+				checkResourceRemoteProperties(
+					resourceName,
+					checkProperties(tailscale.LogstreamConfiguration{
+						LogType:         tailscale.LogTypeConfig,
+						DestinationType: tailscale.LogstreamPantherEndpoint,
+						URL:             "https://example.com",
+					}),
+				),
+				resource.TestCheckResourceAttr(resourceName, "log_type", "configuration"),
+				resource.TestCheckResourceAttr(resourceName, "destination_type", "panther"),
+				resource.TestCheckResourceAttr(resourceName, "url", "https://example.com"),
+				resource.TestCheckResourceAttr(resourceName, "user", "user"),
+				resource.TestCheckResourceAttr(resourceName, "token", "some-token"),
+			),
+		},
+		{
+			Config: testLogstreamConfigurationGCS,
+			Check: resource.ComposeTestCheckFunc(
+				checkResourceRemoteProperties(
+					resourceName,
+					checkProperties(tailscale.LogstreamConfiguration{
+						UploadPeriodMinutes: 5,
+						CompressionFormat:   tailscale.CompressionFormatZstd,
+						LogType:             tailscale.LogTypeNetwork,
+						DestinationType:     tailscale.LogstreamGCSEndpoint,
+						GCSScopes:           []string{"scope1", "scope2"},
+						GCSBucket:           "example-bucket",
+						GCSKeyPrefix:        "some-prefix",
+						GCSCredentials:      "{\"universe_domain\":\"googleapis.com\",\"type\":\"external_account\",\"audience\":\"//iam.googleapis.com/projects/12345678/locations/global/workloadIdentityPools/test/providers/test\",\"subject_token_type\":\"urn:ietf:params:aws:token-type:aws4_request\",\"service_account_impersonation_url\":\"https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/test@test.iam.gserviceaccount.com:generateAccessToken\",\"token_url\":\"https://sts.googleapis.com/v1/token\",\"credential_source\":{\"environment_id\":\"aws1\",\"region_url\":\"http://169.254.169.254/latest/meta-data/placement/availability-zone\",\"url\":\"http://169.254.169.254/latest/meta-data/iam/security-credentials\",\"regional_cred_verification_url\":\"https://sts.{region}.amazonaws.com?Action=GetCallerIdentity\\u0026Version=2011-06-15\",\"imdsv2_session_token_url\":\"http://169.254.169.254/latest/api/token\"}}",
+					}),
+				),
+				resource.TestCheckResourceAttr(resourceName, "destination_type", "gcs"),
+				resource.TestCheckResourceAttr(resourceName, "upload_period_minutes", "5"),
+				resource.TestCheckResourceAttr(resourceName, "compression_format", "zstd"),
+			),
+		},
+		// Check that if the JSON in `gcs_credentials` is semantically equivalent
+		// to the existing value, the plan is a no-op.
+		{
+			Config:             testLogstreamConfigurationGCSAltJSON,
+			PlanOnly:           true,
+			ExpectNonEmptyPlan: false,
+		},
+		{
+			Config: testLogstreamConfigurationUpdateSameLogtype,
+			Check: resource.ComposeTestCheckFunc(
+				checkResourceRemoteProperties(
+					resourceName,
+					checkProperties(tailscale.LogstreamConfiguration{
+						LogType:         tailscale.LogTypeConfig,
+						DestinationType: tailscale.LogstreamCriblEndpoint,
+						URL:             "https://example.com/other",
+						User:            "cribl-user",
+					}),
+				),
+				resource.TestCheckResourceAttr(resourceName, "log_type", "configuration"),
+				resource.TestCheckResourceAttr(resourceName, "destination_type", "cribl"),
+				resource.TestCheckResourceAttr(resourceName, "url", "https://example.com/other"),
+				resource.TestCheckResourceAttr(resourceName, "user", "cribl-user"),
+				resource.TestCheckResourceAttr(resourceName, "token", "some-token"),
+			),
+		},
+		{
+			Config: testLogstreamConfigurationUpdateDifferentLogtype,
+			Check: resource.ComposeTestCheckFunc(
+				checkResourceRemoteProperties(
+					resourceName,
+					checkProperties(tailscale.LogstreamConfiguration{
+						LogType:         tailscale.LogTypeNetwork,
+						DestinationType: tailscale.LogstreamDatadogEndpoint,
+						URL:             "https://example.com/other/other",
+					}),
+				),
+				resource.TestCheckResourceAttr(resourceName, "log_type", "network"),
+				resource.TestCheckResourceAttr(resourceName, "destination_type", "datadog"),
+				resource.TestCheckResourceAttr(resourceName, "url", "https://example.com/other/other"),
+				resource.TestCheckResourceAttr(resourceName, "user", "user"),
+				resource.TestCheckResourceAttr(resourceName, "token", "some-token"),
+			),
+		},
+		{
+			ResourceName:            resourceName,
+			ImportState:             true,
+			ImportStateVerify:       true,
+			ImportStateVerifyIgnore: []string{"token"},
+		},
+		{
+			Config: testLogstreamConfigurationUpdateS3RoleARN,
+			Check: resource.ComposeTestCheckFunc(
+				func(s *terraform.State) error {
+					externalIdResource, ok := s.RootModule().Resources["tailscale_aws_external_id.external_id"]
+					if !ok {
+						return fmt.Errorf("resource not found: tailscale_aws_external_id.external_id")
+					}
+
+					return checkResourceRemoteProperties(
+						resourceName,
+						checkProperties(tailscale.LogstreamConfiguration{
+							LogType:              tailscale.LogTypeNetwork,
+							DestinationType:      tailscale.LogstreamS3Endpoint,
+							S3Bucket:             "example-bucket",
+							S3Region:             "us-west-2",
+							S3KeyPrefix:          "logs/",
+							S3AuthenticationType: tailscale.S3RoleARNAuthentication,
+							S3RoleARN:            "arn:aws:iam::123456789012:role/example-role",
+							S3ExternalID:         externalIdResource.Primary.Attributes["external_id"],
+							CompressionFormat:    tailscale.CompressionFormatNone,
+						}),
+					)(s)
+				},
+				resource.TestCheckResourceAttr(resourceName, "log_type", "network"),
+				resource.TestCheckResourceAttr(resourceName, "destination_type", "s3"),
+				resource.TestCheckResourceAttr(resourceName, "s3_bucket", "example-bucket"),
+				resource.TestCheckResourceAttr(resourceName, "s3_region", "us-west-2"),
+				resource.TestCheckResourceAttr(resourceName, "s3_key_prefix", "logs/"),
+				resource.TestCheckResourceAttr(resourceName, "s3_authentication_type", "rolearn"),
+				resource.TestCheckResourceAttr(resourceName, "s3_role_arn", "arn:aws:iam::123456789012:role/example-role"),
+				resource.TestCheckResourceAttrPair(resourceName, "s3_external_id", "tailscale_aws_external_id.external_id", "external_id"),
+				resource.TestCheckResourceAttr(resourceName, "compression_format", "none"),
+			),
+		},
+		{
+			Config: testLogstreamConfigurationUpdateS3AccessKey,
+			Check: resource.ComposeTestCheckFunc(
+				checkResourceRemoteProperties(
+					resourceName,
+					checkProperties(tailscale.LogstreamConfiguration{
+						LogType:              tailscale.LogTypeNetwork,
+						DestinationType:      tailscale.LogstreamS3Endpoint,
+						S3Bucket:             "example-bucket",
+						S3Region:             "us-west-2",
+						S3AuthenticationType: tailscale.S3AccessKeyAuthentication,
+						S3AccessKeyID:        "example-access-key-id",
+						URL:                  "https://example.com/s3",
+						UploadPeriodMinutes:  5,
+						CompressionFormat:    tailscale.CompressionFormatZstd,
+					}),
+				),
+				resource.TestCheckResourceAttr(resourceName, "log_type", "network"),
+				resource.TestCheckResourceAttr(resourceName, "destination_type", "s3"),
+				resource.TestCheckResourceAttr(resourceName, "s3_bucket", "example-bucket"),
+				resource.TestCheckResourceAttr(resourceName, "s3_region", "us-west-2"),
+				resource.TestCheckResourceAttr(resourceName, "s3_authentication_type", "accesskey"),
+				resource.TestCheckResourceAttr(resourceName, "s3_access_key_id", "example-access-key-id"),
+				resource.TestCheckResourceAttr(resourceName, "s3_secret_access_key", "example-secret-access-key"),
+				resource.TestCheckResourceAttr(resourceName, "url", "https://example.com/s3"),
+				resource.TestCheckResourceAttr(resourceName, "upload_period_minutes", "5"),
+				resource.TestCheckResourceAttr(resourceName, "compression_format", "zstd"),
+			),
+		},
+		{
+			ResourceName:            resourceName,
+			ImportState:             true,
+			ImportStateVerify:       true,
+			ImportStateVerifyIgnore: []string{"token", "s3_secret_access_key"},
+		},
+	}
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProviderFactories(t),
@@ -227,166 +389,16 @@ func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
 			}
 			return nil
 		}),
-		Steps: []resource.TestStep{
-			{
-				Config: testLogStreamConfiguration,
-				Check: resource.ComposeTestCheckFunc(
-					checkResourceRemoteProperties(
-						resourceName,
-						checkProperties(tailscale.LogstreamConfiguration{
-							LogType:         tailscale.LogTypeConfig,
-							DestinationType: tailscale.LogstreamPantherEndpoint,
-							URL:             "https://example.com",
-						}),
-					),
-					resource.TestCheckResourceAttr(resourceName, "log_type", "configuration"),
-					resource.TestCheckResourceAttr(resourceName, "destination_type", "panther"),
-					resource.TestCheckResourceAttr(resourceName, "url", "https://example.com"),
-					resource.TestCheckResourceAttr(resourceName, "user", "user"),
-					resource.TestCheckResourceAttr(resourceName, "token", "some-token"),
-				),
-			},
-			{
-				Config: testLogstreamConfigurationGCS,
-				Check: resource.ComposeTestCheckFunc(
-					checkResourceRemoteProperties(
-						resourceName,
-						checkProperties(tailscale.LogstreamConfiguration{
-							UploadPeriodMinutes: 5,
-							CompressionFormat:   tailscale.CompressionFormatZstd,
-							LogType:             tailscale.LogTypeNetwork,
-							DestinationType:     tailscale.LogstreamGCSEndpoint,
-							GCSScopes:           []string{"scope1", "scope2"},
-							GCSBucket:           "example-bucket",
-							GCSKeyPrefix:        "some-prefix",
-							GCSCredentials:      "{\"universe_domain\":\"googleapis.com\",\"type\":\"external_account\",\"audience\":\"//iam.googleapis.com/projects/12345678/locations/global/workloadIdentityPools/test/providers/test\",\"subject_token_type\":\"urn:ietf:params:aws:token-type:aws4_request\",\"service_account_impersonation_url\":\"https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/test@test.iam.gserviceaccount.com:generateAccessToken\",\"token_url\":\"https://sts.googleapis.com/v1/token\",\"credential_source\":{\"environment_id\":\"aws1\",\"region_url\":\"http://169.254.169.254/latest/meta-data/placement/availability-zone\",\"url\":\"http://169.254.169.254/latest/meta-data/iam/security-credentials\",\"regional_cred_verification_url\":\"https://sts.{region}.amazonaws.com?Action=GetCallerIdentity\\u0026Version=2011-06-15\",\"imdsv2_session_token_url\":\"http://169.254.169.254/latest/api/token\"}}",
-						}),
-					),
-					resource.TestCheckResourceAttr(resourceName, "destination_type", "gcs"),
-					resource.TestCheckResourceAttr(resourceName, "upload_period_minutes", "5"),
-					resource.TestCheckResourceAttr(resourceName, "compression_format", "zstd"),
-				),
-			},
-			// Check that if the JSON in `gcs_credentials` is semantically equivalent
-			// to the existing value, the plan is a no-op.
-			{
-				Config:             testLogstreamConfigurationGCSAltJSON,
-				PlanOnly:           true,
-				ExpectNonEmptyPlan: false,
-			},
-			{
-				Config: testLogstreamConfigurationUpdateSameLogtype,
-				Check: resource.ComposeTestCheckFunc(
-					checkResourceRemoteProperties(
-						resourceName,
-						checkProperties(tailscale.LogstreamConfiguration{
-							LogType:         tailscale.LogTypeConfig,
-							DestinationType: tailscale.LogstreamCriblEndpoint,
-							URL:             "https://example.com/other",
-							User:            "cribl-user",
-						}),
-					),
-					resource.TestCheckResourceAttr(resourceName, "log_type", "configuration"),
-					resource.TestCheckResourceAttr(resourceName, "destination_type", "cribl"),
-					resource.TestCheckResourceAttr(resourceName, "url", "https://example.com/other"),
-					resource.TestCheckResourceAttr(resourceName, "user", "cribl-user"),
-					resource.TestCheckResourceAttr(resourceName, "token", "some-token"),
-				),
-			},
-			{
-				Config: testLogstreamConfigurationUpdateDifferentLogtype,
-				Check: resource.ComposeTestCheckFunc(
-					checkResourceRemoteProperties(
-						resourceName,
-						checkProperties(tailscale.LogstreamConfiguration{
-							LogType:         tailscale.LogTypeNetwork,
-							DestinationType: tailscale.LogstreamDatadogEndpoint,
-							URL:             "https://example.com/other/other",
-						}),
-					),
-					resource.TestCheckResourceAttr(resourceName, "log_type", "network"),
-					resource.TestCheckResourceAttr(resourceName, "destination_type", "datadog"),
-					resource.TestCheckResourceAttr(resourceName, "url", "https://example.com/other/other"),
-					resource.TestCheckResourceAttr(resourceName, "user", "user"),
-					resource.TestCheckResourceAttr(resourceName, "token", "some-token"),
-				),
-			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"token"},
-			},
-			{
-				Config: testLogstreamConfigurationUpdateS3RoleARN,
-				Check: resource.ComposeTestCheckFunc(
-					func(s *terraform.State) error {
-						externalIdResource, ok := s.RootModule().Resources["tailscale_aws_external_id.external_id"]
-						if !ok {
-							return fmt.Errorf("resource not found: tailscale_aws_external_id.external_id")
-						}
-
-						return checkResourceRemoteProperties(
-							resourceName,
-							checkProperties(tailscale.LogstreamConfiguration{
-								LogType:              tailscale.LogTypeNetwork,
-								DestinationType:      tailscale.LogstreamS3Endpoint,
-								S3Bucket:             "example-bucket",
-								S3Region:             "us-west-2",
-								S3KeyPrefix:          "logs/",
-								S3AuthenticationType: tailscale.S3RoleARNAuthentication,
-								S3RoleARN:            "arn:aws:iam::123456789012:role/example-role",
-								S3ExternalID:         externalIdResource.Primary.Attributes["external_id"],
-								CompressionFormat:    tailscale.CompressionFormatNone,
-							}),
-						)(s)
-					},
-					resource.TestCheckResourceAttr(resourceName, "log_type", "network"),
-					resource.TestCheckResourceAttr(resourceName, "destination_type", "s3"),
-					resource.TestCheckResourceAttr(resourceName, "s3_bucket", "example-bucket"),
-					resource.TestCheckResourceAttr(resourceName, "s3_region", "us-west-2"),
-					resource.TestCheckResourceAttr(resourceName, "s3_key_prefix", "logs/"),
-					resource.TestCheckResourceAttr(resourceName, "s3_authentication_type", "rolearn"),
-					resource.TestCheckResourceAttr(resourceName, "s3_role_arn", "arn:aws:iam::123456789012:role/example-role"),
-					resource.TestCheckResourceAttrPair(resourceName, "s3_external_id", "tailscale_aws_external_id.external_id", "external_id"),
-					resource.TestCheckResourceAttr(resourceName, "compression_format", "none"),
-				),
-			},
-			{
-				Config: testLogstreamConfigurationUpdateS3AccessKey,
-				Check: resource.ComposeTestCheckFunc(
-					checkResourceRemoteProperties(
-						resourceName,
-						checkProperties(tailscale.LogstreamConfiguration{
-							LogType:              tailscale.LogTypeNetwork,
-							DestinationType:      tailscale.LogstreamS3Endpoint,
-							S3Bucket:             "example-bucket",
-							S3Region:             "us-west-2",
-							S3AuthenticationType: tailscale.S3AccessKeyAuthentication,
-							S3AccessKeyID:        "example-access-key-id",
-							URL:                  "https://example.com/s3",
-							UploadPeriodMinutes:  5,
-							CompressionFormat:    tailscale.CompressionFormatZstd,
-						}),
-					),
-					resource.TestCheckResourceAttr(resourceName, "log_type", "network"),
-					resource.TestCheckResourceAttr(resourceName, "destination_type", "s3"),
-					resource.TestCheckResourceAttr(resourceName, "s3_bucket", "example-bucket"),
-					resource.TestCheckResourceAttr(resourceName, "s3_region", "us-west-2"),
-					resource.TestCheckResourceAttr(resourceName, "s3_authentication_type", "accesskey"),
-					resource.TestCheckResourceAttr(resourceName, "s3_access_key_id", "example-access-key-id"),
-					resource.TestCheckResourceAttr(resourceName, "s3_secret_access_key", "example-secret-access-key"),
-					resource.TestCheckResourceAttr(resourceName, "url", "https://example.com/s3"),
-					resource.TestCheckResourceAttr(resourceName, "upload_period_minutes", "5"),
-					resource.TestCheckResourceAttr(resourceName, "compression_format", "zstd"),
-				),
-			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"token", "s3_secret_access_key"},
-			},
-		},
+		Steps: steps,
 	})
+
+	// Migration test to ensure the resource is unchanged when migrating
+	// from the plugin SDK to the plugin framework.
+	//
+	// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#terraform-data-resource-example
+	for _, step := range steps {
+		if step.Check != nil {
+			checkResourceIsUnchangedInPluginFramework(t, step.Config, step.Check)
+		}
+	}
 }
