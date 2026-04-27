@@ -15,6 +15,11 @@ import (
 	"tailscale.com/client/tailscale/v2"
 )
 
+var (
+	_ resource.Resource               = &deviceKeyResource{}
+	_ resource.ResourceWithModifyPlan = &deviceKeyResource{}
+)
+
 type deviceKeyResourceModel struct {
 	ID                types.String `tfsdk:"id"`
 	DeviceID          types.String `tfsdk:"device_id"`
@@ -116,6 +121,12 @@ func (d deviceKeyResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	device, err := d.Client.Devices().Get(ctx, deviceID)
 	if err != nil {
+		// If the device is not found, remove from the state so we can create it again.
+		if tailscale.IsNotFound(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
 		resp.Diagnostics.AddError(
 			"Failed to fetch devices",
 			"Could not read device key for device with ID "+deviceID+": "+err.Error(),
@@ -166,4 +177,29 @@ func (d deviceKeyResource) Update(ctx context.Context, req resource.UpdateReques
 
 func (d deviceKeyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+func (d deviceKeyResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+
+	// Read removes the resource from state if the device with the device ID stored in state can't be found,
+	// in order to enable recreation with a new device ID. However, if the device with the new deviceID from
+	// the plan cannot be found either, we don't want to commit that removal, but fail the plan instead.
+	var plan deviceKeyResourceModel
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	deviceID := plan.DeviceID.ValueString()
+	if _, err := d.Client.Devices().Get(ctx, deviceID); err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to fetch devices",
+			"Could not read device key for device with ID "+deviceID+": "+err.Error(),
+		)
+		return
+	}
 }
