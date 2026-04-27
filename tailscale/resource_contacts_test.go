@@ -126,4 +126,17 @@ func TestAccTailscaleContacts(t *testing.T) {
 			},
 		},
 	})
+
+	// Migration test to ensure the resource is unchanged when migrating
+	// from the plugin SDK to the plugin framework.
+	//
+	// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#terraform-data-resource-example
+	checkResourceIsUnchangedInPluginFramework(t, testContactsBasic, resource.ComposeTestCheckFunc(
+		resource.ComposeTestCheckFunc(
+			checkResourceRemoteProperties(resourceName, checkProperties(expectedContactsBasic)),
+			resource.TestCheckResourceAttr(resourceName, "account.0.email", "account@example.com"),
+			resource.TestCheckResourceAttr(resourceName, "support.0.email", "support@example.com"),
+			resource.TestCheckResourceAttr(resourceName, "security.0.email", "security@example.com"),
+		),
+	))
 }
