@@ -6,10 +6,23 @@ package tailscale
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"tailscale.com/client/tailscale/v2"
+)
+
+var (
+	_ resource.Resource                = &contactsResource{}
+	_ resource.ResourceWithImportState = &contactsResource{}
 )
 
 const resourceContactsDescription = `The contacts resource allows you to configure contact details for your Tailscale network. See https://tailscale.com/kb/1224/contact-preferences for more information.
@@ -17,168 +30,222 @@ const resourceContactsDescription = `The contacts resource allows you to configu
 Destroying this resource does not unset or modify values in the tailscale control plane, and simply removes the resource from Terraform state.
 `
 
-func resourceContacts() *schema.Resource {
-	return &schema.Resource{
-		Description:   resourceContactsDescription,
-		ReadContext:   resourceContactsRead,
-		CreateContext: resourceContactsCreate,
-		UpdateContext: resourceContactsUpdate,
-		DeleteContext: resourceContactsDelete,
-		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+// NewContactsResource returns a new webhook resource.
+func NewContactsResource() resource.Resource {
+	return &contactsResource{}
+}
+
+type contactsResource struct {
+	ResourceBase
+}
+
+// Metadata defines the resource name as it appears in Terraform configurations.
+func (r *contactsResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_contacts"
+}
+
+// Schema defines a schema describing what fields can be defined in the resource.
+func (r *contactsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		Description: resourceContactsDescription,
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 		},
-		Schema: map[string]*schema.Schema{
-			"account": {
-				Type:        schema.TypeSet,
+		Blocks: map[string]schema.Block{
+			"account": schema.SetNestedBlock{
 				Description: "Configuration for communications about important changes to your tailnet",
-				Required:    true,
-				MaxItems:    1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"email": {
-							Type:        schema.TypeString,
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"email": schema.StringAttribute{
 							Description: "Email address to send communications to",
 							Required:    true,
 						},
 					},
 				},
+				Validators: []validator.Set{
+					setvalidator.SizeAtLeast(1),
+					setvalidator.SizeAtMost(1),
+				},
 			},
-			"support": {
-				Type:        schema.TypeSet,
+			"support": schema.SetNestedBlock{
 				Description: "Configuration for communications about misconfigurations in your tailnet",
-				Required:    true,
-				MaxItems:    1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"email": {
-							Type:        schema.TypeString,
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"email": schema.StringAttribute{
 							Description: "Email address to send communications to",
 							Required:    true,
 						},
 					},
 				},
+				Validators: []validator.Set{
+					setvalidator.SizeAtLeast(1),
+					setvalidator.SizeAtMost(1),
+				},
 			},
-			"security": {
-				Type:        schema.TypeSet,
+			"security": schema.SetNestedBlock{
 				Description: "Configuration for communications about security issues affecting your tailnet",
-				Required:    true,
-				MaxItems:    1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"email": {
-							Type:        schema.TypeString,
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"email": schema.StringAttribute{
 							Description: "Email address to send communications to",
 							Required:    true,
 						},
 					},
+				},
+				Validators: []validator.Set{
+					setvalidator.SizeAtLeast(1),
+					setvalidator.SizeAtMost(1),
 				},
 			},
 		},
 	}
 }
 
-func resourceContactsCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
-
-	if diagErr := updateContact(ctx, client, d, tailscale.ContactAccount); diagErr != nil {
-		return diagErr
-	}
-
-	if diagErr := updateContact(ctx, client, d, tailscale.ContactSupport); diagErr != nil {
-		return diagErr
-	}
-
-	if diagErr := updateContact(ctx, client, d, tailscale.ContactSecurity); diagErr != nil {
-		return diagErr
-	}
-
-	d.SetId(createUUID())
-	return resourceContactsRead(ctx, d, m)
+type contactsResourceData struct {
+	ID              types.String `tfsdk:"id"`
+	ContactAccount  types.Set    `tfsdk:"account"`
+	ContactSupport  types.Set    `tfsdk:"support"`
+	ContactSecurity types.Set    `tfsdk:"security"`
 }
 
-func resourceContactsRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+type contactModel struct {
+	Email types.String `tfsdk:"email"`
+}
 
-	contacts, err := client.Contacts().Get(ctx)
+func (r *contactsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan contactsResourceData
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	for _, contactType := range []tailscale.ContactType{
+		tailscale.ContactAccount,
+		tailscale.ContactSupport,
+		tailscale.ContactSecurity,
+	} {
+		r.updateContact(ctx, &plan, contactType, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	plan.ID = types.StringValue(createUUID())
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
+
+func (r *contactsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state contactsResourceData
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	contacts, err := r.Client.Contacts().Get(ctx)
 	if err != nil {
-		return diagnosticsError(err, "Failed to fetch contacts")
+		resp.Diagnostics.AddError("Error fetching contacts", err.Error())
+		return
 	}
 
-	if err = d.Set("account", buildContactMap(contacts.Account)); err != nil {
-		return diagnosticsError(err, "Failed to set account field")
+	makeSet := func(ctx context.Context, email string) (types.Set, diag.Diagnostics) {
+		val := contactModel{Email: types.StringValue(email)}
+		contactModelType := types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"email": types.StringType,
+			},
+		}
+		return types.SetValueFrom(ctx, contactModelType, []contactModel{val})
 	}
 
-	if err = d.Set("support", buildContactMap(contacts.Support)); err != nil {
-		return diagnosticsError(err, "Failed to set support field")
+	state.ContactAccount, diags = makeSet(ctx, contacts.Account.Email)
+	resp.Diagnostics.Append(diags...)
+
+	state.ContactSupport, diags = makeSet(ctx, contacts.Support.Email)
+	resp.Diagnostics.Append(diags...)
+
+	state.ContactSecurity, diags = makeSet(ctx, contacts.Security.Email)
+	resp.Diagnostics.Append(diags...)
+
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	if err = d.Set("security", buildContactMap(contacts.Security)); err != nil {
-		return diagnosticsError(err, "Failed to set security field")
-	}
-
-	return nil
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func resourceContactsUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+func (r *contactsResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan contactsResourceData
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	if d.HasChange("account") {
-		if diagErr := updateContact(ctx, client, d, tailscale.ContactAccount); diagErr != nil {
-			return diagErr
+	for _, contactType := range []tailscale.ContactType{
+		tailscale.ContactAccount,
+		tailscale.ContactSupport,
+		tailscale.ContactSecurity,
+	} {
+		r.updateContact(ctx, &plan, contactType, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
 		}
 	}
 
-	if d.HasChange("support") {
-		if diagErr := updateContact(ctx, client, d, tailscale.ContactSupport); diagErr != nil {
-			return diagErr
-		}
-	}
-
-	if d.HasChange("security") {
-		if diagErr := updateContact(ctx, client, d, tailscale.ContactSecurity); diagErr != nil {
-			return diagErr
-		}
-	}
-
-	return resourceContactsRead(ctx, d, m)
+	diags := resp.State.Set(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
 }
 
-func resourceContactsDelete(_ context.Context, _ *schema.ResourceData, _ interface{}) diag.Diagnostics {
+func (r *contactsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	// Deleting is a no-op since we cannot have unset contact information.
 	// Deletion in this context is simply removing from terraform state.
 	const diagDetail = `This resource has been successfully destroyed, but values in tailscale will remain set.
 See https://tailscale.com/kb/1224/contact-preferences to learn more.`
 
-	return diag.Diagnostics{
-		diag.Diagnostic{
-			Severity: diag.Warning,
-			Summary:  "Destroying tailscale_contacts does not unset contact values on tailscale",
-			Detail:   diagDetail,
-		},
-	}
+	resp.Diagnostics.AddWarning(
+		"Destroying tailscale_contacts does not unset contact values on tailscale",
+		diagDetail,
+	)
 }
 
-// buildContactMap transforms a tailscale.Contact into an equivalnet single element
-// slice of map[string]interface{} so that it can be set on a schema.TypeSet property
-// in the resource.
-func buildContactMap(contact tailscale.Contact) []map[string]interface{} {
-	return []map[string]interface{}{
-		{
-			"email": contact.Email,
-		},
-	}
+func (r *contactsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
-// updateContact updates the contact specified by the tailscale.ContactType by
-// reading the resource property with the correct name and using it to build a
-// request to the underlying client.
-func updateContact(ctx context.Context, client *tailscale.Client, d *schema.ResourceData, contactType tailscale.ContactType) diag.Diagnostics {
-	contact := d.Get(string(contactType)).(*schema.Set).List()
-	contactEmail := contact[0].(map[string]interface{})["email"].(string)
-
-	if err := client.Contacts().Update(ctx, contactType, tailscale.UpdateContactRequest{Email: &contactEmail}); err != nil {
-		return diagnosticsError(err, "Failed to create contacts")
+// updateContact calls the Tailscale API to update the contact configuration.
+func (r *contactsResource) updateContact(ctx context.Context, data *contactsResourceData, contactType tailscale.ContactType, diags *diag.Diagnostics) {
+	var targetSet types.Set
+	switch contactType {
+	case tailscale.ContactAccount:
+		targetSet = data.ContactAccount
+	case tailscale.ContactSupport:
+		targetSet = data.ContactSupport
+	case tailscale.ContactSecurity:
+		targetSet = data.ContactSecurity
 	}
 
-	return nil
+	if targetSet.IsNull() || targetSet.IsUnknown() {
+		return
+	}
+
+	var models []contactModel
+	diags.Append(targetSet.ElementsAs(ctx, &models, false)...)
+	if diags.HasError() || len(models) == 0 {
+		return
+	}
+
+	contactEmail := models[0].Email.ValueString()
+	if err := r.Client.Contacts().Update(ctx, contactType, tailscale.UpdateContactRequest{Email: &contactEmail}); err != nil {
+		diags.AddError("Failed to update contacts", err.Error())
+	}
+
+	if err := r.Client.Contacts().Update(ctx, contactType, tailscale.UpdateContactRequest{Email: &contactEmail}); err != nil {
+		diags.AddError("Failed to update contacts", err.Error())
+		return
+	}
 }
