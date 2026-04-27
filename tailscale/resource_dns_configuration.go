@@ -154,30 +154,30 @@ func (r *dnsConfigurationResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 
-	configuration, err := r.Client.DNS().Configuration(ctx)
+	remote, err := r.Client.DNS().Configuration(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to fetch DNS configuration", err.Error())
 		return
 	}
 
-	state.Nameservers = reconcileNameservers(state.Nameservers, configuration.Nameservers)
+	state.Nameservers = reconcileNameservers(state.Nameservers, remote.Nameservers)
 
 	// Read existing SplitDNS to preserve order in TF resource
 	// TODO(alexc): Extract this into a reconcileSplitDNS function to match nameservers.
 	splitDNS := make([]splitDNSModel, 0, len(state.SplitDNS))
 	for _, s := range state.SplitDNS {
 		domain := s.Domain.ValueString()
-		nameservers, found := configuration.SplitDNS[domain]
+		nameservers, found := remote.SplitDNS[domain]
 		if found {
 			splitDNS = append(splitDNS, splitDNSModel{
 				Domain:      s.Domain,
 				Nameservers: reconcileNameservers(s.Nameservers, nameservers),
 			})
-			delete(configuration.SplitDNS, domain)
+			delete(remote.SplitDNS, domain)
 		}
 	}
 	// Add new SplitDNS
-	for domain, nameservers := range configuration.SplitDNS {
+	for domain, nameservers := range remote.SplitDNS {
 		splitDNS = append(splitDNS, splitDNSModel{
 			Domain:      types.StringValue(domain),
 			Nameservers: reconcileNameservers(nil, nameservers),
@@ -185,12 +185,12 @@ func (r *dnsConfigurationResource) Read(ctx context.Context, req resource.ReadRe
 	}
 	state.SplitDNS = splitDNS
 
-	searchPaths, diags := types.ListValueFrom(ctx, types.StringType, configuration.SearchPaths)
+	searchPaths, diags := types.ListValueFrom(ctx, types.StringType, remote.SearchPaths)
 	resp.Diagnostics.Append(diags...)
 	state.SearchPaths = searchPaths
 
-	state.OverrideLocalDNS = types.BoolValue(configuration.Preferences.OverrideLocalDNS)
-	state.MagicDNS = types.BoolValue(configuration.Preferences.MagicDNS)
+	state.OverrideLocalDNS = types.BoolValue(remote.Preferences.OverrideLocalDNS)
+	state.MagicDNS = types.BoolValue(remote.Preferences.MagicDNS)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 
