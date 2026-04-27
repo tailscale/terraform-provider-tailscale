@@ -172,6 +172,7 @@ func (p *tailscaleProvider) Configure(ctx context.Context, req provider.Configur
 func (p *tailscaleProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewAWSExternalIDResource,
+		NewContactsResource,
 		NewDeviceAuthorizationResource,
 		NewDeviceKeyResource,
 		NewDeviceSubnetRoutesResource,
