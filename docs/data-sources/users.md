@@ -27,22 +27,22 @@ data "tailscale_users" "all-users" {}
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `users` (List of Object) The list of users in the tailnet (see [below for nested schema](#nestedatt--users))
+- `users` (Block List) The list of users in the tailnet (see [below for nested schema](#nestedblock--users))
 
-<a id="nestedatt--users"></a>
+<a id="nestedblock--users"></a>
 ### Nested Schema for `users`
 
 Read-Only:
 
-- `created` (String)
-- `currently_connected` (Boolean)
-- `device_count` (Number)
-- `display_name` (String)
-- `id` (String)
-- `last_seen` (String)
-- `login_name` (String)
-- `profile_pic_url` (String)
-- `role` (String)
-- `status` (String)
-- `tailnet_id` (String)
-- `type` (String)
+- `created` (String) The time the user joined their tailnet.
+- `currently_connected` (Boolean) true when the user has a node currently connected to the control server.
+- `device_count` (Number) Number of devices the user owns.
+- `display_name` (String) The name of the user.
+- `id` (String) The unique identifier for the user.
+- `last_seen` (String) The later of either: a) The last time any of the user's nodes were connected to the network or b) The last time the user authenticated to any tailscale service, including the admin panel.
+- `login_name` (String) The emailish login name of the user.
+- `profile_pic_url` (String) The profile pic URL for the user.
+- `role` (String) The role of the user.
+- `status` (String) The status of the user.
+- `tailnet_id` (String) The tailnet that owns the user.
+- `type` (String) The type of relation this user has to the tailnet associated with the request.
