@@ -11,8 +11,10 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -102,5 +104,27 @@ func (t *TestServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		assert.NoError(t.t, err)
 	default:
 		assert.NoError(t.t, json.NewEncoder(w).Encode(body))
+	}
+}
+
+type expectedErrorTestCase struct {
+	Name        string
+	Config      string
+	ExpectError *regexp.Regexp
+}
+
+// runExpectedErrorTests checks that known invalid configurations are
+// rejected with the correct error message.
+func runExpectedErrorTests(t *testing.T, testCases []expectedErrorTestCase) {
+	for _, tt := range testCases {
+		t.Run(tt.Name, func(t *testing.T) {
+			resource.Test(t, resource.TestCase{
+				IsUnitTest:               true,
+				ProtoV5ProviderFactories: testProviderFactories(t),
+				Steps: []resource.TestStep{
+					{Config: tt.Config, ExpectError: tt.ExpectError},
+				},
+			})
+		})
 	}
 }

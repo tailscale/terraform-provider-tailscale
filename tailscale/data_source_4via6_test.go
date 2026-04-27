@@ -25,13 +25,6 @@ data "tailscale_4via6" "example" {
 }
 `
 
-const testDataSource4Via6InvalidSite = `
-data "tailscale_4via6" "invalid" {
-	site = 70000
-	cidr = "10.1.1.0/24"
-}
-`
-
 func TestProvider_DataSourceTailscale4Via6(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		IsUnitTest:               true,
@@ -45,17 +38,21 @@ func TestProvider_DataSourceTailscale4Via6(t *testing.T) {
 	})
 }
 
-func TestProvider_DataSourceTailscale4Via6_InvalidSite(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		IsUnitTest:               true,
-		ProtoV5ProviderFactories: testProviderFactories(t),
-		Steps: []resource.TestStep{
-			{
-				Config:      testDataSource4Via6InvalidSite,
-				ExpectError: regexp.MustCompile(`Attribute site value must be between 0 and 65535, got: 70000`),
-			},
+func TestProvider_DataSourceTailscale4Via6_InvalidConfig(t *testing.T) {
+	testCases := []expectedErrorTestCase{
+		{
+			Name: "invalid-site",
+			Config: `
+				data "tailscale_4via6" "invalid" {
+					site = 70000
+					cidr = "10.1.1.0/24"
+				}
+			`,
+			ExpectError: regexp.MustCompile(`Attribute site value must be between 0 and 65535, got: 70000`),
 		},
-	})
+	}
+
+	runExpectedErrorTests(t, testCases)
 }
 
 func check4Via6Result(n string) resource.TestCheckFunc {

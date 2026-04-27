@@ -192,6 +192,8 @@ func (p *tailscaleProvider) DataSources(_ context.Context) []func() datasource.D
 		New4Via6DataSource,
 		NewACLDataSource,
 		NewDeviceDataSource,
+		NewMultipleUsersDataSource,
+		NewSingleUserDataSource,
 	}
 }
 
