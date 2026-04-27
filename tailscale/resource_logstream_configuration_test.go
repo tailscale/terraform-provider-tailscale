@@ -94,6 +94,36 @@ const testLogstreamConfigurationGCS = `
 		compression_format     = "zstd"
 	}`
 
+// This has JSON for gcs_credentials which is semantically equivalent to the
+// previous block of configuration, but different whitespace and formatting.
+const testLogstreamConfigurationGCSAltJSON = `
+	resource "tailscale_logstream_configuration" "test_logstream_configuration" {
+		log_type               = "network"
+		destination_type       = "gcs"
+		gcs_bucket             = "example-bucket"
+		gcs_key_prefix         = "some-prefix"
+		gcs_scopes             = ["scope1", "scope2"]
+		gcs_credentials        = <<EOF
+{
+  "type": "external_account",
+  "universe_domain": "googleapis.com",
+  "audience": "//iam.googleapis.com/projects/12345678/locations/global/workloadIdentityPools/test/providers/test",
+  "subject_token_type": "urn:ietf:params:aws:token-type:aws4_request",
+  "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/test@test.iam.gserviceaccount.com:generateAccessToken",
+  "token_url": "https://sts.googleapis.com/v1/token",
+  "credential_source": {
+      "environment_id": "aws1",
+      "region_url": "http://169.254.169.254/latest/meta-data/placement/availability-zone",
+	  "url": "http://169.254.169.254/latest/meta-data/iam/security-credentials",
+      "regional_cred_verification_url": "https://sts.{region}.amazonaws.com?Action=GetCallerIdentity&Version=2011-06-15",
+	  "imdsv2_session_token_url": "http://169.254.169.254/latest/api/token"
+  }
+}
+EOF
+		upload_period_minutes  = 5
+		compression_format     = "zstd"
+}`
+
 func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
 	const resourceName = "tailscale_logstream_configuration.test_logstream_configuration"
 
@@ -236,6 +266,13 @@ func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "upload_period_minutes", "5"),
 					resource.TestCheckResourceAttr(resourceName, "compression_format", "zstd"),
 				),
+			},
+			// Check that if the JSON in `gcs_credentials` is semantically equivalent
+			// to the existing value, the plan is a no-op.
+			{
+				Config:             testLogstreamConfigurationGCSAltJSON,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
 			},
 			{
 				Config: testLogstreamConfigurationUpdateSameLogtype,
