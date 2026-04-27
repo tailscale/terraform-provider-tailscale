@@ -37,7 +37,7 @@ data "tailscale_devices" "sample_devices" {
 
 ### Read-Only
 
-- `devices` (List of Object) The list of devices in the tailnet (see [below for nested schema](#nestedatt--devices))
+- `devices` (Block List) The list of devices in the tailnet (see [below for nested schema](#nestedblock--devices))
 - `id` (String) The ID of this resource.
 
 <a id="nestedblock--filter"></a>
@@ -49,29 +49,29 @@ Required:
 - `values` (Set of String) The list of values to filter for. Values are matched as exact matches.
 
 
-<a id="nestedatt--devices"></a>
+<a id="nestedblock--devices"></a>
 ### Nested Schema for `devices`
 
 Read-Only:
 
-- `addresses` (List of String)
-- `authorized` (Boolean)
-- `blocks_incoming_connections` (Boolean)
-- `client_version` (String)
-- `created` (String)
-- `expires` (String)
-- `hostname` (String)
-- `id` (String)
-- `is_external` (Boolean)
-- `key_expiry_disabled` (Boolean)
-- `last_seen` (String)
-- `machine_key` (String)
-- `name` (String)
-- `node_id` (String)
-- `node_key` (String)
-- `os` (String)
-- `tags` (Set of String)
-- `tailnet_lock_error` (String)
-- `tailnet_lock_key` (String)
-- `update_available` (Boolean)
-- `user` (String)
+- `addresses` (List of String) The list of device's IPs
+- `authorized` (Boolean) Whether the device is authorized to access the tailnet
+- `blocks_incoming_connections` (Boolean) Whether the device blocks incoming connections
+- `client_version` (String) The Tailscale client version running on the device
+- `created` (String) The creation time of the device
+- `expires` (String) The expiry time of the device's key
+- `hostname` (String) The short hostname of the device
+- `id` (String) The ID of this resource.
+- `is_external` (Boolean) Whether the device is marked as external
+- `key_expiry_disabled` (Boolean) Whether the device's key expiry is disabled
+- `last_seen` (String) The last seen time of the device
+- `machine_key` (String) The machine key of the device
+- `name` (String) The full name of the device (e.g. `hostname.domain.ts.net`)
+- `node_id` (String) The preferred indentifier for a device.
+- `node_key` (String) The node key of the device
+- `os` (String) The operating system of the device
+- `tags` (Set of String) The tags applied to the device
+- `tailnet_lock_error` (String) The tailnet lock error for the device, if any
+- `tailnet_lock_key` (String) The tailnet lock key for the device, if any
+- `update_available` (Boolean) Whether an update is available for the device
+- `user` (String) The user associated with the device
