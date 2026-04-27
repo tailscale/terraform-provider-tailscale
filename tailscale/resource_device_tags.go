@@ -12,11 +12,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"tailscale.com/client/tailscale/v2"
 )
 
 var (
 	_ resource.Resource                = &deviceTagsResource{}
 	_ resource.ResourceWithImportState = &deviceTagsResource{}
+	_ resource.ResourceWithModifyPlan  = &deviceTagsResource{}
 )
 
 type deviceTagsResourceModel struct {
@@ -77,6 +79,12 @@ func (d deviceTagsResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	device, err := d.Client.Devices().Get(ctx, deviceID)
 	if err != nil {
+		// If the device is not found, remove from the state so we can create it again.
+		if tailscale.IsNotFound(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
 		resp.Diagnostics.AddError(
 			"Failed to fetch device",
 			"Could not read device tags for device with ID "+deviceID+": "+err.Error(),
@@ -183,7 +191,32 @@ func (d deviceTagsResource) Delete(ctx context.Context, req resource.DeleteReque
 	if err := d.Client.Devices().SetTags(ctx, deviceID, []string{}); err != nil {
 		resp.Diagnostics.AddError(
 			"Failed to set device tags",
-			"Could not delete tags: "+err.Error(),
+			"Could not delete tags for device with ID "+deviceID+":"+err.Error(),
+		)
+		return
+	}
+}
+
+func (d deviceTagsResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+
+	// Read removes the resource from state if the device with the device ID stored in state can't be found,
+	// in order to enable recreation with a new device ID. However, if the device with the new deviceID from
+	// the plan cannot be found either, we don't want to commit that removal, but fail the plan instead.
+	var plan deviceTagsResourceModel
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	deviceID := plan.DeviceID.ValueString()
+	if _, err := d.Client.Devices().Get(ctx, deviceID); err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to fetch device",
+			"Could not read device tags for device with ID "+deviceID+": "+err.Error(),
 		)
 		return
 	}
