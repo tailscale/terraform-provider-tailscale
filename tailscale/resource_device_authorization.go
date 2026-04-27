@@ -12,11 +12,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"tailscale.com/client/tailscale/v2"
 )
 
 var (
 	_ resource.Resource                = &deviceAuthorizationResource{}
 	_ resource.ResourceWithImportState = &deviceAuthorizationResource{}
+	_ resource.ResourceWithModifyPlan  = &deviceAuthorizationResource{}
 )
 
 type deviceAuthorizationResourceModel struct {
@@ -78,6 +80,12 @@ func (d deviceAuthorizationResource) Read(ctx context.Context, req resource.Read
 
 	device, err := d.Client.Devices().Get(ctx, deviceID)
 	if err != nil {
+		// If the device is not found, remove from the state so we can create it again.
+		if tailscale.IsNotFound(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
 		resp.Diagnostics.AddError(
 			"Failed to fetch device authorization",
 			"Failed to fetch authorization for device with with ID "+deviceID+": "+err.Error(),
@@ -153,12 +161,14 @@ func (d deviceAuthorizationResource) Delete(_ context.Context, _ resource.Delete
 	return
 }
 
-func (r deviceAuthorizationResource) ModifyPlan(_ context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+func (d deviceAuthorizationResource) ModifyPlan(_ context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	// If the entire plan is null, the resource is planned for destruction.
 	if req.Plan.Raw.IsNull() {
 		resp.Diagnostics.AddWarning(
 			"Resource Destruction Considerations",
 			"Applying this resource destruction will only remove the resource from the Terraform state and "+
 				"will not modify the device's authorization. ",
 		)
+		return
 	}
 }

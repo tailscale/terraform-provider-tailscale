@@ -116,6 +116,12 @@ func (d deviceKeyResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	device, err := d.Client.Devices().Get(ctx, deviceID)
 	if err != nil {
+		// If the device is not found, remove from the state so we can create it again.
+		if tailscale.IsNotFound(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
 		resp.Diagnostics.AddError(
 			"Failed to fetch device key",
 			"Failed to fetch key for device with ID "+deviceID+": "+err.Error(),

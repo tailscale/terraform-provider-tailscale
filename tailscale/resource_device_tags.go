@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"tailscale.com/client/tailscale/v2"
 )
 
 var (
@@ -77,6 +78,12 @@ func (d deviceTagsResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	device, err := d.Client.Devices().Get(ctx, deviceID)
 	if err != nil {
+		// If the device is not found, remove from the state so we can create it again.
+		if tailscale.IsNotFound(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
 		resp.Diagnostics.AddError(
 			"Failed to fetch device tags",
 			"Failed to fetch device with ID "+deviceID+": "+err.Error(),
