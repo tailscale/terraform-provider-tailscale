@@ -6,6 +6,7 @@ package tailscale
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -26,7 +27,8 @@ func TestAccTailscaleDevices(t *testing.T) {
 	devicesTerraformData := &strings.Builder{}
 
 	toResourceComponent := func(str string) string {
-		return strings.ReplaceAll(str, " ", "_")
+		rx := regexp.MustCompile(`[^0-9a-zA-Z_-]+`)
+		return rx.ReplaceAllString(str, "_")
 	}
 
 	// First test the tailscale_devices datasource, which will give us a list of
