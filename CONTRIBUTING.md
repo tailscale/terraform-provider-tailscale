@@ -19,7 +19,7 @@ the pull request it relates to.
 
 ## Making Changes
 
-To work in this repository, you will need go 1.25. You can use the standard go toolchain for building and testing your
+To work in this repository, you will need go 1.26. You can use the standard go toolchain for building and testing your
 changes. 
 
 If you want to enable acceptance tests, you *must* set the `TF_ACC` environment variable. 
