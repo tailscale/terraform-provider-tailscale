@@ -176,6 +176,7 @@ func (p *tailscaleProvider) Resources(_ context.Context) []func() resource.Resou
 		NewDNSPreferencesResource,
 		NewDNSSearchPathsResource,
 		NewDNSSplitNameserversResource,
+		NewPostureIntegrationResource,
 		NewWebhookResource,
 	}
 }
@@ -238,5 +239,17 @@ func createTailscaleClient(baseURL *url.URL, userAgent string, tailnet string, a
 			APIKey:    apiKey,
 			Tailnet:   tailnet,
 		}
+	}
+}
+
+// StringValueNullIfEmpty returns a StringValue of the given input string, or a
+// null StringValue if the input string is empty. Useful for cases where ""
+// being returned from the API is equivalent to an unset / null value in the
+// Terraform state.
+func StringValueNullIfEmpty(s string) types.String {
+	if s == "" {
+		return types.StringNull()
+	} else {
+		return types.StringValue(s)
 	}
 }
