@@ -377,6 +377,7 @@ func checkDataSourceIsUnchangedInPluginFramework(t *testing.T, config string) {
 //
 // See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#external-providers
 func checkResourceIsUnchangedInPluginFramework(t *testing.T, config string, check resource.TestCheckFunc) {
+	t.Helper()
 	resource.Test(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
