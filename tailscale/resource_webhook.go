@@ -191,7 +191,7 @@ func (r *webhookResource) Read(ctx context.Context, req resource.ReadRequest, re
 	}
 
 	state.EndpointURL = types.StringValue(webhook.EndpointURL)
-	state.ProviderType = types.StringValue(string(webhook.ProviderType))
+	state.ProviderType = StringValueNullIfEmpty(string(webhook.ProviderType))
 
 	subscriptions, diags := types.SetValueFrom(ctx, types.StringType, webhook.Subscriptions)
 	resp.Diagnostics.Append(diags...)
