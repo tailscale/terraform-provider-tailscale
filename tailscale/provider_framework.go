@@ -15,8 +15,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"tailscale.com/client/tailscale/v2"
+)
+
+var (
+	_ planmodifier.String = PreserveEmptyStringAsNull{}
 )
 
 type tailscaleProvider struct {
@@ -176,6 +181,7 @@ func (p *tailscaleProvider) Resources(_ context.Context) []func() resource.Resou
 		NewDNSPreferencesResource,
 		NewDNSSearchPathsResource,
 		NewDNSSplitNameserversResource,
+		NewPostureIntegrationResource,
 		NewWebhookResource,
 	}
 }
@@ -238,5 +244,66 @@ func createTailscaleClient(baseURL *url.URL, userAgent string, tailnet string, a
 			APIKey:    apiKey,
 			Tailnet:   tailnet,
 		}
+	}
+}
+
+// StringValueNullIfEmpty returns a StringValue of the given input string, or a
+// null StringValue if the input string is empty. Useful for cases where ""
+// being returned from the API is equivalent to an unset / null value in the
+// Terraform state.
+func StringValueNullIfEmpty(s string) types.String {
+	if s == "" {
+		return types.StringNull()
+	} else {
+		return types.StringValue(s)
+	}
+}
+
+// CoalesceStringEmptyOrNull returns a StringValue based on both the new string
+// value we have received, and the existing value in state, ensuring that we
+// won't set a null string to an empty string, or vice-versa. This is useful in
+// cases where null and empty strings are equivalent as far as the client or API
+// are concerned, and we want to avoid Terraform thinking there is a diff if
+// e.g. the API returns "" but the state has null.
+//
+// If newValue is a non-empty string, this will always return a StringValue of
+// that string.
+//
+// If newValue is empty, and the current value in state is null or empty, it
+// will return the existing stateValue, ensuring the update is no-op.
+//
+// Otherwise, this follows the rules of [StringValueNullIfEmpty], and will
+// return a null StringValue if newValue is empty, and a StringValue of newValue
+// otherwise.
+func CoalesceStringEmptyOrNull(stateValue types.String, newValue string) types.String {
+	if newValue == "" && stateValue.ValueString() == "" && !stateValue.IsUnknown() {
+		return stateValue
+	}
+	return StringValueNullIfEmpty(newValue)
+}
+
+// PreserveEmptyStringAsNull is a plan modifier that will treat empty strings in
+// the state as equivalent to null values, and not change them. This is needed
+// because the plugin SDK provider may have saved empty strings in the state for
+// certain attributes when set to null, but the plugin framework-based provider
+// will always save null strings as null. In cases where the empty string and
+// null are equivalent as far as the client or API are concerned, we therefore
+// need to change the plan to avoid changing an empty string to a null, and a
+// confusing no-op diff from Terraform. For more details, see:
+//   - https://github.com/hashicorp/terraform-plugin-framework/issues/510
+//   - https://discuss.hashicorp.com/t/framework-migration-test-produces-non-empty-plan/54523/12
+type PreserveEmptyStringAsNull struct{}
+
+func (pm PreserveEmptyStringAsNull) Description(_ context.Context) string {
+	return `If the existing value of this attribute in state is "" and the new value is null, the value of this attribute in state will remain as the empty string.`
+}
+
+func (pm PreserveEmptyStringAsNull) MarkdownDescription(_ context.Context) string {
+	return `If the existing value of this attribute in state is "" and the new value is null, the value of this attribute in state will remain as the empty string.`
+}
+
+func (pm PreserveEmptyStringAsNull) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	if req.StateValue.ValueString() == "" && !req.StateValue.IsUnknown() && req.ConfigValue.IsNull() {
+		resp.PlanValue = types.StringValue("")
 	}
 }
