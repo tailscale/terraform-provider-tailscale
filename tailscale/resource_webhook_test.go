@@ -32,6 +32,12 @@ const testWebhookUpdate = `
 		subscriptions = ["nodeCreated", "userSuspended", "userRoleUpdated"]
 	}`
 
+const testWebhookNoProvider = `
+	resource "tailscale_webhook" "test_webhook" {
+		endpoint_url = "https://example.com/endpoint"
+		subscriptions = ["userNeedsApproval", "nodeCreated"]
+	}`
+
 func TestProvider_TailscaleWebhook(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		IsUnitTest: true,
@@ -140,4 +146,30 @@ func TestAccTailscaleWebhook(t *testing.T) {
 	//
 	// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#terraform-data-resource-example
 	checkResourceIsUnchangedInPluginFramework(t, testWebhookCreate, createCheck)
+}
+
+// TestAccTailscaleWebhookOptionalFields checks that we can round-trip set /
+// update / read the provider field, which is an optional string, without
+// getting complaints that it is changing between null and StringVal("").
+func TestAccTailscaleWebhookOptionalFields(t *testing.T) {
+	const resourceName = "tailscale_webhook.test_webhook"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
+		CheckDestroy: checkResourceDestroyed(resourceName, func(client *tailscale.Client, rs *terraform.ResourceState) error {
+			_, err := client.Webhooks().Get(context.Background(), rs.Primary.ID)
+			if err == nil {
+				return fmt.Errorf("webhook %q still exists on server", resourceName)
+			}
+			return nil
+		}),
+		Steps: []resource.TestStep{
+			{
+				Config: testWebhookNoProvider,
+			},
+		},
+	})
+
+	checkResourceIsUnchangedInPluginFramework(t, testWebhookNoProvider, nil)
 }
