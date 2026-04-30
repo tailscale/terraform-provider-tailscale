@@ -114,6 +114,7 @@ func (d deviceAuthorizationResource) Create(ctx context.Context, req resource.Cr
 			"Failed to authorize device",
 			"Could not authorize device with ID "+deviceID+": "+err.Error(),
 		)
+		return
 	}
 
 	plan.ID = types.StringValue(deviceID)
