@@ -119,6 +119,13 @@ which will correctly populate the necessary environment variables for you.
 make testacc_local
 ```
 
+If you want to run a single acceptance test or pass other arguments to the `go test` command, use `TESTARGS`.
+For example:
+
+```shell
+TESTARGS='-run TestAccTailscaleACL' make testacc_local
+```
+
 ## Generating documentation
 
 The documentation is generated with [terraform-plugin-docs](https://github.com/hashicorp/terraform-plugin-docs).
