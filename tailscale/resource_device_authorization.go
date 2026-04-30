@@ -79,8 +79,8 @@ func (d deviceAuthorizationResource) Read(ctx context.Context, req resource.Read
 	device, err := d.Client.Devices().Get(ctx, deviceID)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Failed to fetch device",
-			"Could not read device authorization for device with ID "+deviceID+": "+err.Error(),
+			"Failed to fetch device authorization",
+			"Failed to fetch authorization for device with with ID "+deviceID+": "+err.Error(),
 		)
 		return
 	}
@@ -111,8 +111,8 @@ func (d deviceAuthorizationResource) Create(ctx context.Context, req resource.Cr
 
 	if err := d.Client.Devices().SetAuthorized(ctx, deviceID, authorized); err != nil {
 		resp.Diagnostics.AddError(
-			"Failed to authorize device",
-			"Could not authorize device with ID "+deviceID+": "+err.Error(),
+			"Failed to update device authorization",
+			"Failed to update authorization for device with ID "+deviceID+": "+err.Error(),
 		)
 	}
 
@@ -135,8 +135,8 @@ func (d deviceAuthorizationResource) Update(ctx context.Context, req resource.Up
 
 	if err := d.Client.Devices().SetAuthorized(ctx, deviceID, authorized); err != nil {
 		resp.Diagnostics.AddError(
-			"Failed to authorize device",
-			"Could not authorize device with ID"+deviceID+": "+err.Error(),
+			"Failed to update device authorization",
+			"Failed to update authorization for device with ID "+deviceID+": "+err.Error(),
 		)
 		return
 	}

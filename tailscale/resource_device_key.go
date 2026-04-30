@@ -73,8 +73,8 @@ func (d deviceKeyResource) Create(ctx context.Context, req resource.CreateReques
 
 	if err := d.Client.Devices().SetKey(ctx, deviceID, key); err != nil {
 		resp.Diagnostics.AddError(
-			"Failed to create device key",
-			"Could not create device key: "+err.Error(),
+			"Failed to update device key",
+			"Failed to update key for device with ID "+deviceID+": "+err.Error(),
 		)
 		return
 	}
@@ -97,8 +97,8 @@ func (d deviceKeyResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	if err := d.Client.Devices().SetKey(ctx, deviceID, key); err != nil {
 		resp.Diagnostics.AddError(
-			"Failed to delete device key",
-			"Could not delete device key: "+err.Error(),
+			"Failed to update device key",
+			"Failed to update key for device with ID "+deviceID+": "+err.Error(),
 		)
 		return
 	}
@@ -117,8 +117,8 @@ func (d deviceKeyResource) Read(ctx context.Context, req resource.ReadRequest, r
 	device, err := d.Client.Devices().Get(ctx, deviceID)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Failed to fetch devices",
-			"Could not read device key for device with ID "+deviceID+": "+err.Error(),
+			"Failed to fetch device key",
+			"Failed to fetch key for device with ID "+deviceID+": "+err.Error(),
 		)
 		return
 	}
@@ -154,7 +154,7 @@ func (d deviceKeyResource) Update(ctx context.Context, req resource.UpdateReques
 	if err := d.Client.Devices().SetKey(ctx, deviceID, key); err != nil {
 		resp.Diagnostics.AddError(
 			"Failed to update device key",
-			"Could not update device key: "+err.Error(),
+			"Failed to update key for device with ID "+deviceID+": "+err.Error(),
 		)
 		return
 	}

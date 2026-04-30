@@ -102,7 +102,7 @@ func (d deviceSubnetRoutesResource) Read(ctx context.Context, req resource.ReadR
 
 		resp.Diagnostics.AddError(
 			"Failed to fetch device subnet routes",
-			"Could not read subnet routes for device with ID "+deviceID+": "+err.Error(),
+			"Failed to fetch subnet routes for device with ID "+deviceID+": "+err.Error(),
 		)
 		return
 	}
@@ -138,8 +138,8 @@ func (d deviceSubnetRoutesResource) Create(ctx context.Context, req resource.Cre
 
 	if err := d.Client.Devices().SetSubnetRoutes(ctx, deviceID, subnetRoutes); err != nil {
 		resp.Diagnostics.AddError(
-			"Failed to set device subnet routes",
-			"Could not set subnet routes for device with ID "+deviceID+": "+err.Error(),
+			"Failed to update device subnet routes",
+			"Failed to update subnet routes for device with ID "+deviceID+": "+err.Error(),
 		)
 		return
 	}
@@ -169,8 +169,8 @@ func (d deviceSubnetRoutesResource) Update(ctx context.Context, req resource.Upd
 
 	if err := d.Client.Devices().SetSubnetRoutes(ctx, deviceID, subnetRoutes); err != nil {
 		resp.Diagnostics.AddError(
-			"Failed to set device subnet routes",
-			"Could not set subnet routes for device with ID "+deviceID+": "+err.Error(),
+			"Failed to update device subnet routes",
+			"Failed to update subnet routes for device with ID "+deviceID+": "+err.Error(),
 		)
 		return
 	}
@@ -192,7 +192,7 @@ func (d deviceSubnetRoutesResource) Delete(ctx context.Context, req resource.Del
 	if err := d.Client.Devices().SetSubnetRoutes(ctx, deviceID, []string{}); err != nil {
 		resp.Diagnostics.AddError(
 			"Failed to delete device subnet routes",
-			"Could not delete subnet routes for device with ID "+deviceID+": "+err.Error(),
+			"Failed to delete subnet routes for device with ID "+deviceID+": "+err.Error(),
 		)
 		return
 	}
