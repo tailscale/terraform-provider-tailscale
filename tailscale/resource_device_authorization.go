@@ -146,12 +146,13 @@ func (d deviceAuthorizationResource) Update(ctx context.Context, req resource.Up
 }
 
 func (d deviceAuthorizationResource) Delete(_ context.Context, _ resource.DeleteRequest, _ *resource.DeleteResponse) {
-	// Since authorization cannot be removed at this point, deleting the resource will do nothing.
+	// Historically it used to not be possible to de-authorize (un-approve) a device via the API and
+	// the destroy operation therefore used to be a no-op as far as the remote state was concerned.
+	// For backwards-compatibility, we're keeping things this way for now until further notice.
 	return
 }
 
 func (r deviceAuthorizationResource) ModifyPlan(_ context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	// If the entire plan is null, the resource is planned for destruction.
 	if req.Plan.Raw.IsNull() {
 		resp.Diagnostics.AddWarning(
 			"Resource Destruction Considerations",
