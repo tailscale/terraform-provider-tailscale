@@ -78,8 +78,8 @@ func (d deviceTagsResource) Read(ctx context.Context, req resource.ReadRequest, 
 	device, err := d.Client.Devices().Get(ctx, deviceID)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Failed to fetch device",
-			"Could not read device tags for device with ID "+deviceID+": "+err.Error(),
+			"Failed to fetch device tags",
+			"Failed to fetch device with ID "+deviceID+": "+err.Error(),
 		)
 		return
 	}
@@ -120,8 +120,8 @@ func (d deviceTagsResource) Create(ctx context.Context, req resource.CreateReque
 
 	if err := d.Client.Devices().SetTags(ctx, deviceID, tags); err != nil {
 		resp.Diagnostics.AddError(
-			"Failed to set device tags",
-			"Could not set tags for device with ID "+deviceID+": "+err.Error(),
+			"Failed to update device tags",
+			"Failed to update tags for device with ID "+deviceID+": "+err.Error(),
 		)
 		return
 	}
@@ -149,8 +149,8 @@ func (d deviceTagsResource) Update(ctx context.Context, req resource.UpdateReque
 
 	if err := d.Client.Devices().SetTags(ctx, deviceID, tags); err != nil {
 		resp.Diagnostics.AddError(
-			"Failed to set device tags",
-			"Could not set tags for device with ID "+deviceID+": "+err.Error(),
+			"Failed to update device tags",
+			"Failed to update tags for device with ID "+deviceID+": "+err.Error(),
 		)
 		return
 	}
@@ -182,8 +182,8 @@ func (d deviceTagsResource) Delete(ctx context.Context, req resource.DeleteReque
 
 	if err := d.Client.Devices().SetTags(ctx, deviceID, []string{}); err != nil {
 		resp.Diagnostics.AddError(
-			"Failed to set device tags",
-			"Could not delete tags: "+err.Error(),
+			"Failed to delete device tags",
+			"Failed to delete tags for device with ID "+deviceID+": "+err.Error(),
 		)
 		return
 	}
