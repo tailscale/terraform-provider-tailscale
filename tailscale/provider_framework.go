@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -18,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"tailscale.com/client/tailscale/v2"
+	"tailscale.com/wif"
 )
 
 var (
@@ -51,6 +53,10 @@ func (p *tailscaleProvider) Schema(_ context.Context, _ provider.SchemaRequest, 
 				Optional:    true,
 				Description: "The API key to use for authenticating requests to the API. Can be set via the TAILSCALE_API_KEY environment variable. Conflicts with 'oauth_client_id' and 'oauth_client_secret'.",
 				Sensitive:   true,
+			},
+			"audience": schema.StringAttribute{
+				Optional:    true,
+				Description: "The OIDC audience to request when discovering an identity token from the runtime (GitHub Actions, AWS, or GCP) for workload identity federation. Can be set via the TAILSCALE_AUDIENCE environment variable. Requires 'oauth_client_id'. Conflicts with 'api_key', 'oauth_client_secret', 'identity_token', and 'identity_token_environment_variable_name'.",
 			},
 			"identity_token": schema.StringAttribute{
 				Optional:    true,
@@ -93,6 +99,7 @@ func (p *tailscaleProvider) Schema(_ context.Context, _ provider.SchemaRequest, 
 
 type tailscaleProviderModel struct {
 	APIKey                               types.String `tfsdk:"api_key"`
+	Audience                             types.String `tfsdk:"audience"`
 	IdentityToken                        types.String `tfsdk:"identity_token"`
 	IdentityTokenEnvironmentVariableName types.String `tfsdk:"identity_token_environment_variable_name"`
 	OAuthClientID                        types.String `tfsdk:"oauth_client_id"`
@@ -120,6 +127,7 @@ func (p *tailscaleProvider) Configure(ctx context.Context, req provider.Configur
 	identityToken := coalesce(data.IdentityToken, identityTokenFallbacks...)
 	oauthClientID := coalesce(data.OAuthClientID, os.Getenv("TAILSCALE_OAUTH_CLIENT_ID"), os.Getenv("OAUTH_CLIENT_ID"))
 	oauthClientSecret := coalesce(data.OAuthClientSecret, os.Getenv("TAILSCALE_OAUTH_CLIENT_SECRET"), os.Getenv("OAUTH_CLIENT_SECRET"))
+	audience := coalesce(data.Audience, os.Getenv("TAILSCALE_AUDIENCE"))
 
 	var userAgent string
 	if data.UserAgent.ValueString() != "" {
@@ -152,7 +160,7 @@ func (p *tailscaleProvider) Configure(ctx context.Context, req provider.Configur
 		)
 	}
 
-	if err := validateProviderCreds(apiKey, oauthClientID, oauthClientID, identityToken); err != nil {
+	if err := validateProviderCreds(apiKey, oauthClientID, oauthClientSecret, identityToken, audience); err != nil {
 		resp.Diagnostics.AddError("Provider credentials error", err[0].Summary)
 	}
 
@@ -160,7 +168,7 @@ func (p *tailscaleProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
-	p.Client = createTailscaleClient(parsedBaseURL, userAgent, tailnet, apiKey, oauthClientID, oauthClientSecret, identityToken, scopes)
+	p.Client = createTailscaleClient(parsedBaseURL, userAgent, tailnet, apiKey, oauthClientID, oauthClientSecret, identityToken, audience, scopes)
 
 	// Make the Tailscale client available during DataSource and Resource
 	// type Configure methods.
@@ -218,7 +226,7 @@ func coalesce(val types.String, fallbacks ...string) string {
 
 // createTailscaleClient creates a new Tailscale API client based on the credentials
 // provided to the Terraform provider.
-func createTailscaleClient(baseURL *url.URL, userAgent string, tailnet string, apiKey string, oauthClientID string, oauthClientSecret string, identityToken string, scopes []string) tailscale.Client {
+func createTailscaleClient(baseURL *url.URL, userAgent, tailnet, apiKey, oauthClientID, oauthClientSecret, identityToken, audience string, scopes []string) tailscale.Client {
 	if oauthClientID != "" && oauthClientSecret != "" {
 		return tailscale.Client{
 			BaseURL:   baseURL,
@@ -230,7 +238,7 @@ func createTailscaleClient(baseURL *url.URL, userAgent string, tailnet string, a
 				Scopes:       scopes,
 			},
 		}
-	} else if oauthClientID != "" && identityToken != "" {
+	} else if oauthClientID != "" && (identityToken != "" || audience != "") {
 		return tailscale.Client{
 			BaseURL:   baseURL,
 			UserAgent: userAgent,
@@ -238,7 +246,12 @@ func createTailscaleClient(baseURL *url.URL, userAgent string, tailnet string, a
 			Auth: &tailscale.IdentityFederation{
 				ClientID: oauthClientID,
 				IDTokenFunc: func() (string, error) {
-					return identityToken, nil
+					if identityToken != "" {
+						return identityToken, nil
+					}
+					ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+					defer cancel()
+					return wif.ObtainProviderToken(ctx, audience)
 				},
 			},
 		}
