@@ -106,9 +106,6 @@ func Provider(options ...ProviderOption) *schema.Provider {
 			"tailscale_federated_identity":      resourceFederatedIdentity(),
 			"tailscale_service":                 resourceService(),
 		},
-		DataSourcesMap: map[string]*schema.Resource{
-			"tailscale_service": dataSourceService(),
-		},
 	}
 
 	provider.ConfigureContextFunc = func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {

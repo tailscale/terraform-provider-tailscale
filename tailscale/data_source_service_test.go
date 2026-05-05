@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -101,4 +102,20 @@ func TestAccTailscaleDataSourceService(t *testing.T) {
 			},
 		},
 	})
+
+	// Note: we don't need to test that this data source is unchanged in the
+	// plugin framework, because it was not introduced until after we'd moved
+	// from the plugin SDK to the plugin framework.
+}
+
+func TestProvider_DataSourceService_InvalidConfig(t *testing.T) {
+	testCases := []expectedErrorTestCase{
+		{
+			Name:        "no-fields",
+			Config:      `data "tailscale_service" "example" {}`,
+			ExpectError: regexp.MustCompile(`The argument "name" is required, but no definition was found`),
+		},
+	}
+
+	runExpectedErrorTests(t, testCases)
 }
