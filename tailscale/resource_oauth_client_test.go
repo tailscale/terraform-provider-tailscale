@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"testing"
 	"time"
 
@@ -110,6 +111,20 @@ func TestAccTailscaleOAuthClient(t *testing.T) {
 		return nil
 	}
 
+	createCheck := resource.ComposeTestCheckFunc(
+		checkResourceRemoteProperties(resourceName,
+			checkProperties(&expectedOAuthClientCreated),
+		),
+		resource.TestCheckResourceAttr(resourceName, "description", "Test client"),
+		resource.TestCheckResourceAttr(resourceName, "scopes.0", "auth_keys"),
+		resource.TestCheckResourceAttr(resourceName, "scopes.1", "devices:core"),
+		resource.TestCheckResourceAttr(resourceName, "tags.0", "tag:test"),
+		resource.TestCheckResourceAttrSet(resourceName, "id"),
+		resource.TestCheckResourceAttrSet(resourceName, "key"),
+		resource.TestCheckResourceAttrSet(resourceName, "created_at"),
+		resource.TestCheckResourceAttrSet(resourceName, "user_id"),
+	)
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProviderFactories(t),
@@ -130,19 +145,7 @@ func TestAccTailscaleOAuthClient(t *testing.T) {
 					}
 				},
 				Config: testOAuthClientCreate,
-				Check: resource.ComposeTestCheckFunc(
-					checkResourceRemoteProperties(resourceName,
-						checkProperties(&expectedOAuthClientCreated),
-					),
-					resource.TestCheckResourceAttr(resourceName, "description", "Test client"),
-					resource.TestCheckResourceAttr(resourceName, "scopes.0", "auth_keys"),
-					resource.TestCheckResourceAttr(resourceName, "scopes.1", "devices:core"),
-					resource.TestCheckResourceAttr(resourceName, "tags.0", "tag:test"),
-					resource.TestCheckResourceAttrSet(resourceName, "id"),
-					resource.TestCheckResourceAttrSet(resourceName, "key"),
-					resource.TestCheckResourceAttrSet(resourceName, "created_at"),
-					resource.TestCheckResourceAttrSet(resourceName, "user_id"),
-				),
+				Check:  createCheck,
 			},
 			{
 				Config: testOAuthClientUpdate,
@@ -167,4 +170,53 @@ func TestAccTailscaleOAuthClient(t *testing.T) {
 			},
 		},
 	})
+
+	// Migration test to ensure the resource is unchanged when migrating
+	// from the plugin SDK to the plugin framework.
+	//
+	// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#terraform-data-resource-example
+	checkResourceIsUnchangedInPluginFramework(t, testOAuthClientCreate, createCheck)
+}
+
+// TestAccTailscale_OAuthClient_OptionalFields checks that we can round-trip the
+// optional `tags` field without getting complaints that they are changing between
+// null and StringVal("").
+func TestAccTailscale_OAuthClient_OptionalFields(t *testing.T) {
+	config := `
+		resource "tailscale_oauth_client" "test_client" {
+			description = "Test client"
+			scopes      = ["all:read"]
+		}
+	`
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProviderFactories(t),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+			},
+			{
+				Config:   config,
+				PlanOnly: true,
+			},
+		},
+	})
+
+	checkResourceIsUnchangedInPluginFramework(t, config, resource.ComposeTestCheckFunc())
+}
+
+func TestProvider_OAuthClient_InvalidConfig(t *testing.T) {
+	testCases := []expectedErrorTestCase{
+		{
+			Name: "no-scopes",
+			Config: `resource "tailscale_oauth_client" "test_client" {
+				description = "Test client"
+				tags        = ["tag:test"]
+			}`,
+			ExpectError: regexp.MustCompile(`The argument "scopes" is required, but no definition was found`),
+		},
+	}
+
+	runExpectedErrorTests(t, testCases)
 }
