@@ -15,13 +15,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"tailscale.com/client/tailscale/v2"
-)
-
-var (
-	_ planmodifier.String = PreserveEmptyStringAsNull{}
 )
 
 type tailscaleProvider struct {
