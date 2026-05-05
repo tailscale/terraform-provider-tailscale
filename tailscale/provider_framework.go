@@ -188,6 +188,7 @@ func (p *tailscaleProvider) Resources(_ context.Context) []func() resource.Resou
 		NewDNSSearchPathsResource,
 		NewDNSSplitNameserversResource,
 		NewLogstreamConfigurationResource,
+		NewOAuthClientResource,
 		NewPostureIntegrationResource,
 		NewServiceResource,
 		NewWebhookResource,
