@@ -6,78 +6,101 @@ package tailscale
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
-	"tailscale.com/client/tailscale/v2"
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func dataSourceService() *schema.Resource {
-	return &schema.Resource{
+// NewServiceDataSource() returns a new Services data source.
+func NewServiceDataSource() datasource.DataSource {
+	return &dataSourceService{}
+}
+
+type dataSourceService struct {
+	DataSourceBase
+}
+
+// Metadata defines the data source name as it appears in Terraform configurations.
+func (d dataSourceService) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_service"
+}
+
+// Schema defines a schema describing what data is available in the data source response.
+func (d dataSourceService) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		Description: "The Service data source describes a single Service in a tailnet. See https://tailscale.com/docs/features/tailscale-services for more information.",
-		ReadContext: dataSourceServiceRead,
-		Schema: map[string]*schema.Schema{
-			"name": {
-				Type:        schema.TypeString,
+		Attributes: map[string]schema.Attribute{
+			"name": schema.StringAttribute{
 				Description: "The name of the Service (e.g. `svc:my-service`).",
 				Required:    true,
 			},
-			"id": {
-				Type:        schema.TypeString,
+			"id": schema.StringAttribute{
 				Description: "The Service name, e.g. 'svc:my-service'.",
 				Computed:    true,
 			},
-			"addrs": {
-				Type:        schema.TypeList,
+			"addrs": schema.ListAttribute{
 				Description: "The IP addresses assigned to the Service.",
 				Computed:    true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
+				ElementType: types.StringType,
 			},
-			"comment": {
-				Type:        schema.TypeString,
+			"comment": schema.StringAttribute{
 				Description: "A comment describing the Service.",
 				Computed:    true,
 			},
-			"ports": {
-				Type:        schema.TypeList,
+			"ports": schema.ListAttribute{
 				Description: "The ports that the Service listens on.",
 				Computed:    true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
+				ElementType: types.StringType,
 			},
-			"tags": {
-				Type:        schema.TypeSet,
+			"tags": schema.SetAttribute{
 				Description: "The ACL tags applied to the Service.",
 				Computed:    true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
+				ElementType: types.StringType,
 			},
 		},
 	}
 }
 
-func dataSourceServiceRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+type dataSourceServiceModel struct {
+	ID      types.String `tfsdk:"id"`
+	Name    types.String `tfsdk:"name"`
+	Addrs   types.List   `tfsdk:"addrs"`
+	Comment types.String `tfsdk:"comment"`
+	Ports   types.List   `tfsdk:"ports"`
+	Tags    types.Set    `tfsdk:"tags"`
+}
 
-	name, ok := d.GetOk("name")
-	if !ok {
-		return diag.Errorf("A Service `name` is required")
+// Read fetches the data from the Tailscale API.
+func (d dataSourceService) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var data dataSourceServiceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
-	svc, err := client.VIPServices().Get(ctx, name.(string))
+
+	name := data.Name.ValueString()
+	svc, err := d.Client.VIPServices().Get(ctx, name)
 	if err != nil {
-		return diagnosticsError(err, "Failed to fetch Service %q", name)
+		resp.Diagnostics.AddError("Failed to fetch service", err.Error())
+		return
 	}
 
-	d.SetId(svc.Name)
-	return setProperties(d, map[string]any{
-		"name":    svc.Name,
-		"addrs":   svc.Addrs,
-		"comment": svc.Comment,
-		"ports":   svc.Ports,
-		"tags":    svc.Tags,
-	})
+	data.ID = types.StringValue(svc.Name)
+	data.Name = types.StringValue(svc.Name)
+
+	addrs, diags := types.ListValueFrom(ctx, types.StringType, svc.Addrs)
+	resp.Diagnostics.Append(diags...)
+	data.Addrs = addrs
+
+	data.Comment = types.StringValue(svc.Comment)
+
+	ports, diags := types.ListValueFrom(ctx, types.StringType, svc.Ports)
+	resp.Diagnostics.Append(diags...)
+	data.Ports = ports
+
+	tags, diags := types.SetValueFrom(ctx, types.StringType, svc.Tags)
+	resp.Diagnostics.Append(diags...)
+	data.Tags = tags
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
