@@ -17,6 +17,9 @@ var (
 	_ planmodifier.String = PreserveEmptyStringAsNull{}
 )
 
+// jsonSemanticDiffModifier is a plan modifier that will treat strings as
+// equivalent if they correspond to the same JSON value, and differ only
+// in whitespace.
 type jsonSemanticDiffModifier struct{}
 
 func (m jsonSemanticDiffModifier) Description(_ context.Context) string {
