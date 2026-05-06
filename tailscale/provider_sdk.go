@@ -47,6 +47,12 @@ func Provider(options ...ProviderOption) *schema.Provider {
 				Description: "The API key to use for authenticating requests to the API. Can be set via the TAILSCALE_API_KEY environment variable. Conflicts with 'oauth_client_id' and 'oauth_client_secret'.",
 				Sensitive:   true,
 			},
+			"audience": {
+				Type:        schema.TypeString,
+				DefaultFunc: schema.EnvDefaultFunc("TAILSCALE_AUDIENCE", ""),
+				Optional:    true,
+				Description: "The OIDC audience to request when discovering an identity token from the runtime (GitHub Actions, AWS, or GCP) for workload identity federation. Can be set via the TAILSCALE_AUDIENCE environment variable. Requires 'oauth_client_id'. Conflicts with 'api_key', 'oauth_client_secret', 'identity_token', and 'identity_token_environment_variable_name'.",
+			},
 			"identity_token": {
 				Type:        schema.TypeString,
 				DefaultFunc: schema.MultiEnvDefaultFunc(identityTokenEnvVars, ""),
@@ -137,8 +143,9 @@ func providerConfigure(_ context.Context, provider *schema.Provider, d *schema.R
 			idToken = os.Getenv(envVarName)
 		}
 	}
+	audience := d.Get("audience").(string)
 
-	if diags := validateProviderCreds(apiKey, oauthClientID, oauthClientSecret, idToken); diags != nil && diags.HasError() {
+	if diags := validateProviderCreds(apiKey, oauthClientID, oauthClientSecret, idToken, audience); diags != nil && diags.HasError() {
 		return nil, diags
 	}
 
@@ -158,19 +165,21 @@ func providerConfigure(_ context.Context, provider *schema.Provider, d *schema.R
 		}
 	}
 
-	client := createTailscaleClient(parsedBaseURL, userAgent, tailnet, apiKey, oauthClientID, oauthClientSecret, idToken, scopes)
+	client := createTailscaleClient(parsedBaseURL, userAgent, tailnet, apiKey, oauthClientID, oauthClientSecret, idToken, audience, scopes)
 	return &client, nil
 }
 
-func validateProviderCreds(apiKey string, oauthClientID string, oauthClientSecret string, idToken string) diag.Diagnostics {
-	if apiKey == "" && oauthClientID == "" && oauthClientSecret == "" && idToken == "" {
-		return diag.Errorf("tailscale provider credentials are empty - set `api_key` or 'oauth_client_id' and either 'oauth_client_secret' or 'identity_token'")
-	} else if apiKey != "" && (oauthClientID != "" || oauthClientSecret != "" || idToken != "") {
-		return diag.Errorf("tailscale provider credentials are conflicting - `api_key` conflicts with 'oauth_client_id', 'oauth_client_secret' and 'identity_token'")
+func validateProviderCreds(apiKey, oauthClientID, oauthClientSecret, idToken, audience string) diag.Diagnostics {
+	if apiKey == "" && oauthClientID == "" && oauthClientSecret == "" && idToken == "" && audience == "" {
+		return diag.Errorf("tailscale provider credentials are empty - set `api_key` or 'oauth_client_id' and one of 'oauth_client_secret', 'identity_token', or 'audience'")
+	} else if apiKey != "" && (oauthClientID != "" || oauthClientSecret != "" || idToken != "" || audience != "") {
+		return diag.Errorf("tailscale provider credentials are conflicting - `api_key` conflicts with 'oauth_client_id', 'oauth_client_secret', 'identity_token', and 'audience'")
+	} else if audience != "" && (oauthClientSecret != "" || idToken != "") {
+		return diag.Errorf("tailscale provider argument 'audience' conflicts with 'oauth_client_secret' and 'identity_token'")
 	} else if apiKey == "" && oauthClientID == "" {
 		return diag.Errorf("tailscale provider argument 'oauth_client_id' is empty")
-	} else if oauthClientID != "" && (oauthClientSecret == "" && idToken == "") {
-		return diag.Errorf("one of tailscale provider arguments 'oauth_client_secret' or 'identity_token' are mandatory with 'oauth_client_id'")
+	} else if oauthClientID != "" && oauthClientSecret == "" && idToken == "" && audience == "" {
+		return diag.Errorf("one of tailscale provider arguments 'oauth_client_secret', 'identity_token', or 'audience' are mandatory with 'oauth_client_id'")
 	}
 
 	return nil

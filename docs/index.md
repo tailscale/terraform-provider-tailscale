@@ -69,6 +69,21 @@ provider "tailscale" {
 }
 ```
 
+If Terraform is running in a supported runtime (GitHub Actions, AWS via EC2 instance profile or ECS task role, or Google
+Cloud), the provider can discover the OIDC token from the runtime automatically. Configure only the `oauth_client_id`
+and the `audience` expected by the federated identity:
+
+```terraform
+provider "tailscale" {
+  oauth_client_id = "my_client_id"
+  audience        = "my_audience"
+  tailnet         = "example.com"
+}
+```
+
+For GitHub Actions, the workflow must declare `permissions: id-token: write`. For AWS, the runtime must have valid AWS
+credentials available. For GCP, the runtime must be able to reach the metadata server.
+
 See [argument reference](#argument-reference) for more details.
 
 ### API keys
@@ -90,6 +105,7 @@ See [argument reference](#argument-reference) for more details.
 ### Optional
 
 - `api_key` (String, Sensitive) The API key to use for authenticating requests to the API. Can be set via the TAILSCALE_API_KEY environment variable. Conflicts with 'oauth_client_id' and 'oauth_client_secret'.
+- `audience` (String) The OIDC audience to request when discovering an identity token from the runtime (GitHub Actions, AWS, or GCP) for workload identity federation. Can be set via the TAILSCALE_AUDIENCE environment variable. Requires 'oauth_client_id'. Conflicts with 'api_key', 'oauth_client_secret', 'identity_token', and 'identity_token_environment_variable_name'.
 - `base_url` (String) The base URL of the Tailscale API. Defaults to https://api.tailscale.com. Can be set via the TAILSCALE_BASE_URL environment variable.
 - `identity_token` (String, Sensitive) The jwt identity token to exchange for a Tailscale API token when using a federated identity. Can be set via the TAILSCALE_IDENTITY_TOKEN environment variable. Conflicts with 'api_key', 'oauth_client_secret', and 'identity_token_environment_variable_name'.
 - `identity_token_environment_variable_name` (String) The name of an environment variable to read the identity token from. This is useful when the identity token is provided by an external system (such as Terraform Cloud workload identity) in an environment variable you do not control. Conflicts with 'identity_token'.

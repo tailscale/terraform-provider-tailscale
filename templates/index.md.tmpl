@@ -69,6 +69,21 @@ provider "tailscale" {
 }
 ```
 
+If Terraform is running in a supported runtime (GitHub Actions, AWS via EC2 instance profile or ECS task role, or Google
+Cloud), the provider can discover the OIDC token from the runtime automatically. Configure only the `oauth_client_id`
+and the `audience` expected by the federated identity:
+
+```terraform
+provider "tailscale" {
+  oauth_client_id = "my_client_id"
+  audience        = "my_audience"
+  tailnet         = "example.com"
+}
+```
+
+For GitHub Actions, the workflow must declare `permissions: id-token: write`. For AWS, the runtime must have valid AWS
+credentials available. For GCP, the runtime must be able to reach the metadata server.
+
 See [argument reference](#argument-reference) for more details.
 
 ### API keys

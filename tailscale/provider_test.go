@@ -253,6 +253,7 @@ func TestValidateProviderCreds(t *testing.T) {
 		oauthClientID string
 		oauthSecret   string
 		idToken       string
+		audience      string
 		wantErr       string
 	}{
 		{
@@ -270,6 +271,12 @@ func TestValidateProviderCreds(t *testing.T) {
 			name:          "valid oauth with identity token",
 			oauthClientID: "client-id",
 			idToken:       "id-token",
+			wantErr:       "",
+		},
+		{
+			name:          "valid oauth with audience",
+			oauthClientID: "client-id",
+			audience:      "tailscale-aud",
 			wantErr:       "",
 		},
 		{
@@ -295,6 +302,12 @@ func TestValidateProviderCreds(t *testing.T) {
 			wantErr: "credentials are conflicting",
 		},
 		{
+			name:     "api_key conflicts with audience",
+			apiKey:   "test-api-key",
+			audience: "tailscale-aud",
+			wantErr:  "credentials are conflicting",
+		},
+		{
 			name:        "oauth_client_id missing with only oauth_client_secret",
 			oauthSecret: "client-secret",
 			wantErr:     "oauth_client_id' is empty",
@@ -305,15 +318,34 @@ func TestValidateProviderCreds(t *testing.T) {
 			wantErr: "oauth_client_id' is empty",
 		},
 		{
-			name:          "oauth_client_id without secret or token",
+			name:     "oauth_client_id missing with only audience",
+			audience: "tailscale-aud",
+			wantErr:  "oauth_client_id' is empty",
+		},
+		{
+			name:          "oauth_client_id without secret, token, or audience",
 			oauthClientID: "client-id",
-			wantErr:       "oauth_client_secret' or 'identity_token' are mandatory",
+			wantErr:       "'oauth_client_secret', 'identity_token', or 'audience' are mandatory",
+		},
+		{
+			name:          "audience conflicts with oauth_client_secret",
+			oauthClientID: "client-id",
+			oauthSecret:   "client-secret",
+			audience:      "tailscale-aud",
+			wantErr:       "audience' conflicts",
+		},
+		{
+			name:          "audience conflicts with identity_token",
+			oauthClientID: "client-id",
+			idToken:       "id-token",
+			audience:      "tailscale-aud",
+			wantErr:       "audience' conflicts",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			diags := validateProviderCreds(tt.apiKey, tt.oauthClientID, tt.oauthSecret, tt.idToken)
+			diags := validateProviderCreds(tt.apiKey, tt.oauthClientID, tt.oauthSecret, tt.idToken, tt.audience)
 
 			if tt.wantErr == "" && diags.HasError() {
 				t.Errorf("unexpected error: %v", diags)
