@@ -107,6 +107,11 @@ func (t *TestServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (t *TestServer) SetResponses(responses []TestResponse) {
+	t.Responses = responses
+	t.calls = 0
+}
+
 type expectedErrorTestCase struct {
 	Name        string
 	Config      string

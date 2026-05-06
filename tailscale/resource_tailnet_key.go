@@ -5,182 +5,197 @@ package tailscale
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/hashicorp/go-cty/cty"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/pkg/errors"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"tailscale.com/client/tailscale/v2"
 )
 
-func resourceTailnetKey() *schema.Resource {
-	return &schema.Resource{
-		Description:   "The tailnet_key resource allows you to create pre-authentication keys that can register new nodes without needing to sign in via a web browser. See https://tailscale.com/kb/1085/auth-keys for more information",
-		ReadContext:   resourceTailnetKeyRead,
-		CreateContext: resourceTailnetKeyCreate,
-		DeleteContext: resourceTailnetKeyDelete,
-		UpdateContext: schema.NoopContext,
-		CustomizeDiff: resourceTailnetKeyDiff,
-		Importer: &schema.ResourceImporter{
-			StateContext: resourceTailnetKeyImport,
-		},
-		Schema: map[string]*schema.Schema{
-			"reusable": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Description: "Indicates if the key is reusable or single-use. Defaults to `false`.",
-				ForceNew:    true,
+var (
+	_ resource.Resource                = &tailnetKeyResource{}
+	_ resource.ResourceWithConfigure   = &tailnetKeyResource{}
+	_ resource.ResourceWithModifyPlan  = &tailnetKeyResource{}
+	_ resource.ResourceWithImportState = &tailnetKeyResource{}
+)
+
+type tailnetKeyResourceModel struct {
+	ID                types.String `tfsdk:"id"`
+	Reusable          types.Bool   `tfsdk:"reusable"`
+	Ephemeral         types.Bool   `tfsdk:"ephemeral"`
+	Tags              types.Set    `tfsdk:"tags"`
+	Preauthorized     types.Bool   `tfsdk:"preauthorized"`
+	Key               types.String `tfsdk:"key"`
+	Expiry            types.Int64  `tfsdk:"expiry"`
+	CreatedAt         types.String `tfsdk:"created_at"`
+	ExpiresAt         types.String `tfsdk:"expires_at"`
+	Description       types.String `tfsdk:"description"`
+	Invalid           types.Bool   `tfsdk:"invalid"`
+	RecreateIfInvalid types.String `tfsdk:"recreate_if_invalid"`
+	UserID            types.String `tfsdk:"user_id"`
+}
+
+func NewTailnetKeyResource() resource.Resource {
+	return &tailnetKeyResource{}
+}
+
+type tailnetKeyResource struct {
+	ResourceBase
+}
+
+func (t *tailnetKeyResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_tailnet_key"
+}
+
+func (t *tailnetKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		Description: "The tailnet_key resource allows you to create pre-authentication keys that can register new nodes without needing to sign in via a web browser. See https://tailscale.com/kb/1085/auth-keys for more information",
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
-			"ephemeral": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Description: "Indicates if the key is ephemeral. Defaults to `false`.",
-				ForceNew:    true,
+			"reusable": schema.BoolAttribute{
+				Optional:      true,
+				Description:   "Indicates if the key is reusable or single-use. Defaults to `false`.",
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
 			},
-			"tags": {
-				Type: schema.TypeSet,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
+			"ephemeral": schema.BoolAttribute{
+				Optional:      true,
+				Description:   "Indicates if the key is ephemeral. Defaults to `false`.",
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
+			},
+			"tags": schema.SetAttribute{
+				ElementType:   types.StringType,
+				Optional:      true,
+				Description:   "List of tags to apply to the machines authenticated by the key.",
+				PlanModifiers: []planmodifier.Set{setplanmodifier.RequiresReplace()},
+			},
+			"preauthorized": schema.BoolAttribute{
+				Optional:      true,
+				Description:   "Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default. Defaults to `false`.",
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
+			},
+			"key": schema.StringAttribute{
+				Description:   "The authentication key",
+				Computed:      true,
+				Sensitive:     true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
+			"expiry": schema.Int64Attribute{
+				Optional:      true,
+				Computed:      true,
+				Description:   "The expiry of the key in seconds. Defaults to `7776000` (90 days).",
+				PlanModifiers: []planmodifier.Int64{int64planmodifier.RequiresReplace()},
+			},
+			"created_at": schema.StringAttribute{
+				Description:   "The creation timestamp of the key in RFC3339 format",
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
+			"expires_at": schema.StringAttribute{
+				Description:   "The expiry timestamp of the key in RFC3339 format",
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
+			"description": schema.StringAttribute{
+				Optional:      true,
+				Description:   "A description of the key consisting of alphanumeric characters. Defaults to `\"\"`.",
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+				Validators: []validator.String{
+					stringvalidator.LengthAtMost(50),
 				},
-				Optional:    true,
-				Description: "List of tags to apply to the machines authenticated by the key.",
-				ForceNew:    true,
 			},
-			"preauthorized": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Description: "Determines whether or not the machines authenticated by the key will be authorized for the tailnet by default. Defaults to `false`.",
-				ForceNew:    true,
+			"invalid": schema.BoolAttribute{
+				Description:   "Indicates whether the key is invalid (e.g. expired, revoked or has been deleted).",
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
-			"key": {
-				Type:        schema.TypeString,
-				Description: "The authentication key",
-				Computed:    true,
-				Sensitive:   true,
-			},
-			"expiry": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Computed:    true,
-				Description: "The expiry of the key in seconds. Defaults to `7776000` (90 days).",
-				ForceNew:    true,
-			},
-			"created_at": {
-				Type:        schema.TypeString,
-				Description: "The creation timestamp of the key in RFC3339 format",
-				Computed:    true,
-			},
-			"expires_at": {
-				Type:        schema.TypeString,
-				Description: "The expiry timestamp of the key in RFC3339 format",
-				Computed:    true,
-			},
-			"description": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "A description of the key consisting of alphanumeric characters. Defaults to `\"\"`.",
-				ForceNew:    true,
-				ValidateDiagFunc: func(i interface{}, p cty.Path) diag.Diagnostics {
-					if len(i.(string)) > 50 {
-						return diagnosticsError(nil, "description must be 50 characters or less")
-					}
-					return nil
-				},
-			},
-			"invalid": {
-				Type:        schema.TypeBool,
-				Description: "Indicates whether the key is invalid (e.g. expired, revoked or has been deleted).",
-				Computed:    true,
-			},
-			"recreate_if_invalid": {
-				Type:        schema.TypeString,
+			"recreate_if_invalid": schema.StringAttribute{
 				Optional:    true,
 				Description: "Determines whether the key should be created again if it becomes invalid. By default, reusable keys will be recreated, but single-use keys will not. Possible values: 'always', 'never'.",
-				ValidateDiagFunc: func(i interface{}, p cty.Path) diag.Diagnostics {
-					switch i.(string) {
-					case "", "always", "never":
-						return nil
-					default:
-						return diagnosticsError(nil, "unexpected value of recreate_if_invalid: %s", i)
-					}
+				Validators: []validator.String{
+					stringvalidator.OneOf(
+						"",
+						"always",
+						"never",
+					),
 				},
 			},
-			"user_id": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "ID of the user who created this key, empty for keys created by OAuth clients.",
-				Computed:    true,
+			"user_id": schema.StringAttribute{
+				Optional:      true,
+				Computed:      true,
+				Description:   "ID of the user who created this key, empty for keys created by OAuth clients.",
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 		},
 	}
 }
 
-func resourceTailnetKeyCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
-	reusable := d.Get("reusable").(bool)
-	ephemeral := d.Get("ephemeral").(bool)
-	preauthorized := d.Get("preauthorized").(bool)
-	expiry, hasExpiry := d.GetOk("expiry")
-	description, hasDescription := d.GetOk("description")
+func (t *tailnetKeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan tailnetKeyResourceModel
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var createKeyRequest tailscale.CreateKeyRequest
+	createKeyRequest.Capabilities.Devices.Create.Reusable = plan.Reusable.ValueBool()
+	createKeyRequest.Capabilities.Devices.Create.Ephemeral = plan.Ephemeral.ValueBool()
+
 	var tags []string
-	for _, tag := range d.Get("tags").(*schema.Set).List() {
-		tags = append(tags, tag.(string))
+	diags = plan.Tags.ElementsAs(ctx, &tags, false)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
+	createKeyRequest.Capabilities.Devices.Create.Tags = tags
+	createKeyRequest.Capabilities.Devices.Create.Preauthorized = plan.Preauthorized.ValueBool()
+	createKeyRequest.ExpirySeconds = plan.Expiry.ValueInt64()
+	createKeyRequest.Description = plan.Description.ValueString()
 
-	var req tailscale.CreateKeyRequest
-	req.Capabilities.Devices.Create.Reusable = reusable
-	req.Capabilities.Devices.Create.Ephemeral = ephemeral
-	req.Capabilities.Devices.Create.Tags = tags
-	req.Capabilities.Devices.Create.Preauthorized = preauthorized
-
-	if hasExpiry {
-		req.ExpirySeconds = int64(expiry.(int))
-	}
-
-	if hasDescription {
-		req.Description = description.(string)
-	}
-
-	key, err := client.Keys().CreateAuthKey(ctx, req)
+	key, err := t.Client.Keys().CreateAuthKey(ctx, createKeyRequest)
 	if err != nil {
-		return diagnosticsError(err, "Failed to create key")
+		resp.Diagnostics.AddError("Failed to create key", fmt.Sprintf("Error creating tailnet key: %s", err.Error()))
+		return
 	}
 
-	d.SetId(key.ID)
+	plan.ID = types.StringValue(key.ID)
+	plan.Key = types.StringValue(key.Key)
+	plan.CreatedAt = types.StringValue(key.Created.Format(time.RFC3339))
+	plan.ExpiresAt = types.StringValue(key.Expires.Format(time.RFC3339))
+	plan.Expiry = types.Int64Value(int64(*key.ExpirySeconds))
+	plan.Invalid = types.BoolValue(key.Invalid)
+	plan.UserID = types.StringValue(key.UserID)
 
-	if err = d.Set("key", key.Key); err != nil {
-		return diagnosticsError(err, "Failed to set key")
-	}
-
-	if err = d.Set("created_at", key.Created.Format(time.RFC3339)); err != nil {
-		return diagnosticsError(err, "Failed to set created_at")
-	}
-
-	if err = d.Set("expires_at", key.Expires.Format(time.RFC3339)); err != nil {
-		return diagnosticsError(err, "Failed to set expires_at")
-	}
-
-	if err = d.Set("invalid", key.Invalid); err != nil {
-		return diagnosticsError(err, "Failed to set 'invalid'")
-	}
-
-	return resourceTailnetKeyRead(ctx, d, m)
+	diags = resp.State.Set(ctx, plan)
+	resp.Diagnostics.Append(diags...)
 }
 
-func resourceTailnetKeyDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
+func (t *tailnetKeyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state tailnetKeyResourceModel
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	err := client.Keys().Delete(ctx, d.Id())
-	switch {
-	case tailscale.IsNotFound(err):
-		// Single-use keys may no longer be here, so we can ignore deletions that fail due to not-found errors.
-		return nil
-	case err != nil:
-		return diagnosticsError(err, "Failed to delete key")
-	default:
-		return nil
+	err := t.Client.Keys().Delete(ctx, state.ID.ValueString())
+	// Single-use keys may no longer be here, so we can ignore deletions that fail due to not-found errors.
+	if err != nil && !tailscale.IsNotFound(err) {
+		resp.Diagnostics.AddError("Failed to delete key", fmt.Sprintf("Error deleting tailnet key with id %q: %s", state.ID, err.Error()))
 	}
 }
 
@@ -199,103 +214,120 @@ func shouldRecreateIfInvalid(reusable bool, recreateIfInvalid string) bool {
 	return reusable
 }
 
-// resourceTailnetKeyDiff makes sure a resource is recreated when a `recreate_if_invalid`
-// field changes in a way that requires it.
-func resourceTailnetKeyDiff(ctx context.Context, d *schema.ResourceDiff, m interface{}) error {
-	old, new := d.GetChange("recreate_if_invalid")
-	if old == new {
-		return nil
+func (t *tailnetKeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state tailnetKeyResourceModel
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	recreateIfInvalid := shouldRecreateIfInvalid(d.Get("reusable").(bool), d.Get("recreate_if_invalid").(string))
-	if !recreateIfInvalid {
-		return nil
-	}
-
-	client := m.(*tailscale.Client)
-	key, err := client.Keys().Get(ctx, d.Id())
-	if tailscale.IsNotFound(err) || (err == nil && key.Invalid) {
-		d.ForceNew("recreate_if_invalid")
-	}
-	return nil
-}
-
-func resourceTailnetKeyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	recreateIfInvalid := shouldRecreateIfInvalid(d.Get("reusable").(bool), d.Get("recreate_if_invalid").(string))
-
-	client := m.(*tailscale.Client)
-	key, err := client.Keys().Get(ctx, d.Id())
-
-	switch {
-	case tailscale.IsNotFound(err):
-		if recreateIfInvalid {
-			d.SetId("")
-		}
-		return nil
-	case err != nil:
-		return diagnosticsError(err, "Failed to fetch key")
-	}
-
-	// The Tailscale API continues to return keys for some time after they've expired.
-	// Use `invalid` key property to determine if key should be recreated.
-	if key.Invalid && recreateIfInvalid {
-		d.SetId("")
-		return nil
+	key, err := t.Client.Keys().Get(ctx, state.ID.ValueString())
+	if tailscale.IsNotFound(err) {
+		state.Invalid = types.BoolValue(true)
+	} else if err != nil {
+		resp.Diagnostics.AddError("Failed to fetch key", fmt.Sprintf("Error reading tailnet key with id %q: %s", state.ID, err.Error()))
+		return
+	} else {
+		state.Invalid = types.BoolValue(false)
 	}
 
 	if key.KeyType != "auth" {
-		return diagnosticsError(errors.New("Only 'auth' keys are supported by this resource"), "Invalid key type '%s'", key.KeyType)
+		resp.Diagnostics.AddError(fmt.Sprintf("Invalid key type '%s'", key.KeyType), "Only 'auth' keys are supported by this resource")
+		return
 	}
 
-	d.SetId(key.ID)
-	if err = d.Set("reusable", key.Capabilities.Devices.Create.Reusable); err != nil {
-		return diagnosticsError(err, "Failed to set reusable")
+	if key.Invalid {
+		state.Invalid = types.BoolValue(true)
 	}
 
-	if err = d.Set("ephemeral", key.Capabilities.Devices.Create.Ephemeral); err != nil {
-		return diagnosticsError(err, "Failed to set ephemeral")
+	state.ID = types.StringValue(key.ID)
+	state.Reusable = types.BoolValue(key.Capabilities.Devices.Create.Reusable)
+	state.Ephemeral = types.BoolValue(key.Capabilities.Devices.Create.Ephemeral)
+	tags, diags := types.SetValueFrom(ctx, types.StringType, key.Capabilities.Devices.Create.Tags)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
+	state.Tags = tags
+	state.Preauthorized = types.BoolValue(key.Capabilities.Devices.Create.Preauthorized)
+	state.Key = types.StringValue(key.Key)
+	state.Expiry = types.Int64Value(int64(*key.ExpirySeconds))
+	state.CreatedAt = types.StringValue(key.Created.Format(time.RFC3339))
+	state.ExpiresAt = types.StringValue(key.Expires.Format(time.RFC3339))
+	state.Description = types.StringValue(key.Description)
+	state.UserID = types.StringValue(key.UserID)
 
-	if err = d.Set("expiry", key.ExpirySeconds); err != nil {
-		return diagnosticsError(err, "Failed to set expiry")
-	}
-
-	if err = d.Set("created_at", key.Created.Format(time.RFC3339)); err != nil {
-		return diagnosticsError(err, "Failed to set created_at")
-	}
-
-	if err = d.Set("expires_at", key.Expires.Format(time.RFC3339)); err != nil {
-		return diagnosticsError(err, "Failed to set expires_at")
-	}
-
-	if err = d.Set("description", key.Description); err != nil {
-		return diagnosticsError(err, "Failed to set description")
-	}
-
-	if err = d.Set("invalid", key.Invalid); err != nil {
-		return diagnosticsError(err, "Failed to set 'invalid'")
-	}
-
-	if err = d.Set("user_id", key.UserID); err != nil {
-		return diagnosticsError(err, "Failed to set 'user_id'")
-	}
-
-	if err = d.Set("preauthorized", key.Capabilities.Devices.Create.Preauthorized); err != nil {
-		return diagnosticsError(err, "Failed to set preauthorized")
-	}
-
-	if err = d.Set("tags", key.Capabilities.Devices.Create.Tags); err != nil {
-		return diagnosticsError(err, "Failed to set tags")
-	}
-
-	return nil
+	diags = resp.State.Set(ctx, state)
+	resp.Diagnostics.Append(diags...)
 }
 
-func resourceTailnetKeyImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
-	diags := resourceTailnetKeyRead(ctx, d, m)
-	if diags.HasError() {
-		return nil, diagnosticsAsError(diags)
+func (t *tailnetKeyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var state tailnetKeyResourceModel
+	diags := req.Plan.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	return []*schema.ResourceData{d}, nil
+	key, err := t.Client.Keys().Get(ctx, state.ID.ValueString())
+	if tailscale.IsNotFound(err) {
+		state.Invalid = types.BoolValue(true)
+	} else if err != nil {
+		resp.Diagnostics.AddError("Failed to fetch key", fmt.Sprintf("Error reading tailnet key with id %q: %s", state.ID, err.Error()))
+		return
+	} else {
+		state.Invalid = types.BoolValue(false)
+	}
+
+	if key.KeyType != "auth" {
+		resp.Diagnostics.AddError(fmt.Sprintf("Invalid key type '%s'", key.KeyType), "Only 'auth' keys are supported by this resource")
+		return
+	}
+
+	if key.Invalid {
+		state.Invalid = types.BoolValue(true)
+	}
+
+	state.Key = types.StringValue(key.Key)
+	state.CreatedAt = types.StringValue(key.Created.Format(time.RFC3339))
+	state.ExpiresAt = types.StringValue(key.Expires.Format(time.RFC3339))
+	state.Description = types.StringValue(key.Description)
+	state.UserID = types.StringValue(key.UserID)
+
+	diags = resp.State.Set(ctx, state)
+	resp.Diagnostics.Append(diags...)
+}
+
+func (t *tailnetKeyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+func (t *tailnetKeyResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	// Do not replace on resource creation.
+	if req.State.Raw.IsNull() {
+		return
+	}
+
+	// Do not replace on resource destroy.
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+
+	var plan tailnetKeyResourceModel
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Don't ever need to replace if the key is still valid.
+	if !plan.Invalid.ValueBool() {
+		return
+	}
+
+	if shouldRecreateIfInvalid(plan.Reusable.ValueBool(), plan.RecreateIfInvalid.ValueString()) {
+		resp.Plan.SetAttribute(ctx, path.Root("id"), types.StringUnknown())
+		resp.RequiresReplace = append(resp.RequiresReplace, path.Root("id"))
+	}
 }
