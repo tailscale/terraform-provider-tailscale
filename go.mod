@@ -1,6 +1,6 @@
 module github.com/tailscale/terraform-provider-tailscale
 
-go 1.26.1
+go 1.26.2
 
 require (
 	github.com/google/go-cmp v0.7.0
@@ -9,9 +9,9 @@ require (
 	github.com/hashicorp/terraform-plugin-docs v0.25.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.40.1
 	github.com/stretchr/testify v1.11.1
-	github.com/tailscale/hujson v0.0.0-20221223112325-20486734a56a
+	github.com/tailscale/hujson v0.0.0-20260302212456-ecc657c15afd
 	golang.org/x/tools v0.44.0
-	tailscale.com v1.96.5
+	tailscale.com v1.98.0
 	tailscale.com/client/tailscale/v2 v2.9.0
 )
 
@@ -88,7 +88,7 @@ require (
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
 	golang.org/x/mod v0.35.0 // indirect
 	golang.org/x/net v0.53.0 // indirect
-	golang.org/x/oauth2 v0.34.0 // indirect
+	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
 	golang.org/x/telemetry v0.0.0-20260409153401-be6f6cb8b1fa // indirect
