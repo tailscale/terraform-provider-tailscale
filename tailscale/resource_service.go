@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
@@ -42,6 +41,7 @@ func NewServiceResource() resource.Resource {
 
 type serviceResource struct {
 	ResourceBase
+	ResourceImportedByID
 }
 
 // Metadata defines the resource name as it appears in Terraform configurations.
@@ -182,10 +182,6 @@ func (r *serviceResource) Delete(ctx context.Context, req resource.DeleteRequest
 	if err != nil && !tailscale.IsNotFound(err) {
 		resp.Diagnostics.AddError("Failed to delete Service", err.Error())
 	}
-}
-
-func (d serviceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
 func (r *serviceResource) buildServiceFromResource(ctx context.Context, model *serviceResourceModel, diags *diag.Diagnostics) tailscale.VIPService {

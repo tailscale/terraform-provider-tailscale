@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -26,6 +25,7 @@ func NewDNSPreferencesResource() resource.Resource {
 
 type dnsPreferencesResource struct {
 	ResourceBase
+	ResourceImportedByID
 }
 
 // Metadata defines the resource name as it appears in Terraform configurations.
@@ -122,10 +122,6 @@ func (r *dnsPreferencesResource) Delete(ctx context.Context, req resource.Delete
 	if err := r.Client.DNS().SetPreferences(ctx, tailscale.DNSPreferences{}); err != nil {
 		resp.Diagnostics.AddError("Failed to set DNS preferences", "Failed to set DNS preferences: "+err.Error())
 	}
-}
-
-func (r *dnsPreferencesResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
 // updateDNSPreferences calls the Tailscale API to update the DNS preferences based

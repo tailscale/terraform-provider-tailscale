@@ -10,7 +10,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -34,6 +33,7 @@ func NewDNSConfigurationResource() resource.Resource {
 
 type dnsConfigurationResource struct {
 	ResourceBase
+	ResourceImportedByID
 }
 
 // Metadata defines the resource name as it appears in Terraform configurations.
@@ -261,10 +261,6 @@ func (r *dnsConfigurationResource) Delete(ctx context.Context, req resource.Dele
 	if err := r.Client.DNS().SetConfiguration(ctx, tailscale.DNSConfiguration{}); err != nil {
 		resp.Diagnostics.AddError("Failed to delete DNS configuration", err.Error())
 	}
-}
-
-func (r *dnsConfigurationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
 // updateDNSConfiguration calls the Tailscale API to update the DNS configuration based

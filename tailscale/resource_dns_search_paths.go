@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -15,7 +14,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-var _ resource.ResourceWithImportState = &dnsSearchPathsResource{}
+var (
+	_ resource.Resource                = &dnsSearchPathsResource{}
+	_ resource.ResourceWithImportState = &dnsSearchPathsResource{}
+)
 
 // NewDNSPreferencesResource returns a new DNS search paths resources.
 func NewDNSSearchPathsResource() resource.Resource {
@@ -24,6 +26,7 @@ func NewDNSSearchPathsResource() resource.Resource {
 
 type dnsSearchPathsResource struct {
 	ResourceBase
+	ResourceImportedByID
 }
 
 // Metadata defines the resource name as it appears in Terraform configurations.
@@ -125,10 +128,6 @@ func (r *dnsSearchPathsResource) Delete(ctx context.Context, req resource.Delete
 	if err := r.Client.DNS().SetSearchPaths(ctx, []string{}); err != nil {
 		resp.Diagnostics.AddError("Failed to delete DNS search paths", err.Error())
 	}
-}
-
-func (r *dnsSearchPathsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
 // updateDNSSearchPaths calls the Tailscale API to update the DNS search paths based
