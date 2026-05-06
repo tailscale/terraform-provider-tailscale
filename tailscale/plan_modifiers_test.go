@@ -49,11 +49,21 @@ func TestJsonSemanticDiffModifier(t *testing.T) {
 			config:       types.StringValue("<xml>this isn't JSON either</xml>"),
 			expectedPlan: types.StringValue("<xml>this isn't JSON either</xml>"),
 		},
+		{
+			name:         "config-null",
+			state:        types.StringValue(`{"sides": 8, "colour": "red"}`),
+			config:       types.StringNull(),
+			expectedPlan: types.StringNull(),
+		},
+		{
+			name:         "config-unknown",
+			state:        types.StringValue(`{"sides": 1, "colour": "pink"}`),
+			config:       types.StringUnknown(),
+			expectedPlan: types.StringUnknown(),
+		},
 	}
 
-	for _, tt := range testCases {
-		runStringPlanModifierTest(t, jsonSemanticDiffModifier{}, tt)
-	}
+	runStringPlanModifierTests(t, jsonSemanticDiffModifier{}, testCases)
 }
 
 func TestPreserveEmptyStringAsNull(t *testing.T) {
@@ -94,11 +104,15 @@ func TestPreserveEmptyStringAsNull(t *testing.T) {
 			config:       types.StringNull(),
 			expectedPlan: types.StringValue(""),
 		},
+		{
+			name:         "null-in-state-empty-string-in-plan",
+			state:        types.StringNull(),
+			config:       types.StringValue(""),
+			expectedPlan: types.StringValue(""),
+		},
 	}
 
-	for _, tt := range testCases {
-		runStringPlanModifierTest(t, PreserveEmptyStringAsNull{}, tt)
-	}
+	runStringPlanModifierTests(t, PreserveEmptyStringAsNull{}, testCases)
 }
 
 type stringPlanModifierTestCase struct {
@@ -108,32 +122,34 @@ type stringPlanModifierTestCase struct {
 	expectedPlan types.String
 }
 
-// runStringPlanModifierTest passes two strings as the plan/state values,
-// and checks if the modifier correctly reports a diff or not.
-func runStringPlanModifierTest(t *testing.T, modifier planmodifier.String, tt stringPlanModifierTestCase) {
+// runStringPlanModifierTests goes through the test cases, applies the
+// plan modifier, and checks if the PlanValue matches the expected.
+func runStringPlanModifierTests(t *testing.T, modifier planmodifier.String, testCases []stringPlanModifierTestCase) {
 	ctx := context.Background()
 
-	t.Run(tt.name, func(t *testing.T) {
-		// StateValue is the value currently stored in the state,
-		// ConfigValue is the exact value written by the user in their configuration,
-		// PlanValue is the value Terraform proposes to save
-		//
-		// Initially the PlanValue is the same as the ConfigValue, and we check
-		// if it's been updated correctly (or left as-is) after we've applied
-		// the plan modifier.
-		req := planmodifier.StringRequest{
-			StateValue:  tt.state,
-			ConfigValue: tt.config,
-			PlanValue:   tt.config,
-		}
-		resp := planmodifier.StringResponse{
-			PlanValue: req.PlanValue,
-		}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			// StateValue is the value currently stored in the state,
+			// ConfigValue is the exact value written by the user in their configuration,
+			// PlanValue is the value Terraform proposes to save
+			//
+			// Initially the PlanValue is the same as the ConfigValue, and we check
+			// if it's been updated correctly (or left as-is) after we've applied
+			// the plan modifier.
+			req := planmodifier.StringRequest{
+				StateValue:  tt.state,
+				ConfigValue: tt.config,
+				PlanValue:   tt.config,
+			}
+			resp := planmodifier.StringResponse{
+				PlanValue: req.PlanValue,
+			}
 
-		modifier.PlanModifyString(ctx, req, &resp)
+			modifier.PlanModifyString(ctx, req, &resp)
 
-		if resp.PlanValue != tt.expectedPlan {
-			t.Errorf("plan value is incorrect: got %s, want %s", resp.PlanValue, tt.expectedPlan)
-		}
-	})
+			if resp.PlanValue != tt.expectedPlan {
+				t.Errorf("plan value is incorrect: got %s, want %s", resp.PlanValue, tt.expectedPlan)
+			}
+		})
+	}
 }
