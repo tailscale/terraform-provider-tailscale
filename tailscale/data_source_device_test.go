@@ -247,6 +247,59 @@ func TestRetryWithDeadline_NoRetryWhenWaitForIsZero(t *testing.T) {
 	}
 }
 
+func TestProvider_DataSourceDevice_InvalidConfig(t *testing.T) {
+	testCases := []expectedErrorTestCase{
+		{
+			Name:        "no-fields",
+			Config:      `data "tailscale_device" "example" {}`,
+			ExpectError: regexp.MustCompile(`No attribute specified when one \(and only one\) of \[name,hostname\] is required`),
+		},
+		{
+			Name: "too-many-fields",
+			Config: `
+					data "tailscale_device" "example" {
+						name     = "hostname.domain.ts.net"
+						hostname = "hostname"
+					}
+				`,
+			ExpectError: regexp.MustCompile(`2 attributes specified when one \(and only one\) of \[name,hostname\] is required`),
+		},
+
+		{
+			Name: "invalid-wait-for",
+			Config: `
+				data "tailscale_device" "example" {
+					name     = "hostname.domain.ts.net"
+					wait_for = "century"
+				}
+			`,
+			ExpectError: regexp.MustCompile(`Attribute wait_for unable to parse value as a duration, got: century`),
+		},
+		{
+			Name: "wait-for-1s",
+			Config: `
+				data "tailscale_device" "example" {
+					name     = "hostname.domain.ts.net"
+					wait_for = "1s"
+				}
+			`,
+			ExpectError: regexp.MustCompile(`Attribute wait_for duration must be greater than 1 second, got: 1s`),
+		},
+		{
+			Name: "wait-for-less-than-1s",
+			Config: `
+				data "tailscale_device" "example" {
+					name     = "hostname.domain.ts.net"
+					wait_for = "1ms"
+				}
+			`,
+			ExpectError: regexp.MustCompile(`Attribute wait_for duration must be greater than 1 second, got: 1ms`),
+		},
+	}
+
+	runExpectedErrorTests(t, testCases)
+}
+
 // deviceToMap converts the given device into a map representing the device as a
 // resource in Terraform. This omits the "id" which is expected to be set
 // using [schema.ResourceData.SetId].
