@@ -10,11 +10,14 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/helpers/validatordiag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+
+	"github.com/tailscale/hujson"
 )
 
 var (
 	_ validator.String = cidrValidator{}
 	_ validator.String = retryDeadlineValidator{}
+	_ validator.String = aclHuJSONValidator{}
 )
 
 // cidrValidator is a [validator.String] for CIDR addresses.
@@ -75,5 +78,31 @@ func (r retryDeadlineValidator) ValidateString(_ context.Context, req validator.
 			req.ConfigValue.ValueString(),
 		))
 	default:
+	}
+}
+
+// aclHuJSONValidator is a [validator.String] that checks whether a string can be
+// parsed as HuJSON.
+type aclHuJSONValidator struct{}
+
+func (v aclHuJSONValidator) Description(_ context.Context) string {
+	return "string must be a valid HuJSON or JSON document"
+}
+
+func (v aclHuJSONValidator) MarkdownDescription(_ context.Context) string {
+	return "string must be a valid **HuJSON** or **JSON** document"
+}
+
+func (v aclHuJSONValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
+		return
+	}
+
+	if _, err := hujson.Parse([]byte(req.ConfigValue.ValueString())); err != nil {
+		resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+			req.Path,
+			"is invalid HuJSON",
+			err.Error(),
+		))
 	}
 }

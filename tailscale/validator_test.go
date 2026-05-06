@@ -63,6 +63,37 @@ func TestRetryDeadlineValidator(t *testing.T) {
 	runStringValidatorTests(t, retryDeadlineValidator{}, testCases)
 }
 
+func TestAclHuJSONValidator(t *testing.T) {
+	testCases := []stringValidatorTestCase{
+		{
+			name:   "valid-json",
+			config: types.StringValue(`{ "grants": [ {"src": ["*"], "dst": ["*"], "ip": ["*"] } ] }`),
+		},
+		{
+			name: "valid-hujson-with-comments",
+			config: types.StringValue(`{
+				// Allow all connections. 
+				"grants": [ {"src": ["*"], "dst": ["*"], "ip": ["*"] } ],
+			}`),
+		},
+		{
+			name:    "invalid-json",
+			config:  types.StringValue("{ //"),
+			wantErr: true,
+		},
+		{
+			name:   "null",
+			config: types.StringNull(),
+		},
+		{
+			name:   "unknown",
+			config: types.StringUnknown(),
+		},
+	}
+
+	runStringValidatorTests(t, aclHuJSONValidator{}, testCases)
+}
+
 type stringValidatorTestCase struct {
 	name    string
 	config  types.String

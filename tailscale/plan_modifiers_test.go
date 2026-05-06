@@ -65,6 +65,68 @@ func TestJsonSemanticDiffModifier(t *testing.T) {
 	runStringPlanModifierTests(t, jsonSemanticDiffModifier{}, testCases)
 }
 
+func TestAclHuJSONModifier(t *testing.T) {
+	testCases := []stringPlanModifierTestCase{
+		{
+			name:         "empty-objects",
+			state:        types.StringValue(`{}`),
+			config:       types.StringValue(`{}`),
+			expectedPlan: types.StringValue(`{}`),
+		},
+		{
+			name:         "equivalent-json",
+			state:        types.StringValue(`{"wheels": 3, "seats": 2}`),
+			config:       types.StringValue(`{"wheels": 3, "seats": 2}`),
+			expectedPlan: types.StringValue(`{"wheels": 3, "seats": 2}`),
+		},
+		{
+			name: "unformatted-plan-is-left-as-is",
+			config: types.StringValue(`{
+				"wheels": 6,
+					"seats": 8
+			}`),
+			expectedPlan: types.StringValue(`{
+				"wheels": 6,
+					"seats": 8
+			}`),
+		},
+		{
+			// This assumes the Terraform state contains non-canonicalised HuJSON,
+			// which seems unlikely, but check it would produce an empty diff just in case.
+			name: "plan-matches-state-if-equivalent",
+			state: types.StringValue(`{
+				"wheels": 6,
+					"seats": 8
+			}`),
+			config: types.StringValue("{\n\t\"wheels\": 6,\n\t\"seats\": 8\n}\n"),
+			expectedPlan: types.StringValue(`{
+				"wheels": 6,
+					"seats": 8
+			}`),
+		},
+		{
+			name:         "config-invalid-json-is-left-as-is",
+			state:        types.StringUnknown(),
+			config:       types.StringValue("<xml>not json</xml>"),
+			expectedPlan: types.StringValue("<xml>not json</xml>"),
+		},
+		{
+			name:         "config-null",
+			state:        types.StringValue(`{"wheels": 4, "seats": 5}`),
+			config:       types.StringNull(),
+			expectedPlan: types.StringNull(),
+		},
+		{
+			name:         "config-unknown",
+			state:        types.StringValue(`{"wheels": 1, "seats": 1}`),
+			config:       types.StringUnknown(),
+			expectedPlan: types.StringUnknown(),
+		},
+	}
+
+	runStringPlanModifierTests(t, aclHuJSONModifier{}, testCases)
+}
+
 func TestPreserveEmptyStringAsNull(t *testing.T) {
 	testCases := []stringPlanModifierTestCase{
 		{
