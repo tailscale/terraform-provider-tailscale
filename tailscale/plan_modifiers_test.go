@@ -4,7 +4,6 @@
 package tailscale
 
 import (
-	"context"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -125,8 +124,6 @@ type stringPlanModifierTestCase struct {
 // runStringPlanModifierTests goes through the test cases, applies the
 // plan modifier, and checks if the PlanValue matches the expected.
 func runStringPlanModifierTests(t *testing.T, modifier planmodifier.String, testCases []stringPlanModifierTestCase) {
-	ctx := context.Background()
-
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			// StateValue is the value currently stored in the state,
@@ -145,7 +142,7 @@ func runStringPlanModifierTests(t *testing.T, modifier planmodifier.String, test
 				PlanValue: req.PlanValue,
 			}
 
-			modifier.PlanModifyString(ctx, req, &resp)
+			modifier.PlanModifyString(t.Context(), req, &resp)
 
 			if resp.PlanValue != tt.expectedPlan {
 				t.Errorf("plan value is incorrect: got %s, want %s", resp.PlanValue, tt.expectedPlan)

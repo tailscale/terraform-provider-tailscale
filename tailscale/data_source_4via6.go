@@ -5,10 +5,8 @@ package tailscale
 
 import (
 	"context"
-	"net"
 	"net/netip"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/helpers/validatordiag"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -101,31 +99,4 @@ func (d dataSource4via6) Read(ctx context.Context, req datasource.ReadRequest, r
 	data.IPv6 = types.StringValue(mapped)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
-}
-
-// cidrValidator is a [validator.String] for CIDR addresses.
-type cidrValidator struct{}
-
-func (v cidrValidator) Description(_ context.Context) string {
-	return "value must be a CIDR address."
-}
-
-func (v cidrValidator) MarkdownDescription(ctx context.Context) string {
-	return v.Description(ctx)
-}
-
-func (v cidrValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
-		return
-	}
-
-	value := req.ConfigValue.ValueString()
-	_, _, err := net.ParseCIDR(value)
-	if err != nil {
-		resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
-			req.Path,
-			v.Description(ctx),
-			req.ConfigValue.ValueString(),
-		))
-	}
 }

@@ -78,31 +78,6 @@ func (d singleDeviceDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 	}
 }
 
-type retryDeadlineValidator struct {
-}
-
-func (r retryDeadlineValidator) Description(_ context.Context) string {
-	return "Validates that the value is a duration greater than 1s."
-}
-
-func (r retryDeadlineValidator) MarkdownDescription(ctx context.Context) string {
-	return r.Description(ctx)
-}
-
-func (r retryDeadlineValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-	if req.ConfigValue.IsNull() {
-		return
-	}
-	waitFor, err := time.ParseDuration(req.ConfigValue.ValueString())
-	switch {
-	case err != nil:
-		resp.Diagnostics.AddAttributeError(req.Path, "failed to parse wait_for", "not a duration")
-	case waitFor <= time.Second:
-		resp.Diagnostics.AddAttributeError(req.Path, "failed to parse wait_for", "wait_for must be greater than 1 second")
-	default:
-	}
-}
-
 // Read fetches the data from the Tailscale API.
 func (d singleDeviceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var device singleDeviceDataSourceModel
