@@ -46,21 +46,12 @@ func (d singleDeviceDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 			Description: "The full name of the device (e.g. `hostname.domain.ts.net`)",
 			Optional:    true,
 			Validators: []validator.String{
-				stringvalidator.ExactlyOneOf(path.Expressions{
-					path.MatchRoot("name"),
-					path.MatchRoot("hostname"),
-				}...),
+				stringvalidator.ExactlyOneOf(path.MatchRoot("name"), path.MatchRoot("hostname")),
 			},
 		},
 		"hostname": schema.StringAttribute{
 			Description: "The short hostname of the device",
 			Optional:    true,
-			Validators: []validator.String{
-				stringvalidator.ExactlyOneOf(path.Expressions{
-					path.MatchRoot("name"),
-					path.MatchRoot("hostname"),
-				}...),
-			},
 		},
 		"wait_for": schema.StringAttribute{
 			Description: "If specified, the provider will make multiple attempts to obtain the data source until the wait_for duration is reached. Retries are made every second so this value should be greater than 1s",
