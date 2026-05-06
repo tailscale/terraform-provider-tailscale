@@ -5,7 +5,6 @@ package tailscale
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -50,18 +49,9 @@ func TestProvider_TailscaleTailnetKey(t *testing.T) {
 
 func testTailnetKeyStruct(reusable bool) tailscale.Key {
 	var keyCapabilities tailscale.KeyCapabilities
-	json.Unmarshal([]byte(`
-		{
-			"devices": {
-				"create": {
-					"ephemeral": true,
-					"preauthorized": true,
-					"tags": [
-						"tag:server"
-					]
-				}
-			}
-		}`), &keyCapabilities)
+	keyCapabilities.Devices.Create.Ephemeral = true
+	keyCapabilities.Devices.Create.Preauthorized = true
+	keyCapabilities.Devices.Create.Tags = []string{"tag:server"}
 	keyCapabilities.Devices.Create.Reusable = reusable
 	return tailscale.Key{
 		ID:            "test",
@@ -73,10 +63,28 @@ func testTailnetKeyStruct(reusable bool) tailscale.Key {
 	}
 }
 
+func testTailnetKeyStructWithID(id string, reusable bool) tailscale.Key {
+	var keyCapabilities tailscale.KeyCapabilities
+	keyCapabilities.Devices.Create.Ephemeral = true
+	keyCapabilities.Devices.Create.Preauthorized = true
+	keyCapabilities.Devices.Create.Tags = []string{"tag:server"}
+	keyCapabilities.Devices.Create.Reusable = reusable
+	return tailscale.Key{
+		ID:            id,
+		KeyType:       "auth",
+		Key:           "thisisatestkey",
+		Description:   "Example key",
+		ExpirySeconds: toPtr(time.Duration(3600)),
+		Capabilities:  keyCapabilities,
+	}
+}
+
 func setKeyStep(reusable bool, recreateIfInvalid string) resource.TestStep {
 	return resource.TestStep{
 		PreConfig: func() {
-			testServer.ResponseBody = testTailnetKeyStruct(reusable)
+			testServer.SetResponses([]TestResponse{
+				{Code: http.StatusOK, Body: testTailnetKeyStructWithID("old-key-id", reusable)},
+			})
 		},
 		ResourceName: "tailscale_tailnet_key.example_key",
 		Config: fmt.Sprintf(`
@@ -103,34 +111,55 @@ func setKeyStep(reusable bool, recreateIfInvalid string) resource.TestStep {
 
 			// Make sure the next API call to the test server returns the key
 			// matching the one we have just set.
-			testServer.ResponseBody = testTailnetKeyStruct(reusable)
+			testServer.ResponseBody = testTailnetKeyStructWithID("old-key-id", reusable)
 
 			return nil
 		},
 	}
 }
 
-func checkInvalidKeyRecreated(reusable, wantRecreated bool) resource.TestStep {
+func checkInvalidKeyRecreated(description string, reusable bool, recreateIfInvalid string, wantRecreated bool) resource.TestStep {
 	return resource.TestStep{
-		RefreshState:       true,
-		ExpectNonEmptyPlan: true,
 		PreConfig: func() {
-			testServer.ResponseCode = http.StatusOK
-			key := testTailnetKeyStruct(reusable)
-			key.Invalid = true
-			testServer.ResponseBody = key
+			oldKey := testTailnetKeyStructWithID("old-key-id", reusable)
+			oldKey.Invalid = true
+			newKey := testTailnetKeyStructWithID("new-key-id", reusable)
+			testServer.SetResponses([]TestResponse{
+				{Code: http.StatusOK, Body: oldKey},
+				{Code: http.StatusOK, Body: newKey},
+			})
 		},
+		ResourceName: "tailscale_tailnet_key.example_key",
+		Config: fmt.Sprintf(`
+			resource "tailscale_tailnet_key" "example_key" {
+				reusable = %v
+				recreate_if_invalid = "%s"
+				ephemeral = true
+				preauthorized = true
+				tags = ["tag:server"]
+				expiry = 3600
+				description = "Example key"
+			}
+		`, reusable, recreateIfInvalid),
 		Check: func(s *terraform.State) error {
-			_, ok := s.RootModule().Resources["tailscale_tailnet_key.example_key"]
+			key, ok := s.RootModule().Resources["tailscale_tailnet_key.example_key"]
+			if !ok {
+				return errors.New("key not found")
+			}
 
-			if ok == wantRecreated {
-				return fmt.Errorf("found=%v, wantRecreated=%v", ok, wantRecreated)
+			fmt.Printf("%s: %+v\n", description, key.Primary.Attributes)
+
+			gotRecreated := key.Primary.ID != "old-key-id"
+
+			if gotRecreated != wantRecreated {
+				return fmt.Errorf("%s: gotRecreated=%v, wantRecreated=%v", description, gotRecreated, wantRecreated)
 			}
 
 			return nil
 		},
 	}
 }
+
 func TestProvider_TailscaleTailnetKeyInvalid(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		IsUnitTest: true,
@@ -146,29 +175,27 @@ func TestProvider_TailscaleTailnetKeyInvalid(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create a reusable key.
 			setKeyStep(true, ""),
-			// Confirm that the reusable key will be recreated when invalid.
-			checkInvalidKeyRecreated(true, true),
+			checkInvalidKeyRecreated("Confirm that the reusable key will be recreated when invalid", true, "", true),
 
 			// Now make it a single-use key.
 			setKeyStep(false, ""),
-			// Confirm that the single-use key is not recreated.
-			checkInvalidKeyRecreated(false, false),
+			checkInvalidKeyRecreated("Confirm that the single-use key is not recreated", false, "", false),
 
 			// A single-use key with recreate=always, should be recreated.
 			setKeyStep(false, "always"),
-			checkInvalidKeyRecreated(false, true),
+			checkInvalidKeyRecreated("A single-use key with recreate=always, should be recreated", false, "always", true),
 
 			// A single-use key with recreate=never, should not be recreated.
 			setKeyStep(false, "never"),
-			checkInvalidKeyRecreated(false, false),
+			checkInvalidKeyRecreated("A single-use key with recreate=never, should not be recreated", false, "never", false),
 
 			// A reusable key with recreate=always, should be recreated.
 			setKeyStep(true, "always"),
-			checkInvalidKeyRecreated(true, true),
+			checkInvalidKeyRecreated("A reusable key with recreate=always, should be recreated", true, "always", true),
 
 			// A reusable key with recreate=always, should be recreated.
 			setKeyStep(true, "always"),
-			checkInvalidKeyRecreated(true, true),
+			checkInvalidKeyRecreated("A reusable key with recreate=always, should be recreated", true, "always", true),
 		},
 	})
 }
@@ -304,6 +331,20 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 			},
 		},
 	})
+
+	checkResourceIsUnchangedInPluginFramework(t,
+		testTailnetKeyCreate,
+		resource.ComposeTestCheckFunc(
+			checkResourceRemoteProperties(resourceName,
+				checkProperties(&expectedKey, 7776000),
+			),
+			resource.TestCheckResourceAttr(resourceName, "reusable", "true"),
+			resource.TestCheckResourceAttr(resourceName, "ephemeral", "true"),
+			resource.TestCheckResourceAttr(resourceName, "preauthorized", "true"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "tags.*", "tag:a"),
+			resource.TestCheckResourceAttr(resourceName, "expiry", "7776000"),
+			resource.TestCheckResourceAttr(resourceName, "description", "Test key"),
+		))
 }
 
 func toPtr[T any](v T) *T {
