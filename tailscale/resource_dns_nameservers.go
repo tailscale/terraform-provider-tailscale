@@ -81,13 +81,11 @@ func (r *dnsNameserversResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	nsSet, diags := types.ListValueFrom(ctx, types.StringType, servers)
-	resp.Diagnostics.Append(diags...)
+	state.Nameservers = ListOfStringValue(ctx, servers, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	state.Nameservers = nsSet
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 

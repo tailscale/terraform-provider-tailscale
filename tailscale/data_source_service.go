@@ -87,20 +87,10 @@ func (d dataSourceService) Read(ctx context.Context, req datasource.ReadRequest,
 
 	data.ID = types.StringValue(svc.Name)
 	data.Name = types.StringValue(svc.Name)
-
-	addrs, diags := types.ListValueFrom(ctx, types.StringType, svc.Addrs)
-	resp.Diagnostics.Append(diags...)
-	data.Addrs = addrs
-
+	data.Addrs = ListOfStringValue(ctx, svc.Addrs, &resp.Diagnostics)
 	data.Comment = types.StringValue(svc.Comment)
-
-	ports, diags := types.ListValueFrom(ctx, types.StringType, svc.Ports)
-	resp.Diagnostics.Append(diags...)
-	data.Ports = ports
-
-	tags, diags := types.SetValueFrom(ctx, types.StringType, svc.Tags)
-	resp.Diagnostics.Append(diags...)
-	data.Tags = tags
+	data.Ports = ListOfStringValue(ctx, svc.Ports, &resp.Diagnostics)
+	data.Tags = SetOfStringValue(ctx, svc.Tags, &resp.Diagnostics)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
