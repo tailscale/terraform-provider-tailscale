@@ -6,13 +6,17 @@ package tailscale
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"tailscale.com/client/tailscale/v2"
+)
+
+var (
+	_ resource.Resource                = &deviceKeyResource{}
+	_ resource.ResourceWithImportState = &deviceKeyResource{}
 )
 
 type deviceKeyResourceModel struct {
@@ -28,6 +32,7 @@ func NewDeviceKeyResource() resource.Resource {
 
 type deviceKeyResource struct {
 	ResourceBase
+	ResourceImportedByID
 }
 
 func (d deviceKeyResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -168,8 +173,4 @@ func (d deviceKeyResource) Update(ctx context.Context, req resource.UpdateReques
 	plan.ID = types.StringValue(deviceID)
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
-}
-
-func (d deviceKeyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
