@@ -5,17 +5,38 @@ package tailscale
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
-	"github.com/hashicorp/go-cty/cty"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
-	"tailscale.com/client/tailscale/v2"
-
-	"github.com/tailscale/hujson"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
+
+type aclResourceModel struct {
+	ID                       types.String `tfsdk:"id"`
+	ACL                      types.String `tfsdk:"acl"`
+	OverwriteExistingContent types.Bool   `tfsdk:"overwrite_existing_content"`
+	ResetACLOnDestroy        types.Bool   `tfsdk:"reset_acl_on_destroy"`
+}
+
+// NewACLResource returns a new ACL resource.
+func NewACLResource() resource.Resource {
+	return &aclResource{}
+}
+
+type aclResource struct {
+	ResourceBase
+}
+
+// Metadata defines the resource name as it appears in Terraform configurations.
+func (r *aclResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_acl"
+}
 
 const resourceACLDescription = `The acl resource allows you to configure a Tailscale policy file. See https://tailscale.com/kb/1395/tailnet-policy-file for more information. Note that this resource will completely overwrite existing policy file contents for a given tailnet.
 
@@ -25,148 +46,127 @@ If tests are defined in the policy file (the top-level "tests" section), policy 
 // TODO: use an exported variable when https://github.com/hashicorp/terraform-plugin-sdk/issues/803 has been addressed.
 const UnknownVariableValue = "74D93920-ED26-11E3-AC10-0800200C9A66"
 
-func resourceACL() *schema.Resource {
-	return &schema.Resource{
-		Description:   resourceACLDescription,
-		ReadContext:   resourceACLRead,
-		CreateContext: resourceACLCreate,
-		UpdateContext: resourceACLUpdate,
-		DeleteContext: resourceACLDelete,
-		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
-		},
-		CustomizeDiff: func(ctx context.Context, rd *schema.ResourceDiff, m interface{}) error {
-			client := m.(*tailscale.Client)
-
-			//if the acl is only known after apply, then acl will be an empty string and validation will fail
-			if rd.Get("acl").(string) == "" {
-				return nil
-			}
-			return client.PolicyFile().Validate(ctx, rd.Get("acl").(string))
-		},
-		Schema: map[string]*schema.Schema{
-			"acl": {
-				Type:        schema.TypeString,
+func (r *aclResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		Description: resourceACLDescription,
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"acl": schema.StringAttribute{
 				Required:    true,
 				Description: "The policy that defines which devices and users are allowed to connect in your network. Can be either a JSON or a HuJSON string.",
-
-				// Field-level validation just checks that it's valid JSON or HuJSON.
-				// Actual contents of the policy is validated by calling the API when
-				// the whole resource is validated in CustomizeDiff.
-				ValidateDiagFunc: func(i interface{}, p cty.Path) diag.Diagnostics {
-					_, err := hujson.Parse([]byte(i.(string)))
-					if err != nil {
-						return diagnosticsErrorWithPath(err, "ACL is not a valid HuJSON string", p)
-					}
-					return nil
+				PlanModifiers: []planmodifier.String{
+					aclHuJSONModifier{},
 				},
-
-				// Do not show a diff if canonical HuJSON representation of the policy did not
-				// change. Note that a policy that is valid JSON will not be formatted as HuJSON
-				// (see hujson.Format docs), so a diff is expected when switching from JSON to
-				// HuJSON (or back), even if there are no semantic changes.
-				DiffSuppressFunc: func(k, oldValue, newValue string, d *schema.ResourceData) bool {
-					old, oldErr := hujson.Format([]byte(oldValue))
-					new, newErr := hujson.Format([]byte(newValue))
-					if oldErr != nil || newErr != nil {
-						return false
-					}
-					return string(old) == string(new)
-				},
-				DiffSuppressOnRefresh: true,
-
-				// Use the canonical HuJSON representation of the policy in Terraform state.
-				StateFunc: func(i interface{}) string {
-					//if the acl is only known after apply, then it will be the magic UUID `UnknownVariableValue` and not valid json, and formatting will fail
-					if i.(string) == UnknownVariableValue {
-						return i.(string)
-					}
-					value, err := hujson.Format([]byte(i.(string)))
-					if err != nil {
-						panic(fmt.Errorf("could not parse ACL as HuJSON: %s", err))
-					}
-					return string(value)
+				Validators: []validator.String{
+					aclHuJSONValidator{},
 				},
 			},
-			"overwrite_existing_content": {
-				Type:        schema.TypeBool,
+			"overwrite_existing_content": schema.BoolAttribute{
+				Computed:    true,
 				Optional:    true,
 				Description: "If true, will skip requirement to import acl before allowing changes. Be careful, can cause the policy file to be overwritten",
+				Default:     booldefault.StaticBool(false),
 			},
-			"reset_acl_on_destroy": {
-				Type:        schema.TypeBool,
+			"reset_acl_on_destroy": schema.BoolAttribute{
+				Computed:    true,
 				Optional:    true,
 				Description: "If true, will reset the policy file for the Tailnet to the default when this resource is destroyed",
+				Default:     booldefault.StaticBool(false),
 			},
 		},
 	}
 }
 
-func resourceACLRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
-	acl, err := client.PolicyFile().Raw(ctx)
-	if err != nil {
-		return diagnosticsError(err, "Failed to fetch policy file")
+func (r *aclResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state aclResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	if err := d.Set("acl", acl.HuJSON); err != nil {
-		return diag.FromErr(err)
+	acl, err := r.Client.PolicyFile().Raw(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to fetch ACL", err.Error())
+		return
 	}
-	return nil
+
+	state.ACL = types.StringValue(acl.HuJSON)
+
+	if state.ResetACLOnDestroy.IsNull() {
+		state.ResetACLOnDestroy = types.BoolValue(false)
+	}
+	if state.OverwriteExistingContent.IsNull() {
+		state.OverwriteExistingContent = types.BoolValue(false)
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func resourceACLCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
-	acl := d.Get("acl").(string)
+func (r *aclResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan aclResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Setting the `ts-default` ETag will make this operation succeed only if
 	// ACL contents has never been changed from its default value.
 	var etag string
-	if !d.Get("overwrite_existing_content").(bool) {
+	if !plan.OverwriteExistingContent.ValueBool() {
 		etag = "ts-default"
 	}
 
-	if err := client.PolicyFile().Set(ctx, acl, etag); err != nil {
+	if err := r.Client.PolicyFile().Set(ctx, plan.ACL.ValueString(), etag); err != nil {
 		if strings.HasSuffix(err.Error(), "(412)") {
-			err = fmt.Errorf(
-				"! You seem to be trying to overwrite a non-default policy file with a tailscale_acl resource.\n"+
-					"Before doing this, please import your existing policy file into Terraform state using:\n"+
-					" terraform import $(this_resource) acl\n"+
-					"(got error %q)", err)
+			resp.Diagnostics.AddError("Overwrite Protected",
+				"You are trying to overwrite a non-default policy. Please import the ACL first or set overwrite_existing_content = true.")
+			return
 		}
-		return diagnosticsError(err, "Failed to set policy file")
+		resp.Diagnostics.AddError("Failed to set ACL", err.Error())
+		return
 	}
 
-	d.SetId(createUUID())
-	return resourceACLRead(ctx, d, m)
+	plan.ID = types.StringValue(createUUID())
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-func resourceACLUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*tailscale.Client)
-
-	if !d.HasChange("acl") {
-		return nil
+func (r *aclResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan aclResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	if err := client.PolicyFile().Set(ctx, d.Get("acl").(string), ""); err != nil {
-		return diagnosticsError(err, "Failed to set policy file")
+	err := r.Client.PolicyFile().Set(ctx, plan.ACL.ValueString(), "")
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to update ACL", err.Error())
+		return
 	}
 
-	return resourceACLRead(ctx, d, m)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-func resourceACLDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func (r *aclResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state aclResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+
 	// Each tailnet always has an associated ACL file, so deleting a resource will
 	// only remove it from Terraform state, leaving ACL contents intact.
-	if !d.Get("reset_acl_on_destroy").(bool) {
-		return nil
+	if !state.ResetACLOnDestroy.ValueBool() {
+		return
 	}
 
-	client := m.(*tailscale.Client)
 	// Setting the ACL to an empty string resets its value to the default.
-	if err := client.PolicyFile().Set(ctx, "", ""); err != nil {
-		return diagnosticsError(err, "Failed to reset policy file")
+	if err := r.Client.PolicyFile().Set(ctx, "", ""); err != nil {
+		resp.Diagnostics.AddError("Failed to reset ACL", err.Error())
 	}
+}
 
-	return nil
+func (r *aclResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
