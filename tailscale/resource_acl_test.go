@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -222,6 +223,24 @@ func TestAccACL(t *testing.T) {
 			},
 		},
 	})
+
+	// Migration test to ensure the resource is unchanged when migrating
+	// from the plugin SDK to the plugin framework.
+	//
+	// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#terraform-data-resource-example
+	checkResourceIsUnchangedInPluginFramework(t, testACLCreate, resource.ComposeTestCheckFunc(
+		checkResourceRemoteProperties(resourceName,
+			checkACLProperties(&tailscale.ACL{
+				ACLs: []tailscale.ACLEntry{
+					{
+						Action: "accept",
+						Users:  []string{"*"},
+						Ports:  []string{"*:*"},
+					},
+				},
+			}),
+		),
+	))
 }
 
 func TestAccACL_resetOnDestroy(t *testing.T) {
@@ -307,4 +326,25 @@ func checkACLProperties(expected *tailscale.ACL) func(client *tailscale.Client, 
 
 		return nil
 	}
+}
+
+func TestProvider_TailscaleACL_InvalidConfig(t *testing.T) {
+	testCases := []expectedErrorTestCase{
+		{
+			Name:        "no-acl",
+			Config:      `resource "tailscale_acl" "example" {}`,
+			ExpectError: regexp.MustCompile(`The argument "acl" is required, but no definition was found`),
+		},
+		{
+			Name: "invalid-acl",
+			Config: `
+					resource "tailscale_acl" "example" {
+						acl = "<xml>not JSON</xml>"
+					}
+				`,
+			ExpectError: regexp.MustCompile(`Attribute acl is invalid HuJSON, got: hujson: line 1, column 1`),
+		},
+	}
+
+	runExpectedErrorTests(t, testCases)
 }
