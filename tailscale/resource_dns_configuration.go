@@ -184,11 +184,7 @@ func (r *dnsConfigurationResource) Read(ctx context.Context, req resource.ReadRe
 		})
 	}
 	state.SplitDNS = splitDNS
-
-	searchPaths, diags := types.ListValueFrom(ctx, types.StringType, remote.SearchPaths)
-	resp.Diagnostics.Append(diags...)
-	state.SearchPaths = searchPaths
-
+	state.SearchPaths = ListOfStringValue(ctx, remote.SearchPaths, &resp.Diagnostics)
 	state.OverrideLocalDNS = types.BoolValue(remote.Preferences.OverrideLocalDNS)
 	state.MagicDNS = types.BoolValue(remote.Preferences.MagicDNS)
 

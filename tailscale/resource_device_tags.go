@@ -98,12 +98,11 @@ func (d deviceTagsResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	state.DeviceID = types.StringValue(canonicalDeviceID)
-	tags, diags := types.SetValueFrom(ctx, types.StringType, device.Tags)
-	resp.Diagnostics.Append(diags...)
-	if diags.HasError() {
+	state.Tags = SetOfStringValue(ctx, device.Tags, &resp.Diagnostics)
+
+	if resp.Diagnostics.HasError() {
 		return
 	}
-	state.Tags = tags
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
