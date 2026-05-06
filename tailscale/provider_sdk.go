@@ -102,7 +102,6 @@ func Provider(options ...ProviderOption) *schema.Provider {
 			"tailscale_oauth_client":       resourceOAuthClient(),
 			"tailscale_tailnet_settings":   resourceTailnetSettings(),
 			"tailscale_federated_identity": resourceFederatedIdentity(),
-			"tailscale_service":            resourceService(),
 		},
 	}
 
