@@ -47,6 +47,16 @@ func TestProvider_DataSourceTailscale4Via6_InvalidConfig(t *testing.T) {
 			`,
 			ExpectError: regexp.MustCompile(`Attribute site value must be between 0 and 65535, got: 70000`),
 		},
+		{
+			Name: "invalid-cidr",
+			Config: `
+				data "tailscale_4via6" "invalid" {
+					site = 5757
+					cidr = "not-a-cidr"
+				}
+			`,
+			ExpectError: regexp.MustCompile("Attribute cidr value must be a CIDR address, got: not-a-cidr"),
+		},
 	}
 
 	runExpectedErrorTests(t, testCases)
