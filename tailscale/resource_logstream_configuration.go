@@ -256,10 +256,7 @@ func (d *logstreamConfigurationResourceModel) updateFields(ctx context.Context, 
 	d.S3RoleARN = StringValueNullIfEmpty(config.S3RoleARN)
 	d.S3ExternalID = StringValueNullIfEmpty(config.S3ExternalID)
 
-	gcsScopes, scopeDiags := types.SetValueFrom(ctx, types.StringType, config.GCSScopes)
-	diags.Append(scopeDiags...)
-	d.GCSScopes = gcsScopes
-
+	d.GCSScopes = SetOfStringValue(ctx, config.GCSScopes, diags)
 	d.GCSCredentials = StringValueNullIfEmpty(config.GCSCredentials)
 	d.GCSKeyPrefix = StringValueNullIfEmpty(config.GCSKeyPrefix)
 	d.GCSBucket = StringValueNullIfEmpty(config.GCSBucket)

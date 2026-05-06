@@ -12,10 +12,12 @@ import (
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"tailscale.com/client/tailscale/v2"
 )
 
@@ -247,6 +249,20 @@ func createTailscaleClient(baseURL *url.URL, userAgent string, tailnet string, a
 			Tailnet:   tailnet,
 		}
 	}
+}
+
+// ListOfStringValue returns a [types.ListValue] of strings.
+func ListOfStringValue(ctx context.Context, value []string, diags *diag.Diagnostics) basetypes.ListValue {
+	v, d := types.ListValueFrom(ctx, types.StringType, value)
+	diags.Append(d...)
+	return v
+}
+
+// SetOfStringValue returns a [types.SetValue] of strings.
+func SetOfStringValue(ctx context.Context, value any, diags *diag.Diagnostics) basetypes.SetValue {
+	v, d := types.SetValueFrom(ctx, types.StringType, value)
+	diags.Append(d...)
+	return v
 }
 
 // StringValueNullIfEmpty returns a StringValue of the given input string, or a

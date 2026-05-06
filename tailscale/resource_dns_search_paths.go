@@ -73,13 +73,11 @@ func (r *dnsSearchPathsResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	searchPaths, diags := types.ListValueFrom(ctx, types.StringType, paths)
-	if diags.HasError() {
-		resp.Diagnostics.Append(diags...)
+	state.SearchPaths = ListOfStringValue(ctx, paths, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	state.SearchPaths = searchPaths
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 }

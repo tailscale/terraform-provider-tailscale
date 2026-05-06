@@ -127,9 +127,7 @@ func (r *serviceResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	addrs, d := types.ListValueFrom(ctx, types.StringType, createdSvc.Addrs)
-	resp.Diagnostics.Append(d...)
-	plan.Addrs = addrs
+	plan.Addrs = ListOfStringValue(ctx, createdSvc.Addrs, &resp.Diagnostics)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -153,18 +151,9 @@ func (r *serviceResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	state.Name = types.StringValue(svc.Name)
 	state.Comment = types.StringValue(svc.Comment)
-
-	addrs, d := types.ListValueFrom(ctx, types.StringType, svc.Addrs)
-	resp.Diagnostics.Append(d...)
-	state.Addrs = addrs
-
-	ports, d := types.SetValueFrom(ctx, types.StringType, svc.Ports)
-	resp.Diagnostics.Append(d...)
-	state.Ports = ports
-
-	tags, d := types.SetValueFrom(ctx, types.StringType, svc.Tags)
-	resp.Diagnostics.Append(d...)
-	state.Tags = tags
+	state.Addrs = ListOfStringValue(ctx, svc.Addrs, &resp.Diagnostics)
+	state.Ports = SetOfStringValue(ctx, svc.Ports, &resp.Diagnostics)
+	state.Tags = SetOfStringValue(ctx, svc.Tags, &resp.Diagnostics)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }

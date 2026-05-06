@@ -107,13 +107,11 @@ func (d deviceSubnetRoutesResource) Read(ctx context.Context, req resource.ReadR
 		return
 	}
 
-	routes, diags := types.SetValueFrom(ctx, types.StringType, deviceRoutes.Enabled)
-	resp.Diagnostics.Append(diags...)
-	if diags.HasError() {
+	state.Routes = SetOfStringValue(ctx, deviceRoutes.Enabled, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	state.Routes = routes
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 }
