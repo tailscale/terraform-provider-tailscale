@@ -21,7 +21,7 @@ var (
 type cidrValidator struct{}
 
 func (v cidrValidator) Description(_ context.Context) string {
-	return "value must be a CIDR address."
+	return "value must be a CIDR address"
 }
 
 func (v cidrValidator) MarkdownDescription(ctx context.Context) string {
