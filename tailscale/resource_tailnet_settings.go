@@ -25,6 +25,7 @@ var (
 	_ resource.Resource                = &tailnetSettingsResource{}
 	_ resource.ResourceWithConfigure   = &tailnetSettingsResource{}
 	_ resource.ResourceWithImportState = &tailnetSettingsResource{}
+	_ resource.ResourceWithModifyPlan  = &tailnetSettingsResource{}
 )
 
 type tailnetSettingsResourceModel struct {
@@ -216,7 +217,25 @@ func (s *tailnetSettingsResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	if err := s.resourceTailnetSettingsDoCreate(ctx, plan); err != nil {
+	// We don't have existing state to pass in to resourceTailnetSettingsDoUpdate,
+	// create a state with all unknown values so we'll update any fields set in
+	// the plan - and only fields set in the plan.
+	pretendState := tailnetSettingsResourceModel{
+		ID:                                    types.StringUnknown(),
+		ACLsExternallyManagedOn:               types.BoolUnknown(),
+		ACLsExternalLink:                      types.StringUnknown(),
+		DevicesApprovalOn:                     types.BoolUnknown(),
+		DevicesAutoUpdatesOn:                  types.BoolUnknown(),
+		DevicesKeyDurationDays:                types.Int64Unknown(),
+		UsersApprovalOn:                       types.BoolUnknown(),
+		UsersRoleAllowedToJoinExternalTailnet: types.StringUnknown(),
+		NetworkFlowLoggingOn:                  types.BoolUnknown(),
+		RegionalRoutingOn:                     types.BoolUnknown(),
+		PostureIdentityCollectionOn:           types.BoolUnknown(),
+		HTTPSEnabled:                          types.BoolUnknown(),
+	}
+
+	if err := s.resourceTailnetSettingsDoUpdate(ctx, plan, pretendState); err != nil {
 		resp.Diagnostics.AddError("Failed to update tailnet settings", fmt.Sprintf("Error updating tailnet settings: %s", err))
 		return
 	}
@@ -229,50 +248,6 @@ func (s *tailnetSettingsResource) Create(ctx context.Context, req resource.Creat
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
-}
-
-func BoolNullPointerIfUnknown(b types.Bool) *bool {
-	if b.IsUnknown() {
-		return nil
-	}
-	return b.ValueBoolPointer()
-}
-
-func BoolNullPointerIfSame(plan types.Bool, state types.Bool) *bool {
-	if plan.Equal(state) {
-		return nil
-	}
-	return plan.ValueBoolPointer()
-}
-
-func StringNullPointerIfUnknown(s types.String) *string {
-	if s.IsUnknown() {
-		return nil
-	}
-	return s.ValueStringPointer()
-}
-
-func StringNullPointerIfSame(plan types.String, state types.String) *string {
-	if plan.Equal(state) {
-		return nil
-	}
-	return plan.ValueStringPointer()
-}
-
-func Int64ToIntNullPointerIfUnknown(i types.Int64) *int {
-	if i.IsUnknown() || i.IsNull() {
-		return nil
-	}
-	v := int(i.ValueInt64())
-	return &v
-}
-
-func Int64ToIntNullPointerIfSame(plan types.Int64, state types.Int64) *int {
-	if plan.Equal(state) {
-		return nil
-	}
-	v := int(plan.ValueInt64())
-	return &v
 }
 
 func (s *tailnetSettingsResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -304,48 +279,61 @@ func (s *tailnetSettingsResource) Update(ctx context.Context, req resource.Updat
 	resp.Diagnostics.Append(diags...)
 }
 
-func (s *tailnetSettingsResource) resourceTailnetSettingsDoCreate(ctx context.Context, plan tailnetSettingsResourceModel) error {
-	settingsRequest := tailscale.UpdateTailnetSettingsRequest{}
-
-	settingsRequest.ACLsExternallyManagedOn = BoolNullPointerIfUnknown(plan.ACLsExternallyManagedOn)
-	settingsRequest.ACLsExternalLink = StringNullPointerIfUnknown(plan.ACLsExternalLink)
-	settingsRequest.DevicesApprovalOn = BoolNullPointerIfUnknown(plan.DevicesApprovalOn)
-	settingsRequest.DevicesAutoUpdatesOn = BoolNullPointerIfUnknown(plan.DevicesAutoUpdatesOn)
-	settingsRequest.DevicesKeyDurationDays = Int64ToIntNullPointerIfUnknown(plan.DevicesKeyDurationDays)
-	settingsRequest.UsersApprovalOn = BoolNullPointerIfUnknown(plan.UsersApprovalOn)
-	settingsRequest.UsersRoleAllowedToJoinExternalTailnets = (*tailscale.RoleAllowedToJoinExternalTailnets)(StringNullPointerIfUnknown(plan.UsersRoleAllowedToJoinExternalTailnet))
-	settingsRequest.NetworkFlowLoggingOn = BoolNullPointerIfUnknown(plan.NetworkFlowLoggingOn)
-	settingsRequest.RegionalRoutingOn = BoolNullPointerIfUnknown(plan.RegionalRoutingOn)
-	settingsRequest.PostureIdentityCollectionOn = BoolNullPointerIfUnknown(plan.PostureIdentityCollectionOn)
-	settingsRequest.HTTPSEnabled = BoolNullPointerIfUnknown(plan.HTTPSEnabled)
-
-	// panic(fmt.Sprintf("settingsRequest: %+v", settingsRequest)) // easy way to see what actual request will be made
-
-	return s.Client.TailnetSettings().Update(ctx, settingsRequest)
-}
-
 func (s *tailnetSettingsResource) resourceTailnetSettingsDoUpdate(ctx context.Context, plan tailnetSettingsResourceModel, state tailnetSettingsResourceModel) error {
-	settingsRequest := tailscale.UpdateTailnetSettingsRequest{}
+	boolIfDiff := func(plan types.Bool, state types.Bool) *bool {
+		if plan.Equal(state) {
+			return nil
+		}
+		return plan.ValueBoolPointer()
+	}
 
-	settingsRequest.ACLsExternallyManagedOn = BoolNullPointerIfSame(plan.ACLsExternallyManagedOn, state.ACLsExternallyManagedOn)
-	settingsRequest.ACLsExternalLink = StringNullPointerIfSame(plan.ACLsExternalLink, state.ACLsExternalLink)
-	settingsRequest.DevicesApprovalOn = BoolNullPointerIfSame(plan.DevicesApprovalOn, state.DevicesApprovalOn)
-	settingsRequest.DevicesAutoUpdatesOn = BoolNullPointerIfSame(plan.DevicesAutoUpdatesOn, state.DevicesAutoUpdatesOn)
-	settingsRequest.DevicesKeyDurationDays = Int64ToIntNullPointerIfSame(plan.DevicesKeyDurationDays, state.DevicesKeyDurationDays)
-	settingsRequest.UsersApprovalOn = BoolNullPointerIfSame(plan.UsersApprovalOn, state.UsersApprovalOn)
-	settingsRequest.UsersRoleAllowedToJoinExternalTailnets = (*tailscale.RoleAllowedToJoinExternalTailnets)(StringNullPointerIfSame(plan.UsersRoleAllowedToJoinExternalTailnet, state.UsersRoleAllowedToJoinExternalTailnet))
-	settingsRequest.NetworkFlowLoggingOn = BoolNullPointerIfSame(plan.NetworkFlowLoggingOn, state.NetworkFlowLoggingOn)
-	settingsRequest.RegionalRoutingOn = BoolNullPointerIfSame(plan.RegionalRoutingOn, state.RegionalRoutingOn)
-	settingsRequest.PostureIdentityCollectionOn = BoolNullPointerIfSame(plan.PostureIdentityCollectionOn, state.PostureIdentityCollectionOn)
-	settingsRequest.HTTPSEnabled = BoolNullPointerIfSame(plan.HTTPSEnabled, state.HTTPSEnabled)
+	strIfDiff := func(plan types.String, state types.String) *string {
+		if plan.Equal(state) {
+			return nil
+		}
+		return plan.ValueStringPointer()
+	}
 
-	// panic(fmt.Sprintf("settingsRequest: %+v", settingsRequest)) // easy way to see what actual request will be made
+	roleIfDiff := func(plan types.String, state types.String) *tailscale.RoleAllowedToJoinExternalTailnets {
+		return (*tailscale.RoleAllowedToJoinExternalTailnets)(strIfDiff(plan, state))
+	}
+
+	intIfDiff := func(plan types.Int64, state types.Int64) *int {
+		if plan.Equal(state) {
+			return nil
+		}
+		v := int(plan.ValueInt64())
+		return &v
+	}
+
+	// Only make the updates we need to: ignore any fields where the plan and state are already the same.
+	settingsRequest := tailscale.UpdateTailnetSettingsRequest{
+		ACLsExternallyManagedOn:                boolIfDiff(plan.ACLsExternallyManagedOn, state.ACLsExternallyManagedOn),
+		ACLsExternalLink:                       strIfDiff(plan.ACLsExternalLink, state.ACLsExternalLink),
+		DevicesApprovalOn:                      boolIfDiff(plan.DevicesApprovalOn, state.DevicesApprovalOn),
+		DevicesAutoUpdatesOn:                   boolIfDiff(plan.DevicesAutoUpdatesOn, state.DevicesAutoUpdatesOn),
+		DevicesKeyDurationDays:                 intIfDiff(plan.DevicesKeyDurationDays, state.DevicesKeyDurationDays),
+		UsersApprovalOn:                        boolIfDiff(plan.UsersApprovalOn, state.UsersApprovalOn),
+		UsersRoleAllowedToJoinExternalTailnets: roleIfDiff(plan.UsersRoleAllowedToJoinExternalTailnet, state.UsersRoleAllowedToJoinExternalTailnet),
+		NetworkFlowLoggingOn:                   boolIfDiff(plan.NetworkFlowLoggingOn, state.NetworkFlowLoggingOn),
+		RegionalRoutingOn:                      boolIfDiff(plan.RegionalRoutingOn, state.RegionalRoutingOn),
+		PostureIdentityCollectionOn:            boolIfDiff(plan.PostureIdentityCollectionOn, state.PostureIdentityCollectionOn),
+		HTTPSEnabled:                           boolIfDiff(plan.HTTPSEnabled, state.HTTPSEnabled),
+	}
 
 	return s.Client.TailnetSettings().Update(ctx, settingsRequest)
 }
 
 func (s *tailnetSettingsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	// We don't know what the default values for Tailnet settings should be, so deleting is a noop.
+}
 
-	// TODO: Add a plan modifier to tell users that a delete is doing nothing
+func (s *tailnetSettingsResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() {
+		resp.Diagnostics.AddWarning(
+			"Resource Destruction Considerations",
+			"Destroying this resource will only remove the resource from the Terraform state and will not undo or change any tailnet settings. "+
+				"Use a tailscale_tailnet_settings resource to explicitly change any settings you want to set back, or manually update them via the admin console.",
+		)
+	}
 }
