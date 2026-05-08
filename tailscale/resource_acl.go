@@ -7,13 +7,17 @@ import (
 	"context"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+)
+
+var (
+	_ resource.Resource                = &aclResource{}
+	_ resource.ResourceWithImportState = &aclResource{}
 )
 
 type aclResourceModel struct {
@@ -30,6 +34,7 @@ func NewACLResource() resource.Resource {
 
 type aclResource struct {
 	ResourceBase
+	ResourceImportedByID
 }
 
 // Metadata defines the resource name as it appears in Terraform configurations.
@@ -152,8 +157,4 @@ func (r *aclResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	if err := r.Client.PolicyFile().Set(ctx, "", ""); err != nil {
 		resp.Diagnostics.AddError("Failed to reset ACL", err.Error())
 	}
-}
-
-func (r *aclResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

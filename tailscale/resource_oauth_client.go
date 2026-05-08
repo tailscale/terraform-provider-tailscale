@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -40,6 +39,7 @@ func NewOAuthClientResource() resource.Resource {
 
 type oauthClientResource struct {
 	ResourceBase
+	ResourceImportedByID
 }
 
 func (r *oauthClientResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -198,8 +198,4 @@ func (r *oauthClientResource) Delete(ctx context.Context, req resource.DeleteReq
 	if err != nil && !tailscale.IsNotFound(err) {
 		resp.Diagnostics.AddError("Failed to delete oauth client", err.Error())
 	}
-}
-
-func (r *oauthClientResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
