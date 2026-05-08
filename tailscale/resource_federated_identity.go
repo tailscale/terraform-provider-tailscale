@@ -9,10 +9,12 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -88,10 +90,12 @@ func (r *federatedIdentityResource) Schema(_ context.Context, _ resource.SchemaR
 			"custom_claim_rules": schema.MapAttribute{
 				Description: "A map of claim names to pattern strings used to match against arbitrary claims in the OIDC identity token. Patterns can include `*` characters to match against any character.",
 				Optional:    true,
+				Computed:    true,
 				ElementType: types.StringType,
 				Validators: []validator.Map{
 					reservedClaimKeysValidator{},
 				},
+				Default: mapdefault.StaticValue(types.MapValueMust(types.StringType, map[string]attr.Value{})),
 			},
 			"created_at": schema.StringAttribute{
 				Description: "The creation timestamp of the key in RFC3339 format",
@@ -144,17 +148,9 @@ func (r *federatedIdentityResource) Create(ctx context.Context, req resource.Cre
 		Audience:    data.Audience.ValueString(),
 	}
 
-	if !data.Scopes.IsNull() {
-		resp.Diagnostics.Append(data.Scopes.ElementsAs(ctx, &createReq.Scopes, false)...)
-	}
-	if !data.Tags.IsNull() {
-		resp.Diagnostics.Append(data.Tags.ElementsAs(ctx, &createReq.Tags, false)...)
-	}
-
-	createReq.CustomClaimRules = map[string]string{}
-	if !data.CustomClaimRules.IsNull() {
-		resp.Diagnostics.Append(data.CustomClaimRules.ElementsAs(ctx, &createReq.CustomClaimRules, false)...)
-	}
+	resp.Diagnostics.Append(data.Scopes.ElementsAs(ctx, &createReq.Scopes, false)...)
+	resp.Diagnostics.Append(data.Tags.ElementsAs(ctx, &createReq.Tags, false)...)
+	resp.Diagnostics.Append(data.CustomClaimRules.ElementsAs(ctx, &createReq.CustomClaimRules, false)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -183,6 +179,10 @@ func (r *federatedIdentityResource) Read(ctx context.Context, req resource.ReadR
 
 	key, err := r.Client.Keys().Get(ctx, data.ID.ValueString())
 	if err != nil {
+		if tailscale.IsNotFound(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError("Failed to fetch federated identity", err.Error())
 		return
 	}
@@ -209,17 +209,9 @@ func (r *federatedIdentityResource) Update(ctx context.Context, req resource.Upd
 		Audience:    data.Audience.ValueString(),
 	}
 
-	if !data.Scopes.IsNull() {
-		resp.Diagnostics.Append(data.Scopes.ElementsAs(ctx, &updateReq.Scopes, false)...)
-	}
-	if !data.Tags.IsNull() {
-		resp.Diagnostics.Append(data.Tags.ElementsAs(ctx, &updateReq.Tags, false)...)
-	}
-
-	updateReq.CustomClaimRules = map[string]string{}
-	if !data.CustomClaimRules.IsNull() {
-		resp.Diagnostics.Append(data.CustomClaimRules.ElementsAs(ctx, &updateReq.CustomClaimRules, false)...)
-	}
+	resp.Diagnostics.Append(data.Scopes.ElementsAs(ctx, &updateReq.Scopes, false)...)
+	resp.Diagnostics.Append(data.Tags.ElementsAs(ctx, &updateReq.Tags, false)...)
+	resp.Diagnostics.Append(data.CustomClaimRules.ElementsAs(ctx, &updateReq.CustomClaimRules, false)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -269,32 +261,11 @@ func (r *federatedIdentityResource) populateFromKey(ctx context.Context, data *f
 	data.CreatedAt = types.StringValue(key.Created.Format(time.RFC3339))
 	data.UpdatedAt = types.StringValue(key.Updated.Format(time.RFC3339))
 	data.UserID = types.StringValue(key.UserID)
-
-	scopes := key.Scopes
-	if scopes == nil {
-		scopes = []string{}
-	}
-	scopesVal, d := types.SetValueFrom(ctx, types.StringType, scopes)
+	data.Scopes = SetOfStringValue(ctx, key.Scopes, &diags)
+	data.Tags = SetOfStringValue(ctx, key.Tags, &diags)
+	claimRulesVal, d := types.MapValueFrom(ctx, types.StringType, key.CustomClaimRules)
 	diags.Append(d...)
-	data.Scopes = scopesVal
-	
-	tags := key.Tags
-	if tags == nil {
-		tags = []string{}
-	}
-	tagsVal, d := types.SetValueFrom(ctx, types.StringType, tags)
-	diags.Append(d...)
-	data.Tags = tagsVal
-
-	if len(key.CustomClaimRules) > 0 || !data.CustomClaimRules.IsNull() {
-		claimRules := key.CustomClaimRules
-		if claimRules == nil {
-			claimRules = map[string]string{}
-		}
-		claimRulesVal, d := types.MapValueFrom(ctx, types.StringType, claimRules)
-		diags.Append(d...)
-		data.CustomClaimRules = claimRulesVal
-	}
+	data.CustomClaimRules = claimRulesVal
 
 	return diags
 }
