@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -65,6 +67,9 @@ func (s *tailnetSettingsResource) Schema(_ context.Context, _ resource.SchemaReq
 				Description: "Prevent users from editing policies in the admin console to avoid conflicts with external management workflows like GitOps or Terraform.",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"acls_external_link": schema.StringAttribute{
 				Description: "Link to your external ACL definition or management system. Must be a valid URL.",
@@ -76,26 +81,41 @@ func (s *tailnetSettingsResource) Schema(_ context.Context, _ resource.SchemaReq
 						"must be a valid URL with http or https scheme",
 					),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"devices_approval_on": schema.BoolAttribute{
 				Description: "Whether device approval is enabled for the tailnet",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"devices_auto_updates_on": schema.BoolAttribute{
 				Description: "Whether auto updates are enabled for devices that belong to this tailnet",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"devices_key_duration_days": schema.Int64Attribute{
 				Description: "The key expiry duration for devices on this tailnet",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"users_approval_on": schema.BoolAttribute{
 				Description: "Whether user approval is enabled for this tailnet",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"users_role_allowed_to_join_external_tailnet": schema.StringAttribute{
 				Description: "Which user roles are allowed to join external tailnets",
@@ -108,26 +128,41 @@ func (s *tailnetSettingsResource) Schema(_ context.Context, _ resource.SchemaReq
 						string(tailscale.RoleAllowedToJoinExternalTailnetsAdmin),
 					),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"network_flow_logging_on": schema.BoolAttribute{
 				Description: "Whether network flow logs are enabled for the tailnet",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"regional_routing_on": schema.BoolAttribute{
 				Description: "Whether regional routing is enabled for the tailnet",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"posture_identity_collection_on": schema.BoolAttribute{
 				Description: "Whether identity collection is enabled for device posture integrations for the tailnet",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"https_enabled": schema.BoolAttribute{
 				Description: "Whether provisioning of HTTPS certificates is enabled for the tailnet",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -181,7 +216,7 @@ func (s *tailnetSettingsResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	if err := s.resourceTailnetSettingsDoUpdate(ctx, plan); err != nil {
+	if err := s.resourceTailnetSettingsDoCreate(ctx, plan); err != nil {
 		resp.Diagnostics.AddError("Failed to update tailnet settings", fmt.Sprintf("Error updating tailnet settings: %s", err))
 		return
 	}
@@ -203,6 +238,13 @@ func BoolNullPointerIfUnknown(b types.Bool) *bool {
 	return b.ValueBoolPointer()
 }
 
+func BoolNullPointerIfSame(plan types.Bool, state types.Bool) *bool {
+	if plan.Equal(state) {
+		return nil
+	}
+	return plan.ValueBoolPointer()
+}
+
 func StringNullPointerIfUnknown(s types.String) *string {
 	if s.IsUnknown() {
 		return nil
@@ -210,11 +252,26 @@ func StringNullPointerIfUnknown(s types.String) *string {
 	return s.ValueStringPointer()
 }
 
+func StringNullPointerIfSame(plan types.String, state types.String) *string {
+	if plan.Equal(state) {
+		return nil
+	}
+	return plan.ValueStringPointer()
+}
+
 func Int64ToIntNullPointerIfUnknown(i types.Int64) *int {
 	if i.IsUnknown() || i.IsNull() {
 		return nil
 	}
 	v := int(i.ValueInt64())
+	return &v
+}
+
+func Int64ToIntNullPointerIfSame(plan types.Int64, state types.Int64) *int {
+	if plan.Equal(state) {
+		return nil
+	}
+	v := int(plan.ValueInt64())
 	return &v
 }
 
@@ -226,7 +283,14 @@ func (s *tailnetSettingsResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	if err := s.resourceTailnetSettingsDoUpdate(ctx, plan); err != nil {
+	var state tailnetSettingsResourceModel
+	diags = req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if err := s.resourceTailnetSettingsDoUpdate(ctx, plan, state); err != nil {
 		resp.Diagnostics.AddError("Failed to update tailnet settings", fmt.Sprintf("Error updating tailnet settings: %s", err))
 		return
 	}
@@ -240,7 +304,7 @@ func (s *tailnetSettingsResource) Update(ctx context.Context, req resource.Updat
 	resp.Diagnostics.Append(diags...)
 }
 
-func (s *tailnetSettingsResource) resourceTailnetSettingsDoUpdate(ctx context.Context, plan tailnetSettingsResourceModel) error {
+func (s *tailnetSettingsResource) resourceTailnetSettingsDoCreate(ctx context.Context, plan tailnetSettingsResourceModel) error {
 	settingsRequest := tailscale.UpdateTailnetSettingsRequest{}
 
 	settingsRequest.ACLsExternallyManagedOn = BoolNullPointerIfUnknown(plan.ACLsExternallyManagedOn)
@@ -254,6 +318,26 @@ func (s *tailnetSettingsResource) resourceTailnetSettingsDoUpdate(ctx context.Co
 	settingsRequest.RegionalRoutingOn = BoolNullPointerIfUnknown(plan.RegionalRoutingOn)
 	settingsRequest.PostureIdentityCollectionOn = BoolNullPointerIfUnknown(plan.PostureIdentityCollectionOn)
 	settingsRequest.HTTPSEnabled = BoolNullPointerIfUnknown(plan.HTTPSEnabled)
+
+	// panic(fmt.Sprintf("settingsRequest: %+v", settingsRequest)) // easy way to see what actual request will be made
+
+	return s.Client.TailnetSettings().Update(ctx, settingsRequest)
+}
+
+func (s *tailnetSettingsResource) resourceTailnetSettingsDoUpdate(ctx context.Context, plan tailnetSettingsResourceModel, state tailnetSettingsResourceModel) error {
+	settingsRequest := tailscale.UpdateTailnetSettingsRequest{}
+
+	settingsRequest.ACLsExternallyManagedOn = BoolNullPointerIfSame(plan.ACLsExternallyManagedOn, state.ACLsExternallyManagedOn)
+	settingsRequest.ACLsExternalLink = StringNullPointerIfSame(plan.ACLsExternalLink, state.ACLsExternalLink)
+	settingsRequest.DevicesApprovalOn = BoolNullPointerIfSame(plan.DevicesApprovalOn, state.DevicesApprovalOn)
+	settingsRequest.DevicesAutoUpdatesOn = BoolNullPointerIfSame(plan.DevicesAutoUpdatesOn, state.DevicesAutoUpdatesOn)
+	settingsRequest.DevicesKeyDurationDays = Int64ToIntNullPointerIfSame(plan.DevicesKeyDurationDays, state.DevicesKeyDurationDays)
+	settingsRequest.UsersApprovalOn = BoolNullPointerIfSame(plan.UsersApprovalOn, state.UsersApprovalOn)
+	settingsRequest.UsersRoleAllowedToJoinExternalTailnets = (*tailscale.RoleAllowedToJoinExternalTailnets)(StringNullPointerIfSame(plan.UsersRoleAllowedToJoinExternalTailnet, state.UsersRoleAllowedToJoinExternalTailnet))
+	settingsRequest.NetworkFlowLoggingOn = BoolNullPointerIfSame(plan.NetworkFlowLoggingOn, state.NetworkFlowLoggingOn)
+	settingsRequest.RegionalRoutingOn = BoolNullPointerIfSame(plan.RegionalRoutingOn, state.RegionalRoutingOn)
+	settingsRequest.PostureIdentityCollectionOn = BoolNullPointerIfSame(plan.PostureIdentityCollectionOn, state.PostureIdentityCollectionOn)
+	settingsRequest.HTTPSEnabled = BoolNullPointerIfSame(plan.HTTPSEnabled, state.HTTPSEnabled)
 
 	// panic(fmt.Sprintf("settingsRequest: %+v", settingsRequest)) // easy way to see what actual request will be made
 
