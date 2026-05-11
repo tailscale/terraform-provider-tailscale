@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -67,6 +68,8 @@ func (r *federatedIdentityResource) Schema(_ context.Context, _ resource.SchemaR
 				Description: "A list of tags that access tokens generated for the federated identity will be able to assign to devices. Mandatory if the scopes include \"devices:core\" or \"auth_keys\".",
 				Optional:    true,
 				ElementType: types.StringType,
+				Computed:    true,
+				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 			},
 			"audience": schema.StringAttribute{
 				Description: "The value used when matching against the `aud` claim from an OIDC identity token. Specifying the audience is optional as Tailscale will generate a secure audience at creation time by default.   It is recommended to let Tailscale generate the audience unless the identity provider you are integrating with requires a specific audience format.",
@@ -262,8 +265,14 @@ func (r *federatedIdentityResource) populateFromKey(ctx context.Context, data *f
 	data.UpdatedAt = types.StringValue(key.Updated.Format(time.RFC3339))
 	data.UserID = types.StringValue(key.UserID)
 	data.Scopes = SetOfStringValue(ctx, key.Scopes, &diags)
+	if key.Tags == nil {
+		key.Tags = []string{}
+	}
 	data.Tags = SetOfStringValue(ctx, key.Tags, &diags)
 
+	if key.CustomClaimRules == nil {
+		key.CustomClaimRules = map[string]string{}
+	}
 	claimRulesVal, d := types.MapValueFrom(ctx, types.StringType, key.CustomClaimRules)
 	diags.Append(d...)
 	data.CustomClaimRules = claimRulesVal
