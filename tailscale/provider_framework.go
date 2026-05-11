@@ -193,6 +193,7 @@ func (p *tailscaleProvider) Resources(_ context.Context) []func() resource.Resou
 		NewPostureIntegrationResource,
 		NewServiceResource,
 		NewTailnetKeyResource,
+		NewTailnetSettingsResource,
 		NewWebhookResource,
 	}
 }
