@@ -8,11 +8,13 @@ import (
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -95,8 +97,10 @@ func (r *serviceResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"tags": schema.SetAttribute{
 				Description: "The ACL tags applied to the Service.",
+				Computed:    true,
 				Optional:    true,
 				ElementType: types.StringType,
+				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 			},
 		},
 	}
@@ -154,6 +158,9 @@ func (r *serviceResource) Read(ctx context.Context, req resource.ReadRequest, re
 	state.Comment = types.StringValue(svc.Comment)
 	state.Addrs = ListOfStringValue(ctx, svc.Addrs, &resp.Diagnostics)
 	state.Ports = SetOfStringValue(ctx, svc.Ports, &resp.Diagnostics)
+	if svc.Tags == nil {
+		svc.Tags = []string{}
+	}
 	state.Tags = SetOfStringValue(ctx, svc.Tags, &resp.Diagnostics)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)

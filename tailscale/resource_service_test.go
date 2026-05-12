@@ -53,6 +53,21 @@ func TestProvider_TailscaleService(t *testing.T) {
 func TestAccTailscaleService(t *testing.T) {
 	const resourceName = "tailscale_service.test_service"
 
+	const testServiceOptionalUnset = `
+		resource "tailscale_service" "test_service" {
+			name    = "svc:test-service"
+			comment = "a test Service" # TODO(zofrex): fix this one too
+			ports   = ["tcp:443", "tcp:8080"]
+		}`
+
+	const testServiceOptionalEmpty = `
+		resource "tailscale_service" "test_service" {
+			name    = "svc:test-service"
+			comment = "a test Service" # TODO(zofrex): fix this one too
+			ports   = ["tcp:443", "tcp:8080"]
+			tags    = []
+		}`
+
 	checkProperties := func(expectedComment string, expectedPorts []string, expectedTags []string) func(client *tailscale.Client, rs *terraform.ResourceState) error {
 		return func(client *tailscale.Client, rs *terraform.ResourceState) error {
 			svc, err := client.VIPServices().Get(context.Background(), rs.Primary.ID)
@@ -129,6 +144,12 @@ func TestAccTailscaleService(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr(resourceName, "ports.*", "tcp:443"),
 					resource.TestCheckTypeSetElemAttr(resourceName, "ports.*", "tcp:8080"),
 				),
+			},
+			{
+				Config: testServiceOptionalUnset,
+			},
+			{
+				Config: testServiceOptionalEmpty,
 			},
 			{
 				ResourceName:      resourceName,
