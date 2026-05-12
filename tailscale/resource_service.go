@@ -22,7 +22,8 @@ import (
 
 var (
 	_ resource.Resource                = &serviceResource{}
-	_ resource.ResourceWithImportState = &webhookResource{}
+	_ resource.ResourceWithConfigure   = &serviceResource{}
+	_ resource.ResourceWithImportState = &serviceResource{}
 )
 
 type serviceResourceModel struct {

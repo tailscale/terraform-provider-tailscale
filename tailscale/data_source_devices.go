@@ -16,6 +16,10 @@ import (
 	"tailscale.com/client/tailscale/v2"
 )
 
+var (
+	_ datasource.DataSourceWithConfigure = &multipleDevicesDataSource{}
+)
+
 // NewMultipleDevicesDataSource returns a new multiple-users data data source.
 func NewMultipleDevicesDataSource() datasource.DataSource {
 	return &multipleDevicesDataSource{}

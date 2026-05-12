@@ -17,6 +17,7 @@ import (
 
 var (
 	_ resource.Resource                = &aclResource{}
+	_ resource.ResourceWithConfigure   = &aclResource{}
 	_ resource.ResourceWithImportState = &aclResource{}
 )
 

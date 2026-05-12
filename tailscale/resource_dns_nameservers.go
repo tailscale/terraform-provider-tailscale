@@ -18,6 +18,7 @@ import (
 
 var (
 	_ resource.Resource                = &dnsNameserversResource{}
+	_ resource.ResourceWithConfigure   = &dnsNameserversResource{}
 	_ resource.ResourceWithImportState = &dnsNameserversResource{}
 )
 

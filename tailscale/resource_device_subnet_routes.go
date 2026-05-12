@@ -24,6 +24,7 @@ Note: all routes enabled for the device through the admin console or autoApprove
 
 var (
 	_ resource.Resource                = &deviceSubnetRoutesResource{}
+	_ resource.ResourceWithConfigure   = &deviceSubnetRoutesResource{}
 	_ resource.ResourceWithImportState = &deviceSubnetRoutesResource{}
 )
 

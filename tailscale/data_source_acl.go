@@ -15,6 +15,10 @@ import (
 	"github.com/tailscale/hujson"
 )
 
+var (
+	_ datasource.DataSourceWithConfigure = &aclDataSource{}
+)
+
 // NewACLDataSource returns a new ACL data source.
 func NewACLDataSource() datasource.DataSource {
 	return &aclDataSource{}

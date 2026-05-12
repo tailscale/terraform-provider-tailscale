@@ -21,6 +21,7 @@ import (
 
 var (
 	_ resource.Resource                = &contactsResource{}
+	_ resource.ResourceWithConfigure   = &contactsResource{}
 	_ resource.ResourceWithImportState = &contactsResource{}
 )
 

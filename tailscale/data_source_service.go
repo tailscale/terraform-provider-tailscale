@@ -11,7 +11,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// NewServiceDataSource() returns a new Services data source.
+var (
+	_ datasource.DataSourceWithConfigure = &dataSourceService{}
+)
+
+// NewServiceDataSource returns a new Services data source.
 func NewServiceDataSource() datasource.DataSource {
 	return &dataSourceService{}
 }

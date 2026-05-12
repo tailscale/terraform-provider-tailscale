@@ -24,6 +24,12 @@ import (
 	"tailscale.com/client/tailscale/v2"
 )
 
+var (
+	_ resource.Resource                = &federatedIdentityResource{}
+	_ resource.ResourceWithConfigure   = &federatedIdentityResource{}
+	_ resource.ResourceWithImportState = &federatedIdentityResource{}
+)
+
 // NewFederatedIdentityResource returns a new federated identity resource.
 func NewFederatedIdentityResource() resource.Resource {
 	return &federatedIdentityResource{}

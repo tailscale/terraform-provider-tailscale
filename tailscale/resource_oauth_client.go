@@ -19,6 +19,7 @@ import (
 
 var (
 	_ resource.Resource                = &oauthClientResource{}
+	_ resource.ResourceWithConfigure   = &oauthClientResource{}
 	_ resource.ResourceWithImportState = &oauthClientResource{}
 )
 

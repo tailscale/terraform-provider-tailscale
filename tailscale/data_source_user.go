@@ -16,7 +16,11 @@ import (
 	"tailscale.com/client/tailscale/v2"
 )
 
-// NewUserDataSource returns a new single-user data source.
+var (
+	_ datasource.DataSourceWithConfigure = &singleUserDataSource{}
+)
+
+// NewSingleUserDataSource returns a new single-user data source.
 func NewSingleUserDataSource() datasource.DataSource {
 	return &singleUserDataSource{}
 }

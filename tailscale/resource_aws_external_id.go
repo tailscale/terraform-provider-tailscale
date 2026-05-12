@@ -11,6 +11,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+var (
+	_ resource.Resource              = &awsExternalIDResource{}
+	_ resource.ResourceWithConfigure = &awsExternalIDResource{}
+)
+
 // NewAWSExternalIDResource returns a new AWS External ID resource.
 func NewAWSExternalIDResource() resource.Resource {
 	return &awsExternalIDResource{}

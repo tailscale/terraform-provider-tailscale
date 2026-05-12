@@ -16,6 +16,7 @@ import (
 
 var (
 	_ resource.Resource                = &deviceKeyResource{}
+	_ resource.ResourceWithConfigure   = &deviceKeyResource{}
 	_ resource.ResourceWithImportState = &deviceKeyResource{}
 )
 
