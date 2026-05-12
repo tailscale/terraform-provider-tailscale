@@ -54,12 +54,28 @@ const testLogstreamConfigurationUpdateS3RoleARN = `
 	resource "tailscale_aws_external_id" "external_id" {}
 	`
 
+const testLogstreamConfigurationS3EmptyOptionalsRoleARN = `
+	resource "tailscale_logstream_configuration" "test_logstream_configuration" {
+		log_type               = "network"
+		destination_type       = "s3"
+		s3_bucket              = "example-bucket"
+		s3_region              = "us-west-2"
+		s3_key_prefix          = ""
+		s3_authentication_type = "rolearn"
+		s3_access_key_id       = ""
+		s3_secret_access_key   = "" # not read back, doesn't cause diffs vs null
+		s3_role_arn            = "arn:aws:iam::123456789012:role/example-role"
+		s3_external_id         = tailscale_aws_external_id.external_id.external_id
+	}
+	resource "tailscale_aws_external_id" "external_id" {}
+	`
+
 const testLogstreamConfigurationUpdateS3AccessKey = `
 	resource "tailscale_logstream_configuration" "test_logstream_configuration" {
 		log_type               = "network"
 		destination_type       = "s3"
 		s3_bucket              = "example-bucket"
-		s3_region			   = "us-west-2"
+		s3_region              = "us-west-2"
 		s3_authentication_type = "accesskey"
 		s3_access_key_id       = "example-access-key-id"
 		s3_secret_access_key   = "example-secret-access-key"
@@ -67,6 +83,20 @@ const testLogstreamConfigurationUpdateS3AccessKey = `
 		upload_period_minutes  = 5
 		compression_format     = "zstd"
 	}`
+
+const testLogstreamConfigurationS3EmptyOptionalsAccessKey = `
+	resource "tailscale_logstream_configuration" "test_logstream_configuration" {
+		log_type               = "network"
+		destination_type       = "s3"
+		s3_bucket              = "example-bucket"
+		s3_region              = "us-west-2"
+		s3_authentication_type = "accesskey"
+		s3_access_key_id       = "example-access-key-id"
+		s3_secret_access_key   = "example-secret-access-key"
+		s3_role_arn            = ""
+		s3_external_id         = ""
+	}
+	`
 
 const testLogstreamConfigurationGCS = `
 	resource "tailscale_logstream_configuration" "test_logstream_configuration" {
@@ -343,6 +373,9 @@ func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
 			),
 		},
 		{
+			Config: testLogstreamConfigurationS3EmptyOptionalsRoleARN,
+		},
+		{
 			Config: testLogstreamConfigurationUpdateS3AccessKey,
 			Check: resource.ComposeTestCheckFunc(
 				checkResourceRemoteProperties(
@@ -370,6 +403,9 @@ func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
 				resource.TestCheckResourceAttr(resourceName, "upload_period_minutes", "5"),
 				resource.TestCheckResourceAttr(resourceName, "compression_format", "zstd"),
 			),
+		},
+		{
+			Config: testLogstreamConfigurationS3EmptyOptionalsAccessKey,
 		},
 		{
 			ResourceName:            resourceName,

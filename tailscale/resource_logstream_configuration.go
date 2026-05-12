@@ -125,7 +125,9 @@ func (r *logstreamConfigurationResource) Schema(_ context.Context, _ resource.Sc
 			},
 			"s3_key_prefix": schema.StringAttribute{
 				Description: "An optional S3 key prefix to prepend to the auto-generated S3 key name.",
+				Computed:    true,
 				Optional:    true,
+				Default:     stringdefault.StaticString(""),
 			},
 			"s3_authentication_type": schema.StringAttribute{
 				Description: "The type of authentication to use for S3. Required if destination_type is `s3`. Valid values are `accesskey` and `rolearn`. Tailscale recommends using `rolearn`.",
@@ -139,7 +141,9 @@ func (r *logstreamConfigurationResource) Schema(_ context.Context, _ resource.Sc
 			},
 			"s3_access_key_id": schema.StringAttribute{
 				Description: "The S3 access key ID. Required if destination_type is s3 and s3_authentication_type is 'accesskey'.",
+				Computed:    true,
 				Optional:    true,
+				Default:     stringdefault.StaticString(""),
 			},
 			"s3_secret_access_key": schema.StringAttribute{
 				Description: "The S3 secret access key. Required if destination_type is 's3' and s3_authentication_type is 'accesskey'.",
@@ -151,11 +155,15 @@ func (r *logstreamConfigurationResource) Schema(_ context.Context, _ resource.Sc
 			},
 			"s3_role_arn": schema.StringAttribute{
 				Description: "ARN of the AWS IAM role that Tailscale should assume when using role-based authentication. Required if destination_type is 's3' and s3_authentication_type is 'rolearn'.",
+				Computed:    true,
 				Optional:    true,
+				Default:     stringdefault.StaticString(""),
 			},
 			"s3_external_id": schema.StringAttribute{
 				Description: "The AWS External ID that Tailscale supplies when authenticating using role-based authentication. Required if destination_type is 's3' and s3_authentication_type is 'rolearn'. This can be obtained via the tailscale_aws_external_id resource.",
+				Computed:    true,
 				Optional:    true,
+				Default:     stringdefault.StaticString(""),
 			},
 			"gcs_credentials": schema.StringAttribute{
 				Description: "The encoded string of JSON that is used to authenticate for workload identity in GCS",
@@ -251,11 +259,11 @@ func (d *logstreamConfigurationResourceModel) updateFields(ctx context.Context, 
 
 	d.S3Bucket = StringValueNullIfEmpty(config.S3Bucket)
 	d.S3Region = StringValueNullIfEmpty(config.S3Region)
-	d.S3KeyPrefix = StringValueNullIfEmpty(config.S3KeyPrefix)
+	d.S3KeyPrefix = types.StringValue(config.S3KeyPrefix)
 	d.S3AuthenticationType = StringValueNullIfEmpty(string(config.S3AuthenticationType))
-	d.S3AccessKeyID = StringValueNullIfEmpty(config.S3AccessKeyID)
-	d.S3RoleARN = StringValueNullIfEmpty(config.S3RoleARN)
-	d.S3ExternalID = StringValueNullIfEmpty(config.S3ExternalID)
+	d.S3AccessKeyID = types.StringValue(config.S3AccessKeyID)
+	d.S3RoleARN = types.StringValue(config.S3RoleARN)
+	d.S3ExternalID = types.StringValue(config.S3ExternalID)
 
 	d.GCSScopes = SetOfStringValue(ctx, config.GCSScopes, diags)
 	d.GCSCredentials = StringValueNullIfEmpty(config.GCSCredentials)
