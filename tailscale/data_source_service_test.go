@@ -82,7 +82,7 @@ func TestAccTailscaleDataSourceService(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				PreConfig: func() {
-					client := testAccProvider.Meta().(*tailscale.Client)
+					client := getAccTestClient()
 					err := client.PolicyFile().Set(context.Background(), `
 					{
 						"tagOwners": {

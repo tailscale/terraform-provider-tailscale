@@ -27,7 +27,7 @@ func TestAccTailscaleACL(t *testing.T) {
 			{
 				Config: `data "tailscale_acl" "acl" {}`,
 				Check: func(s *terraform.State) error {
-					client := testAccProvider.Meta().(*tailscale.Client)
+					client := getAccTestClient()
 					acl, err := client.PolicyFile().Raw(context.Background())
 					if err != nil {
 						return fmt.Errorf("unable to get ACL: %s", err)

@@ -40,7 +40,7 @@ func TestAccTailscaleDevices(t *testing.T) {
 			{
 				Config: `data "tailscale_devices" "all_devices" {}`,
 				Check: func(s *terraform.State) error {
-					client := testAccProvider.Meta().(*tailscale.Client)
+					client := getAccTestClient()
 					devices, err := client.Devices().List(context.Background())
 					if err != nil {
 						return fmt.Errorf("unable to list devices: %s", err)
@@ -99,7 +99,7 @@ func TestAccTailscaleDevices(t *testing.T) {
 			{
 				Config: devicesDataSources.String(),
 				Check: func(s *terraform.State) error {
-					client := testAccProvider.Meta().(*tailscale.Client)
+					client := getAccTestClient()
 					devices, err := client.Devices().List(context.Background())
 					if err != nil {
 						return fmt.Errorf("unable to list devices: %s", err)
@@ -148,7 +148,7 @@ func TestAccTailscaleDevices(t *testing.T) {
 					}
 				}`,
 				Check: func(s *terraform.State) error {
-					client := testAccProvider.Meta().(*tailscale.Client)
+					client := getAccTestClient()
 					devices, err := client.Devices().List(context.Background(),
 						tailscale.WithFilter("isEphemeral", []string{"true"}),
 						tailscale.WithFilter("tags", []string{"tag:server", "tag:test"}),

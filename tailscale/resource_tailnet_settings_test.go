@@ -224,7 +224,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 					},
 				},
 				PreConfig: func() {
-					client := testAccProvider.Meta().(*tailscale.Client)
+					client := getAccTestClient()
 
 					// Set all these optional fields to true / something, so if the
 					// unset value is misinterpreted as the empty value, a change will be
