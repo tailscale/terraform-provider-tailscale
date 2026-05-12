@@ -17,9 +17,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-mux/tf5muxserver"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	pluginterraform "github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"tailscale.com/client/tailscale/v2"
 )
@@ -46,7 +47,7 @@ func testAccPreCheck(t *testing.T) {
 		t.Fatal("TAILSCALE_TEST_DEVICE_NAME must be set for acceptance tests")
 	}
 
-	if diags := testAccProvider.Configure(context.Background(), &terraform.ResourceConfig{}); diags.HasError() {
+	if diags := testAccProvider.Configure(context.Background(), &pluginterraform.ResourceConfig{}); diags.HasError() {
 		for _, d := range diags {
 			if d.Severity == diag.Error {
 				t.Fatalf("Failed to configure provider: %s", d.Summary)
