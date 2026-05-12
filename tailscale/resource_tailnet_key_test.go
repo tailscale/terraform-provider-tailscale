@@ -37,7 +37,7 @@ func TestProvider_TailscaleTailnetKey(t *testing.T) {
 				ID:            "test",
 				KeyType:       "auth",
 				Key:           "thisisatestkey",
-				ExpirySeconds: toPtr(time.Duration(3600)),
+				ExpirySeconds: new(time.Duration(3600)),
 			}
 		},
 		ProtoV5ProviderFactories: testProviderFactories(t),
@@ -46,22 +46,6 @@ func TestProvider_TailscaleTailnetKey(t *testing.T) {
 			testResourceDestroyed("tailscale_tailnet_key.example_key", testTailnetKey),
 		},
 	})
-}
-
-func testTailnetKeyStruct(reusable bool) tailscale.Key {
-	var keyCapabilities tailscale.KeyCapabilities
-	keyCapabilities.Devices.Create.Ephemeral = true
-	keyCapabilities.Devices.Create.Preauthorized = true
-	keyCapabilities.Devices.Create.Tags = []string{"tag:server"}
-	keyCapabilities.Devices.Create.Reusable = reusable
-	return tailscale.Key{
-		ID:            "test",
-		KeyType:       "auth",
-		Key:           "thisisatestkey",
-		Description:   "Example key",
-		ExpirySeconds: toPtr(time.Duration(3600)),
-		Capabilities:  keyCapabilities,
-	}
 }
 
 func testTailnetKeyStructWithID(id string, reusable bool) tailscale.Key {
@@ -75,7 +59,7 @@ func testTailnetKeyStructWithID(id string, reusable bool) tailscale.Key {
 		KeyType:       "auth",
 		Key:           "thisisatestkey",
 		Description:   "Example key",
-		ExpirySeconds: toPtr(time.Duration(3600)),
+		ExpirySeconds: new(time.Duration(3600)),
 		Capabilities:  keyCapabilities,
 	}
 }
@@ -273,7 +257,7 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 	var expectedKey tailscale.Key
 	expectedKey.KeyType = "auth"
 	expectedKey.Description = "Test key"
-	expectedKey.ExpirySeconds = toPtr(time.Duration(7776000))
+	expectedKey.ExpirySeconds = new(time.Duration(7776000))
 	expectedKey.Capabilities.Devices.Create.Reusable = true
 	expectedKey.Capabilities.Devices.Create.Ephemeral = true
 	expectedKey.Capabilities.Devices.Create.Preauthorized = true
@@ -282,7 +266,7 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 	var expectedKeyUpdated tailscale.Key
 	expectedKeyUpdated.KeyType = "auth"
 	expectedKeyUpdated.Description = "Test key changed"
-	expectedKeyUpdated.ExpirySeconds = toPtr(time.Duration(7200))
+	expectedKeyUpdated.ExpirySeconds = new(time.Duration(7200))
 	expectedKeyUpdated.Capabilities.Devices.Create.Reusable = false
 	expectedKeyUpdated.Capabilities.Devices.Create.Ephemeral = false
 	expectedKeyUpdated.Capabilities.Devices.Create.Preauthorized = false
@@ -373,8 +357,4 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 
 	checkResourceIsUnchangedInPluginFramework(t, testTailnetKeySetToDefaults, resource.ComposeTestCheckFunc())
 	checkResourceIsUnchangedInPluginFramework(t, testTailnetKeyUnsetOptionals, resource.ComposeTestCheckFunc())
-}
-
-func toPtr[T any](v T) *T {
-	return &v
 }
