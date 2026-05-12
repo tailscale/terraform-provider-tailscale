@@ -16,6 +16,7 @@ import (
 
 var (
 	_ resource.Resource                = &deviceAuthorizationResource{}
+	_ resource.ResourceWithConfigure   = &deviceAuthorizationResource{}
 	_ resource.ResourceWithImportState = &deviceAuthorizationResource{}
 	_ resource.ResourceWithModifyPlan  = &deviceAuthorizationResource{}
 )

@@ -16,6 +16,7 @@ import (
 
 var (
 	_ resource.Resource                = &dnsSearchPathsResource{}
+	_ resource.ResourceWithConfigure   = &dnsSearchPathsResource{}
 	_ resource.ResourceWithImportState = &dnsSearchPathsResource{}
 )
 

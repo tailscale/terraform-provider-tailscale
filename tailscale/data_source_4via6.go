@@ -22,7 +22,11 @@ type dataSource4Via6Model struct {
 	IPv6 types.String `tfsdk:"ipv6"`
 }
 
-// New4Via6DataSource() returns a new 4via6 data source.
+var (
+	_ datasource.DataSourceWithConfigure = &dataSource4via6{}
+)
+
+// New4Via6DataSource returns a new 4via6 data source.
 func New4Via6DataSource() datasource.DataSource {
 	return &dataSource4via6{}
 }

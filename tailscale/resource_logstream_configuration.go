@@ -21,6 +21,7 @@ import (
 
 var (
 	_ resource.Resource                = &logstreamConfigurationResource{}
+	_ resource.ResourceWithConfigure   = &logstreamConfigurationResource{}
 	_ resource.ResourceWithImportState = &logstreamConfigurationResource{}
 )
 

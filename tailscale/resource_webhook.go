@@ -21,6 +21,7 @@ import (
 
 var (
 	_ resource.Resource                = &webhookResource{}
+	_ resource.ResourceWithConfigure   = &webhookResource{}
 	_ resource.ResourceWithImportState = &webhookResource{}
 )
 

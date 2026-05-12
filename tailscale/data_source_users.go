@@ -15,6 +15,10 @@ import (
 	"tailscale.com/client/tailscale/v2"
 )
 
+var (
+	_ datasource.DataSourceWithConfigure = &multipleUsersDataSource{}
+)
+
 // NewMultipleUsersDataSource returns a new multiple-users data data source.
 func NewMultipleUsersDataSource() datasource.DataSource {
 	return &multipleUsersDataSource{}

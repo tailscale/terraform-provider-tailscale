@@ -19,6 +19,10 @@ import (
 	"tailscale.com/client/tailscale/v2"
 )
 
+var (
+	_ datasource.DataSourceWithConfigure = &singleDeviceDataSource{}
+)
+
 // NewSingleDeviceDataSource returns a new single-device data source.
 func NewSingleDeviceDataSource() datasource.DataSource {
 	return &singleDeviceDataSource{}

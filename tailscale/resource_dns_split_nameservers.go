@@ -19,6 +19,7 @@ import (
 
 var (
 	_ resource.Resource                = &dnsSplitNameserversResource{}
+	_ resource.ResourceWithConfigure   = &dnsSplitNameserversResource{}
 	_ resource.ResourceWithImportState = &dnsSplitNameserversResource{}
 )
 

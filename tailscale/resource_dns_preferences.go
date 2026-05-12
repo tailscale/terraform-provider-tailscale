@@ -16,7 +16,11 @@ import (
 	"tailscale.com/client/tailscale/v2"
 )
 
-var _ resource.ResourceWithImportState = &dnsPreferencesResource{}
+var (
+	_ resource.Resource                = &dnsPreferencesResource{}
+	_ resource.ResourceWithConfigure   = &dnsPreferencesResource{}
+	_ resource.ResourceWithImportState = &dnsPreferencesResource{}
+)
 
 // NewDNSPreferencesResource returns a new DNS preferences resources.
 func NewDNSPreferencesResource() resource.Resource {
