@@ -139,8 +139,8 @@ func providerConfigure(_ context.Context, provider *schema.Provider, d *schema.R
 	}
 	audience := d.Get("audience").(string)
 
-	if diags := validateProviderCreds(apiKey, oauthClientID, oauthClientSecret, idToken, audience); diags != nil && diags.HasError() {
-		return nil, diags
+	if err := validateProviderCreds(apiKey, oauthClientID, oauthClientSecret, idToken, audience); err != nil {
+		return nil, diag.Errorf("%s", err.Error())
 	}
 
 	userAgent := d.Get("user_agent").(string)
@@ -163,17 +163,17 @@ func providerConfigure(_ context.Context, provider *schema.Provider, d *schema.R
 	return &client, nil
 }
 
-func validateProviderCreds(apiKey, oauthClientID, oauthClientSecret, idToken, audience string) diag.Diagnostics {
+func validateProviderCreds(apiKey, oauthClientID, oauthClientSecret, idToken, audience string) error {
 	if apiKey == "" && oauthClientID == "" && oauthClientSecret == "" && idToken == "" && audience == "" {
-		return diag.Errorf("tailscale provider credentials are empty - set `api_key` or 'oauth_client_id' and one of 'oauth_client_secret', 'identity_token', or 'audience'")
+		return errors.New("tailscale provider credentials are empty - set `api_key` or 'oauth_client_id' and one of 'oauth_client_secret', 'identity_token', or 'audience'")
 	} else if apiKey != "" && (oauthClientID != "" || oauthClientSecret != "" || idToken != "" || audience != "") {
-		return diag.Errorf("tailscale provider credentials are conflicting - `api_key` conflicts with 'oauth_client_id', 'oauth_client_secret', 'identity_token', and 'audience'")
+		return errors.New("tailscale provider credentials are conflicting - `api_key` conflicts with 'oauth_client_id', 'oauth_client_secret', 'identity_token', and 'audience'")
 	} else if audience != "" && (oauthClientSecret != "" || idToken != "") {
-		return diag.Errorf("tailscale provider argument 'audience' conflicts with 'oauth_client_secret' and 'identity_token'")
+		return errors.New("tailscale provider argument 'audience' conflicts with 'oauth_client_secret' and 'identity_token'")
 	} else if apiKey == "" && oauthClientID == "" {
-		return diag.Errorf("tailscale provider argument 'oauth_client_id' is empty")
+		return errors.New("tailscale provider argument 'oauth_client_id' is empty")
 	} else if oauthClientID != "" && oauthClientSecret == "" && idToken == "" && audience == "" {
-		return diag.Errorf("one of tailscale provider arguments 'oauth_client_secret', 'identity_token', or 'audience' are mandatory with 'oauth_client_id'")
+		return errors.New("one of tailscale provider arguments 'oauth_client_secret', 'identity_token', or 'audience' are mandatory with 'oauth_client_id'")
 	}
 
 	return nil
