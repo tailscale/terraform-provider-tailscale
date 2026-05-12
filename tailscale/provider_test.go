@@ -8,11 +8,14 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -331,6 +334,106 @@ func TestValidateProviderCreds(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestResolveValueFromFile(t *testing.T) {
+	t.Parallel()
+
+	t.Run("not-using-file-format", func(t *testing.T) {
+		dir := t.TempDir()
+		// We expect that this temporary file will _not_ be read since we will
+		// not be prefixing the value passed to resolveValueFromFile with "file:".
+		// Create it with a known sentinel value for erroring out in the test if
+		// we do incorrectly read it.
+		tempFile := filepath.Join(dir, "file-exists")
+		err := os.WriteFile(tempFile, []byte("this-should-not-have-been-read"), 0600)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var diags diag.Diagnostics
+		// Expect that we get the file name as a value and not the contents of
+		// the file since the value was not prefixed with "file:"
+		val := resolveValueFromFile(&diags, "example-key", types.StringValue(tempFile))
+		if val != tempFile {
+			t.Errorf("expected value %q but got %s", tempFile, val)
+		}
+
+		if diags.HasError() {
+			t.Fatalf("expected no diag errors but got %v", diags.Errors())
+		}
+	})
+
+	t.Run("using-file-format-and-file-exists", func(t *testing.T) {
+		dir := t.TempDir()
+		tempFile := filepath.Join(dir, "file-exists")
+		err := os.WriteFile(tempFile, []byte("example-value"), 0600)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var diags diag.Diagnostics
+		val := resolveValueFromFile(&diags, "example-key", types.StringValue("file:"+tempFile))
+		if val != "example-value" {
+			t.Errorf("expected value 'example-value' but got %s", val)
+		}
+
+		if diags.HasError() {
+			t.Fatalf("expected no diag errors but got %v", diags.Errors())
+		}
+	})
+
+	t.Run("using-file-format-in-fallbacks-and-file-exists", func(t *testing.T) {
+		dir := t.TempDir()
+		tempFile := filepath.Join(dir, "file-exists")
+		err := os.WriteFile(tempFile, []byte("example-value"), 0600)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var diags diag.Diagnostics
+		// This emulates file:tempFile coming from an env-var or elsewhere
+		val := resolveValueFromFile(&diags, "example-key", types.StringNull(), "file:"+tempFile)
+		if val != "example-value" {
+			t.Errorf("expected value 'example-value' but got %s", val)
+		}
+
+		if diags.HasError() {
+			t.Fatalf("expected no diag errors but got %v", diags.Errors())
+		}
+	})
+
+	t.Run("using-file-format-and-file-does-not-exist", func(t *testing.T) {
+		var diags diag.Diagnostics
+		keyName := "example-key"
+		fileName := "does-not-exist"
+
+		val := resolveValueFromFile(&diags, keyName, types.StringValue("file:"+fileName))
+		if val != "" {
+			t.Errorf("expected empty string but got %s", val)
+		}
+
+		if !diags.HasError() {
+			t.Fatal("expected diag errors but got none")
+		}
+
+		if diags.ErrorsCount() != 1 {
+			t.Fatalf("expected 1 diag error but got %d", diags.ErrorsCount())
+		}
+
+		diagError := diags.Errors()[0]
+
+		if !strings.Contains(diagError.Summary(), keyName) {
+			t.Fatalf("expected summary to contain error text with %q but was %q", keyName, diagError.Summary())
+		}
+
+		expectedErrorFragment := "could not be read"
+		if !strings.Contains(diagError.Detail(), expectedErrorFragment) ||
+			!strings.Contains(diagError.Detail(), fileName) ||
+			!strings.Contains(diagError.Detail(), keyName) {
+			t.Fatalf("expected error detail to contain %q, %q, and %q but was %q", expectedErrorFragment, fileName, keyName, diagError.Detail())
+		}
+	})
 }
 
 // checkDataSourceIsUnchangedInPluginFramework runs a migration test to check
