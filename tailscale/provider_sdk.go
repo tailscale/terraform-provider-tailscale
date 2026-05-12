@@ -7,6 +7,7 @@ package tailscale
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"os"
 
