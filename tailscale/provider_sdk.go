@@ -7,18 +7,12 @@ package tailscale
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"maps"
 	"net/url"
 	"os"
 
-	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
-	"tailscale.com/client/tailscale/v2"
 )
 
 // providerVersion is filled by goreleaser at build time.
@@ -179,58 +173,6 @@ func validateProviderCreds(apiKey, oauthClientID, oauthClientSecret, idToken, au
 	return nil
 }
 
-func diagnosticsError(err error, message string, args ...interface{}) diag.Diagnostics {
-	var detail string
-	if err != nil {
-		detail = err.Error()
-	}
-
-	diags := []diag.Diagnostic{
-		{
-			Severity: diag.Error,
-			Summary:  fmt.Sprintf(message, args...),
-			Detail:   detail,
-		},
-	}
-
-	if details := tailscale.ErrorData(err); len(details) > 0 {
-		for _, dt := range details {
-			for _, e := range dt.Errors {
-				diags = append(diags, diag.Diagnostic{
-					Severity: diag.Error,
-					Summary:  fmt.Sprintf("user: %s\nerror: %s", dt.User, e),
-				})
-			}
-		}
-	}
-
-	return diags
-}
-
-func diagnosticsAsError(diags diag.Diagnostics) error {
-	var combined string
-	for _, d := range diags {
-		if d.Severity == diag.Error {
-			combined += fmt.Sprintf("%s: %s\n", d.Summary, d.Detail)
-		}
-	}
-
-	if combined == "" {
-		return nil
-	}
-
-	return errors.New(combined)
-}
-
-func diagnosticsErrorWithPath(err error, message string, path cty.Path, args ...interface{}) diag.Diagnostics {
-	d := diagnosticsError(err, message, args...)
-	for i := range d {
-		d[i].AttributePath = path
-	}
-
-	return d
-}
-
 func createUUID() string {
 	val, err := uuid.GenerateUUID()
 	if err != nil {
@@ -239,37 +181,7 @@ func createUUID() string {
 	return val
 }
 
-// setProperties sets the properties of a ResourceData from the values in the
-// given map. Existing ResourceData properties that don't appear in the map are
-// left as-is.
-func setProperties(d *schema.ResourceData, props map[string]any) diag.Diagnostics {
-	for name, value := range props {
-		if err := d.Set(name, value); err != nil {
-			return diagnosticsError(err, "failed to set %s", name)
-		}
-	}
-	return nil
-}
-
-// optional returns a pointer to the value at key in the given resource if,
-// and only if, the value has changed. If the value is unchanged, it returns nil.
-func optional[T any](d *schema.ResourceData, key string) *T {
-	if !d.HasChange(key) {
-		return nil
-	}
-	return tailscale.PointerTo(d.Get(key).(T))
-}
-
 // isAcceptanceTesting returns true if we're running acceptance tests.
 func isAcceptanceTesting() bool {
 	return os.Getenv("TF_ACC") != ""
-}
-
-// combinedSchemas creates a schema that combines two supplied schemas.
-// Properties in schema b overwrite the same properties in schema b.
-func combinedSchemas(a, b map[string]*schema.Schema) map[string]*schema.Schema {
-	out := make(map[string]*schema.Schema, len(a)+len(b))
-	maps.Copy(out, a)
-	maps.Copy(out, b)
-	return out
 }
