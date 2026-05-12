@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -51,13 +52,13 @@ func (r *federatedIdentityResource) Schema(_ context.Context, _ resource.SchemaR
 				},
 			},
 			"description": schema.StringAttribute{
-				Description:   "A description of the federated identity consisting of alphanumeric characters. Defaults to `\"\"`.",
-				Optional:      true,
-				Computed:      true,
-				PlanModifiers: []planmodifier.String{PreserveEmptyStringAsNull{}},
+				Description: "A description of the federated identity consisting of alphanumeric characters. Defaults to `\"\"`.",
+				Optional:    true,
+				Computed:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtMost(50),
 				},
+				Default: stringdefault.StaticString(""),
 			},
 			"scopes": schema.SetAttribute{
 				Description: "Scopes to grant to the federated identity. See https://tailscale.com/kb/1623/ for a list of available scopes.",

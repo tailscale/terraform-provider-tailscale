@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -72,22 +73,22 @@ func (p *postureIntegrationResource) Schema(_ context.Context, _ resource.Schema
 				},
 			},
 			"cloud_id": schema.StringAttribute{
-				Description:   "Identifies which of the provider's clouds to integrate with.",
-				Optional:      true,
-				Computed:      true,
-				PlanModifiers: []planmodifier.String{PreserveEmptyStringAsNull{}},
+				Description: "Identifies which of the provider's clouds to integrate with.",
+				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString(""),
 			},
 			"client_id": schema.StringAttribute{
-				Description:   "Unique identifier for your client.",
-				Optional:      true,
-				Computed:      true,
-				PlanModifiers: []planmodifier.String{PreserveEmptyStringAsNull{}},
+				Description: "Unique identifier for your client.",
+				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString(""),
 			},
 			"tenant_id": schema.StringAttribute{
-				Description:   "The Microsoft Intune directory (tenant) ID. For other providers, this is left blank.",
-				Optional:      true,
-				Computed:      true,
-				PlanModifiers: []planmodifier.String{PreserveEmptyStringAsNull{}},
+				Description: "The Microsoft Intune directory (tenant) ID. For other providers, this is left blank.",
+				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString(""),
 			},
 			"client_secret": schema.StringAttribute{
 				Description: "The secret (auth key, token, etc.) used to authenticate with the provider.",
