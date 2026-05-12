@@ -12,8 +12,10 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
+	"github.com/tailscale/hujson"
 
 	"tailscale.com/client/tailscale/v2"
 )
@@ -216,10 +218,41 @@ func TestAccACL(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"overwrite_existing_content"},
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: false,
+				ImportStateCheck: func(s []*terraform.InstanceState) error {
+					if len(s) != 1 {
+						return fmt.Errorf("expected 1 state, got %d", len(s))
+					}
+
+					importedACL := s[0].Attributes["acl"]
+
+					importedJSON, err := hujson.Format([]byte(importedACL))
+					if err != nil {
+						return fmt.Errorf("hujson.Format(imported): %v", err)
+					}
+
+					expectedJSON, err := hujson.Format([]byte(
+						`{
+							// Tag owners.
+							"TagOwners": {
+								"tag:example": [
+									"autogroup:member"
+								]
+							},
+						}`,
+					))
+					if err != nil {
+						return fmt.Errorf("hujson.Format(expected): %v", err)
+					}
+
+					if diff := cmp.Diff(expectedJSON, importedJSON); diff != "" {
+						return fmt.Errorf("imported ACL doesn't match expected (-want, +got): %s", diff)
+					}
+
+					return nil
+				},
 			},
 		},
 	})
