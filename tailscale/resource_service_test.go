@@ -56,14 +56,13 @@ func TestAccTailscaleService(t *testing.T) {
 	const testServiceOptionalUnset = `
 		resource "tailscale_service" "test_service" {
 			name    = "svc:test-service"
-			comment = "a test Service" # TODO(zofrex): fix this one too
 			ports   = ["tcp:443", "tcp:8080"]
 		}`
 
 	const testServiceOptionalEmpty = `
 		resource "tailscale_service" "test_service" {
 			name    = "svc:test-service"
-			comment = "a test Service" # TODO(zofrex): fix this one too
+			comment = ""
 			ports   = ["tcp:443", "tcp:8080"]
 			tags    = []
 		}`
