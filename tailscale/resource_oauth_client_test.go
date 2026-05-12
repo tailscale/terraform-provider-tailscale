@@ -60,13 +60,12 @@ func TestAccTailscaleOAuthClient(t *testing.T) {
 
 	const testOauthClientOptionalUnset = `
 		resource "tailscale_oauth_client" "test_client" {
-			description = "Updated description" # TODO(zofrex): fix this as well
 			scopes      = ["auth_keys:read"]
 		}`
 
 	const testOauthClientOptionalEmpty = `
 		resource "tailscale_oauth_client" "test_client" {
-			description = "Updated description" # TODO(zofrex): fix this as well
+			description = ""
 			scopes      = ["auth_keys:read"]
 			tags        = []
 		}`
