@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -50,29 +51,29 @@ func (p *tailscaleProvider) Schema(_ context.Context, _ provider.SchemaRequest, 
 		Attributes: map[string]schema.Attribute{
 			"api_key": schema.StringAttribute{
 				Optional:    true,
-				Description: "The API key to use for authenticating requests to the API. Can be set via the TAILSCALE_API_KEY environment variable. Conflicts with 'oauth_client_id' and 'oauth_client_secret'.",
+				Description: "The API key to use for authenticating requests to the API. Can be set via the TAILSCALE_API_KEY environment variable. If the value starts with 'file:' then it is treated as a path to a file on disk that contains the API key. Conflicts with 'oauth_client_id' and 'oauth_client_secret'.",
 				Sensitive:   true,
 			},
 			"audience": schema.StringAttribute{
 				Optional:    true,
-				Description: "The OIDC audience to request when discovering an identity token from the runtime (GitHub Actions, AWS, or GCP) for workload identity federation. Can be set via the TAILSCALE_AUDIENCE environment variable. Requires 'oauth_client_id'. Conflicts with 'api_key', 'oauth_client_secret', 'identity_token', and 'identity_token_environment_variable_name'.",
+				Description: "The OIDC audience to request when discovering an identity token from the runtime (GitHub Actions, AWS, or GCP) for workload identity federation. Can be set via the TAILSCALE_AUDIENCE environment variable. If the value starts with 'file:' then it is treated as a path to a file on disk that contains the audience. Requires 'oauth_client_id'. Conflicts with 'api_key', 'oauth_client_secret', 'identity_token', and 'identity_token_environment_variable_name'.",
 			},
 			"identity_token": schema.StringAttribute{
 				Optional:    true,
-				Description: "The jwt identity token to exchange for a Tailscale API token when using a federated identity. Can be set via the TAILSCALE_IDENTITY_TOKEN environment variable. Conflicts with 'api_key', 'oauth_client_secret', and 'identity_token_environment_variable_name'.",
+				Description: "The jwt identity token to exchange for a Tailscale API token when using a federated identity. Can be set via the TAILSCALE_IDENTITY_TOKEN environment variable. If the value starts with 'file:' then it is treated as a path to a file on disk that contains the identity token. Conflicts with 'api_key', 'oauth_client_secret', and 'identity_token_environment_variable_name'.",
 				Sensitive:   true,
 			},
 			"identity_token_environment_variable_name": schema.StringAttribute{
 				Optional:    true,
-				Description: "The name of an environment variable to read the identity token from. This is useful when the identity token is provided by an external system (such as Terraform Cloud workload identity) in an environment variable you do not control. Conflicts with 'identity_token'.",
+				Description: "The name of an environment variable to read the identity token from. This is useful when the identity token is provided by an external system (such as Terraform Cloud workload identity) in an environment variable you do not control. If the resolved value of the environment variable starts with 'file:' then it is treated as a path to a file on disk that contains identity token. Conflicts with 'identity_token'.",
 			},
 			"oauth_client_id": schema.StringAttribute{
 				Optional:    true,
-				Description: "The OAuth application or federated identity's ID when using OAuth client credentials or workload identity federation. Can be set via the TAILSCALE_OAUTH_CLIENT_ID environment variable. Either 'oauth_client_secret' or 'identity_token' must be set alongside 'oauth_client_id'. Conflicts with 'api_key'.",
+				Description: "The OAuth application or federated identity's ID when using OAuth client credentials or workload identity federation. Can be set via the TAILSCALE_OAUTH_CLIENT_ID environment variable. If the value starts with 'file:' then it is treated as a path to a file on disk that contains the client ID. Either 'oauth_client_secret' or 'identity_token' must be set alongside 'oauth_client_id'. Conflicts with 'api_key'.",
 			},
 			"oauth_client_secret": schema.StringAttribute{
 				Optional:    true,
-				Description: "The OAuth application's secret when using OAuth client credentials. Can be set via the TAILSCALE_OAUTH_CLIENT_SECRET environment variable. Conflicts with 'api_key' and 'identity_token'.",
+				Description: "The OAuth application's secret when using OAuth client credentials. Can be set via the TAILSCALE_OAUTH_CLIENT_SECRET environment variable. If the value starts with 'file:' then it is treated as a path to a file on disk that contains the client secret. Conflicts with 'api_key' and 'identity_token'.",
 				Sensitive:   true,
 			},
 			"scopes": schema.ListAttribute{
@@ -114,7 +115,7 @@ func (p *tailscaleProvider) Configure(ctx context.Context, req provider.Configur
 	var data tailscaleProviderModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
-	apiKey := coalesce(data.APIKey, os.Getenv("TAILSCALE_API_KEY"))
+	apiKey := resolveValueFromFile(&resp.Diagnostics, "api_key", data.APIKey, os.Getenv("TAILSCALE_API_KEY"))
 	tailnet := coalesce(data.Tailnet, os.Getenv("TAILSCALE_TAILNET"), "-")
 	baseURL := coalesce(data.BaseURL, os.Getenv("TAILSCALE_BASE_URL"), "https://api.tailscale.com")
 
@@ -123,10 +124,32 @@ func (p *tailscaleProvider) Configure(ctx context.Context, req provider.Configur
 	if envVarName := data.IdentityTokenEnvironmentVariableName.ValueString(); envVarName != "" {
 		identityTokenFallbacks = append(identityTokenFallbacks, os.Getenv(envVarName))
 	}
-	identityToken := coalesce(data.IdentityToken, identityTokenFallbacks...)
-	oauthClientID := coalesce(data.OAuthClientID, os.Getenv("TAILSCALE_OAUTH_CLIENT_ID"), os.Getenv("OAUTH_CLIENT_ID"))
-	oauthClientSecret := coalesce(data.OAuthClientSecret, os.Getenv("TAILSCALE_OAUTH_CLIENT_SECRET"), os.Getenv("OAUTH_CLIENT_SECRET"))
-	audience := coalesce(data.Audience, os.Getenv("TAILSCALE_AUDIENCE"))
+	identityToken := resolveValueFromFile(
+		&resp.Diagnostics,
+		"identity_token",
+		data.IdentityToken,
+		identityTokenFallbacks...,
+	)
+	oauthClientID := resolveValueFromFile(
+		&resp.Diagnostics,
+		"oauth_client_id",
+		data.OAuthClientID,
+		os.Getenv("TAILSCALE_OAUTH_CLIENT_ID"),
+		os.Getenv("OAUTH_CLIENT_ID"),
+	)
+	oauthClientSecret := resolveValueFromFile(
+		&resp.Diagnostics,
+		"oauth_client_secret",
+		data.OAuthClientSecret,
+		os.Getenv("TAILSCALE_OAUTH_CLIENT_SECRET"),
+		os.Getenv("OAUTH_CLIENT_SECRET"),
+	)
+	audience := resolveValueFromFile(
+		&resp.Diagnostics,
+		"audience",
+		data.Audience,
+		os.Getenv("TAILSCALE_AUDIENCE"),
+	)
 
 	var userAgent string
 	if data.UserAgent.ValueString() != "" {
@@ -173,6 +196,25 @@ func (p *tailscaleProvider) Configure(ctx context.Context, req provider.Configur
 	// type Configure methods.
 	resp.ResourceData = &p.Client
 	resp.DataSourceData = &p.Client
+}
+
+// resolveValueFromFile returns the value as-is, or if it starts with "file:",
+// reads and returns the trimmed contents of the file.
+func resolveValueFromFile(diags *diag.Diagnostics, key string, v types.String, fallbacks ...string) string {
+	// Derive the value from the provided fallbacks if needed
+	resolvedVal := coalesce(v, fallbacks...)
+
+	if file, ok := strings.CutPrefix(resolvedVal, "file:"); ok {
+		b, err := os.ReadFile(file)
+		if err != nil {
+			diags.AddError("Could not resolve file for "+key,
+				fmt.Sprintf("While configuring the provider, "+
+					"the file %q could not be read for %q: %v", file, key, err))
+			return ""
+		}
+		return strings.TrimSpace(string(b))
+	}
+	return resolvedVal
 }
 
 // Resources returns a slice of resources.
