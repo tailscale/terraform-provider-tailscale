@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
 	"tailscale.com/client/tailscale/v2"
-	"tailscale.com/types/ptr"
 )
 
 func TestAccTailscaleTailnetSettings(t *testing.T) {
@@ -231,17 +230,17 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 					// unset value is misinterpreted as the empty value, a change will be
 					// made and the test will fail.
 					settingsRequest := tailscale.UpdateTailnetSettingsRequest{
-						ACLsExternallyManagedOn:                ptr.To(true),
-						ACLsExternalLink:                       ptr.To("https://foo.com"),
-						DevicesApprovalOn:                      ptr.To(true),
-						DevicesAutoUpdatesOn:                   ptr.To(true),
-						DevicesKeyDurationDays:                 ptr.To(5),
-						HTTPSEnabled:                           ptr.To(true),
-						NetworkFlowLoggingOn:                   ptr.To(true),
-						PostureIdentityCollectionOn:            ptr.To(true),
-						RegionalRoutingOn:                      ptr.To(true),
-						UsersApprovalOn:                        ptr.To(true),
-						UsersRoleAllowedToJoinExternalTailnets: ptr.To(tailscale.RoleAllowedToJoinExternalTailnets("member")),
+						ACLsExternallyManagedOn:                new(true),
+						ACLsExternalLink:                       new("https://foo.com"),
+						DevicesApprovalOn:                      new(true),
+						DevicesAutoUpdatesOn:                   new(true),
+						DevicesKeyDurationDays:                 new(5),
+						HTTPSEnabled:                           new(true),
+						NetworkFlowLoggingOn:                   new(true),
+						PostureIdentityCollectionOn:            new(true),
+						RegionalRoutingOn:                      new(true),
+						UsersApprovalOn:                        new(true),
+						UsersRoleAllowedToJoinExternalTailnets: new(tailscale.RoleAllowedToJoinExternalTailnets("member")),
 					}
 					err := client.TailnetSettings().Update(context.Background(), settingsRequest)
 					if err != nil {

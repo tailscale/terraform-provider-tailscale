@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
 	"tailscale.com/client/tailscale/v2"
-	"tailscale.com/types/ptr"
 )
 
 const testWebhookCreate = `
@@ -45,7 +44,7 @@ func TestProvider_TailscaleWebhook(t *testing.T) {
 			testServer.ResponseCode = http.StatusOK
 			testServer.ResponseBody = tailscale.Webhook{
 				EndpointID: "12345",
-				Secret:     ptr.To("123"),
+				Secret:     new("123"),
 			}
 		},
 		ProtoV5ProviderFactories: testProviderFactories(t),
