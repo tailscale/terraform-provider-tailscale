@@ -345,31 +345,21 @@ func TestValidateProviderCreds(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			diags := validateProviderCreds(tt.apiKey, tt.oauthClientID, tt.oauthSecret, tt.idToken, tt.audience)
+			err := validateProviderCreds(tt.apiKey, tt.oauthClientID, tt.oauthSecret, tt.idToken, tt.audience)
 
-			if tt.wantErr == "" && diags.HasError() {
-				t.Errorf("unexpected error: %v", diags)
+			if tt.wantErr == "" && err != nil {
+				t.Errorf("unexpected error: %v", err)
 
 			}
 
-			if tt.wantErr != "" && !diags.HasError() {
+			if tt.wantErr != "" && err == nil {
 				t.Errorf("expected error containing %q but got none", tt.wantErr)
 				return
 			}
 
 			if tt.wantErr != "" {
-				match := false
-				for _, d := range diags {
-					if d.Severity == diag.Error {
-						errMsg := d.Summary + d.Detail
-						if strings.Contains(errMsg, tt.wantErr) {
-							match = true
-							break
-						}
-					}
-				}
-				if !match {
-					t.Errorf("expected error containing %q but got: %v", tt.wantErr, diags)
+				if !strings.Contains(err.Error(), tt.wantErr) {
+					t.Errorf("expected error containing %q but got: %v", tt.wantErr, err)
 				}
 			}
 		})

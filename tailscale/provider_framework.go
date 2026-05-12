@@ -158,7 +158,7 @@ func (p *tailscaleProvider) Configure(ctx context.Context, req provider.Configur
 	}
 
 	if err := validateProviderCreds(apiKey, oauthClientID, oauthClientSecret, identityToken, audience); err != nil {
-		resp.Diagnostics.AddError("Provider credentials error", err[0].Summary)
+		resp.Diagnostics.AddError("Provider credentials error", err.Error())
 	}
 
 	if resp.Diagnostics.HasError() {
