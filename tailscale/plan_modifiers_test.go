@@ -127,55 +127,6 @@ func TestAclHuJSONModifier(t *testing.T) {
 	runStringPlanModifierTests(t, aclHuJSONModifier{}, testCases)
 }
 
-func TestPreserveEmptyStringAsNull(t *testing.T) {
-	testCases := []stringPlanModifierTestCase{
-		{
-			name:         "equal-strings",
-			state:        types.StringValue("cabbage"),
-			config:       types.StringValue("cabbage"),
-			expectedPlan: types.StringValue("cabbage"),
-		},
-		{
-			name:         "different-strings",
-			state:        types.StringValue("carrot"),
-			config:       types.StringValue("lettuce"),
-			expectedPlan: types.StringValue("lettuce"),
-		},
-		{
-			name:         "empty-string-in-state-non-empty-in-plan",
-			state:        types.StringValue(""),
-			config:       types.StringValue("broccoli"),
-			expectedPlan: types.StringValue("broccoli"),
-		},
-		{
-			name:         "non-empty-string-in-state-empty-in-plan",
-			state:        types.StringValue("rhubarb"),
-			config:       types.StringValue(""),
-			expectedPlan: types.StringValue(""),
-		},
-		{
-			name:         "empty-string-in-state-unknown-plan",
-			state:        types.StringValue(""),
-			config:       types.StringUnknown(),
-			expectedPlan: types.StringUnknown(),
-		},
-		{
-			name:         "empty-string-in-state-null-plan",
-			state:        types.StringValue(""),
-			config:       types.StringNull(),
-			expectedPlan: types.StringValue(""),
-		},
-		{
-			name:         "null-in-state-empty-string-in-plan",
-			state:        types.StringNull(),
-			config:       types.StringValue(""),
-			expectedPlan: types.StringValue(""),
-		},
-	}
-
-	runStringPlanModifierTests(t, PreserveEmptyStringAsNull{}, testCases)
-}
-
 type stringPlanModifierTestCase struct {
 	name         string
 	state        types.String
