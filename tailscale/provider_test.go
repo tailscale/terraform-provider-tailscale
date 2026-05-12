@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -16,9 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-mux/tf5muxserver"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	pluginterraform "github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
@@ -26,9 +25,22 @@ import (
 	"tailscale.com/client/tailscale/v2"
 )
 
-var testClient *tailscale.Client
-var testServer *TestServer
-var testAccProvider = Provider()
+// getTestAccClient returns an instance of [tailscale.Client] for use in
+// the acceptance tests, which is authenticated against devcontrol.
+func getAccTestClient() *tailscale.Client {
+	baseURL, err := url.Parse(os.Getenv("TAILSCALE_BASE_URL"))
+	if err != nil {
+		panic(fmt.Sprintf("unable to parse base URL %q: %v", baseURL, err))
+	}
+
+	client := tailscale.Client{
+		BaseURL:   baseURL,
+		UserAgent: "tailscale-terraform-provider tests",
+		APIKey:    os.Getenv("TAILSCALE_API_KEY"),
+	}
+
+	return &client
+}
 
 // testAccPreCheck ensures that the TAILSCALE_API_KEY and TAILSCALE_BASE_URL variables
 // are set and configures the provider. This must be called before running acceptance
@@ -48,13 +60,7 @@ func testAccPreCheck(t *testing.T) {
 		t.Fatal("TAILSCALE_TEST_DEVICE_NAME must be set for acceptance tests")
 	}
 
-	if diags := testAccProvider.Configure(context.Background(), &pluginterraform.ResourceConfig{}); diags.HasError() {
-		for _, d := range diags {
-			if d.Severity == diag.Error {
-				t.Fatalf("Failed to configure provider: %s", d.Summary)
-			}
-		}
-	}
+	getAccTestClient()
 }
 
 // testAccProviderFactories creates a mux server that serves both the SDKv2 and
@@ -95,38 +101,25 @@ func TestProvider_Implemented(t *testing.T) {
 	var _ provider.Provider = NewFrameworkProvider()
 }
 
-// testProviderFactories creates a mux server that serves both the SDKv2 and
-// the plugin framework providers.
+// testServer is a mock HTTP server uses to simulate the Tailscale API.
 //
-// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/mux#protocol-version-5
+// Tests can define mock responses in the PreCheck step of a test.
+var testServer *TestServer
+
+// testProviderFactories sets up the Terraform provider for non-acceptance tests,
+// connecting it to [testServer].
 func testProviderFactories(t *testing.T) map[string]func() (tfprotov5.ProviderServer, error) {
 	t.Helper()
 
-	testClient, testServer = NewTestHarness(t)
+	baseURL, server := NewTestHarness(t)
+	testServer = server
 	return map[string]func() (tfprotov5.ProviderServer, error){
 		"tailscale": func() (tfprotov5.ProviderServer, error) {
-			ctx := context.Background()
-
 			t.Setenv("TAILSCALE_API_KEY", "api_123")
-			t.Setenv("TAILSCALE_BASE_URL", testClient.BaseURL.String())
+			t.Setenv("TAILSCALE_BASE_URL", baseURL)
 
-			providers := []func() tfprotov5.ProviderServer{
-				providerserver.NewProtocol5(NewFrameworkProvider()),
-				Provider(func(p *schema.Provider) {
-					// Set up a test harness for the provider
-					p.ConfigureContextFunc = func(ctx context.Context, data *schema.ResourceData) (interface{}, diag.Diagnostics) {
-						return testClient, nil
-					}
-				}).GRPCProvider,
-			}
-
-			muxServer, err := tf5muxserver.NewMuxServer(ctx, providers...)
-
-			if err != nil {
-				return nil, err
-			}
-
-			return muxServer.ProviderServer(), nil
+			provider := NewFrameworkProvider()
+			return providerserver.NewProtocol5(provider)(), nil
 		},
 	}
 }
@@ -184,7 +177,7 @@ func checkResourceRemoteProperties(resourceName string, check func(client *tails
 			return fmt.Errorf("resource has no ID set")
 		}
 
-		client := testAccProvider.Meta().(*tailscale.Client)
+		client := getAccTestClient()
 		return check(client, rs)
 	}
 }
@@ -200,7 +193,7 @@ func checkResourceDestroyed(resourceName string, check func(client *tailscale.Cl
 			return fmt.Errorf("resource has no ID set")
 		}
 
-		client := testAccProvider.Meta().(*tailscale.Client)
+		client := getAccTestClient()
 		return check(client, rs)
 	}
 }

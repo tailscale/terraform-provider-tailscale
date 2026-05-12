@@ -10,15 +10,11 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"net/url"
 	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	"tailscale.com/client/tailscale/v2"
 )
 
 type TestResponse struct {
@@ -40,7 +36,7 @@ type TestServer struct {
 	ResponseBody interface{}
 }
 
-func NewTestHarness(t *testing.T) (*tailscale.Client, *TestServer) {
+func NewTestHarness(t *testing.T) (baseURL string, server *TestServer) {
 	t.Helper()
 
 	testServer := &TestServer{
@@ -66,16 +62,9 @@ func NewTestHarness(t *testing.T) (*tailscale.Client, *TestServer) {
 		assert.NoError(t, svr.Close())
 	})
 
-	baseURL := fmt.Sprintf("http://localhost:%v", listener.Addr().(*net.TCPAddr).Port)
-	parsedBaseURL, err := url.Parse(baseURL)
-	require.NoError(t, err)
-	client := &tailscale.Client{
-		BaseURL: parsedBaseURL,
-		APIKey:  "not-a-real-key",
-		Tailnet: "example.com",
-	}
+	baseURL = fmt.Sprintf("http://localhost:%v", listener.Addr().(*net.TCPAddr).Port)
 
-	return client, testServer
+	return baseURL, testServer
 }
 
 func (t *TestServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
