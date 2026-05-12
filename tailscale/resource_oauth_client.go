@@ -8,9 +8,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -65,8 +67,10 @@ func (r *oauthClientResource) Schema(_ context.Context, _ resource.SchemaRequest
 			},
 			"tags": schema.SetAttribute{
 				ElementType: types.StringType,
+				Computed:    true,
 				Optional:    true,
 				Description: "A list of tags that access tokens generated for the OAuth client will be able to assign to devices. Mandatory if the scopes include \"devices:core\" or \"auth_keys\".",
+				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 			},
 			"id": schema.StringAttribute{
 				Description: "The client ID, also known as the key id. Used with the client secret to generate access tokens.",
@@ -127,6 +131,10 @@ func (r *oauthClientResource) Read(ctx context.Context, req resource.ReadRequest
 	state.UpdatedAt = types.StringValue(key.Updated.Format(time.RFC3339))
 	state.UserID = types.StringValue(key.UserID)
 	state.Scopes = SetOfStringValue(ctx, key.Scopes, &resp.Diagnostics)
+
+	if key.Tags == nil {
+		key.Tags = []string{}
+	}
 	state.Tags = SetOfStringValue(ctx, key.Tags, &resp.Diagnostics)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)

@@ -58,6 +58,19 @@ func TestAccTailscaleOAuthClient(t *testing.T) {
 			scopes      = ["auth_keys:read"]
 		}`
 
+	const testOauthClientOptionalUnset = `
+		resource "tailscale_oauth_client" "test_client" {
+			description = "Updated description" # TODO(zofrex): fix this as well
+			scopes      = ["auth_keys:read"]
+		}`
+
+	const testOauthClientOptionalEmpty = `
+		resource "tailscale_oauth_client" "test_client" {
+			description = "Updated description" # TODO(zofrex): fix this as well
+			scopes      = ["auth_keys:read"]
+			tags        = []
+		}`
+
 	var expectedOAuthClientCreated tailscale.Key
 	expectedOAuthClientCreated.Description = "Test client"
 	expectedOAuthClientCreated.KeyType = "client"
@@ -161,6 +174,12 @@ func TestAccTailscaleOAuthClient(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "updated_at"),
 					resource.TestCheckResourceAttrSet(resourceName, "user_id"),
 				),
+			},
+			{
+				Config: testOauthClientOptionalUnset,
+			},
+			{
+				Config: testOauthClientOptionalEmpty,
 			},
 			{
 				ResourceName:            resourceName,
