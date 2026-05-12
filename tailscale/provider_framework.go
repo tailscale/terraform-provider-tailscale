@@ -23,6 +23,8 @@ import (
 	"tailscale.com/wif"
 )
 
+var _ provider.Provider = NewFrameworkProvider()
+
 type tailscaleProvider struct {
 	Client tailscale.Client
 }

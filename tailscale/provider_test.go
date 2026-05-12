@@ -4,7 +4,6 @@
 package tailscale
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -13,11 +12,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
-	"github.com/hashicorp/terraform-plugin-mux/tf5muxserver"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
@@ -63,42 +59,18 @@ func testAccPreCheck(t *testing.T) {
 	getAccTestClient()
 }
 
-// testAccProviderFactories creates a mux server that serves both the SDKv2 and
-// the plugin framework providers.
-//
-// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/mux#protocol-version-5
+// testAccProviderFactories sets up the Terraform provider for acceptance tests,
+// connecting it to a running instance of devcontrol.
 func testAccProviderFactories(t *testing.T) map[string]func() (tfprotov5.ProviderServer, error) {
 	t.Helper()
 
 	return map[string]func() (tfprotov5.ProviderServer, error){
 		"tailscale": func() (tfprotov5.ProviderServer, error) {
-			ctx := context.Background()
-
-			providers := []func() tfprotov5.ProviderServer{
-				providerserver.NewProtocol5(NewFrameworkProvider()),
-				Provider().GRPCProvider,
-			}
-
-			muxServer, err := tf5muxserver.NewMuxServer(ctx, providers...)
-
-			if err != nil {
-				return nil, err
-			}
-
-			return muxServer.ProviderServer(), nil
+			provider := NewFrameworkProvider()
+			tfServer := providerserver.NewProtocol5(provider)
+			return tfServer(), nil
 		},
 	}
-}
-
-func TestProvider(t *testing.T) {
-	if err := Provider().InternalValidate(); err != nil {
-		t.Fatalf("err: %s", err)
-	}
-}
-
-func TestProvider_Implemented(t *testing.T) {
-	var _ *schema.Provider = Provider()
-	var _ provider.Provider = NewFrameworkProvider()
 }
 
 // testServer is a mock HTTP server uses to simulate the Tailscale API.
