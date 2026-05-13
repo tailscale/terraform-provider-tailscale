@@ -95,6 +95,9 @@ func (d deviceTagsResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	state.DeviceID = types.StringValue(canonicalDeviceID)
+	if device.Tags == nil {
+		device.Tags = []string{}
+	}
 	state.Tags = SetOfStringValue(ctx, device.Tags, &resp.Diagnostics)
 
 	if resp.Diagnostics.HasError() {

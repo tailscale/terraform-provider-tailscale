@@ -6,6 +6,7 @@ package tailscale
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"reflect"
 	"testing"
@@ -16,6 +17,31 @@ import (
 	"tailscale.com/client/tailscale/v2"
 )
 
+func TestProvider_TailscaleDeviceTags(t *testing.T) {
+	const testDeviceTagsCreateEmpty = `
+		resource "tailscale_device_tags" "test_tags" {
+			device_id = "device1CNTRL"
+			tags = []
+		}`
+
+	resource.Test(t, resource.TestCase{
+		IsUnitTest: true,
+		PreCheck: func() {
+			testServer.ResponseCode = http.StatusOK
+			testServer.ResponseBody = tailscale.Device{
+				ID:   "device1CNTRL",
+				Tags: nil,
+			}
+		},
+		ProtoV5ProviderFactories: testProviderFactories(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testDeviceTagsCreateEmpty,
+			},
+		},
+	})
+}
+
 func TestAccTailscaleDeviceTags(t *testing.T) {
 	const resourceName = "tailscale_device_tags.test_tags"
 
@@ -24,7 +50,7 @@ func TestAccTailscaleDeviceTags(t *testing.T) {
 			name = "%s"
 			wait_for = "60s"
 		}
-		
+
 		resource "tailscale_device_tags" "test_tags" {
 			device_id = data.tailscale_device.test_device.id
 			tags = [
