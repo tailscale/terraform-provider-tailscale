@@ -7,10 +7,12 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -188,8 +190,10 @@ func (r *logstreamConfigurationResource) Schema(_ context.Context, _ resource.Sc
 			},
 			"gcs_scopes": schema.SetAttribute{
 				Description: "The GCS scopes needed to be able to write in the bucket",
+				Computed:    true,
 				Optional:    true,
 				ElementType: types.StringType,
+				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 			},
 			"gcs_key_prefix": schema.StringAttribute{
 				Description: "The GCS key prefix for the bucket",
@@ -277,6 +281,9 @@ func (d *logstreamConfigurationResourceModel) updateFields(ctx context.Context, 
 	d.S3RoleARN = types.StringValue(config.S3RoleARN)
 	d.S3ExternalID = types.StringValue(config.S3ExternalID)
 
+	if config.GCSScopes == nil {
+		config.GCSScopes = []string{}
+	}
 	d.GCSScopes = SetOfStringValue(ctx, config.GCSScopes, diags)
 	d.GCSCredentials = types.StringValue(config.GCSCredentials)
 	d.GCSKeyPrefix = types.StringValue(config.GCSKeyPrefix)

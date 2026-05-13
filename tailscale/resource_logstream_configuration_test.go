@@ -70,7 +70,7 @@ const testLogstreamConfigurationS3EmptyOptionals = `
 		s3_external_id        = ""
 		gcs_credentials       = ""
 		gcs_bucket            = ""
-		# gcs_scopes            = [] # TODO(zofrex): fix this one too
+		gcs_scopes            = []
 		gcs_key_prefix        = ""
 	}
 	`
