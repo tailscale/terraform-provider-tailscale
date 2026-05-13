@@ -85,6 +85,9 @@ func (r *federatedIdentityResource) Schema(_ context.Context, _ resource.SchemaR
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
 			"subject": schema.StringAttribute{
 				Description: "The pattern used when matching against the `sub` claim from an OIDC identity token. Patterns can include `*` characters to match against any character.",
