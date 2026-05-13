@@ -82,7 +82,9 @@ func (r *logstreamConfigurationResource) Schema(_ context.Context, _ resource.Sc
 			},
 			"url": schema.StringAttribute{
 				Description: "The URL to which log streams are being posted. If destination_type is 's3' and you want to use the official Amazon S3 endpoint, leave this empty.",
+				Computed:    true,
 				Optional:    true,
+				Default:     stringdefault.StaticString(""),
 			},
 			"user": schema.StringAttribute{
 				Description: "The username with which log streams to this endpoint are authenticated. Only required if destination_type is 'elastic', defaults to 'user' if not set.",
@@ -117,15 +119,21 @@ func (r *logstreamConfigurationResource) Schema(_ context.Context, _ resource.Sc
 			},
 			"s3_bucket": schema.StringAttribute{
 				Description: "The S3 bucket name. Required if destination_type is 's3'.",
+				Computed:    true,
 				Optional:    true,
+				Default:     stringdefault.StaticString(""),
 			},
 			"s3_region": schema.StringAttribute{
 				Description: "The region in which the S3 bucket is located. Required if destination_type is 's3'.",
+				Computed:    true,
 				Optional:    true,
+				Default:     stringdefault.StaticString(""),
 			},
 			"s3_key_prefix": schema.StringAttribute{
 				Description: "An optional S3 key prefix to prepend to the auto-generated S3 key name.",
+				Computed:    true,
 				Optional:    true,
+				Default:     stringdefault.StaticString(""),
 			},
 			"s3_authentication_type": schema.StringAttribute{
 				Description: "The type of authentication to use for S3. Required if destination_type is `s3`. Valid values are `accesskey` and `rolearn`. Tailscale recommends using `rolearn`.",
@@ -139,7 +147,9 @@ func (r *logstreamConfigurationResource) Schema(_ context.Context, _ resource.Sc
 			},
 			"s3_access_key_id": schema.StringAttribute{
 				Description: "The S3 access key ID. Required if destination_type is s3 and s3_authentication_type is 'accesskey'.",
+				Computed:    true,
 				Optional:    true,
+				Default:     stringdefault.StaticString(""),
 			},
 			"s3_secret_access_key": schema.StringAttribute{
 				Description: "The S3 secret access key. Required if destination_type is 's3' and s3_authentication_type is 'accesskey'.",
@@ -151,22 +161,30 @@ func (r *logstreamConfigurationResource) Schema(_ context.Context, _ resource.Sc
 			},
 			"s3_role_arn": schema.StringAttribute{
 				Description: "ARN of the AWS IAM role that Tailscale should assume when using role-based authentication. Required if destination_type is 's3' and s3_authentication_type is 'rolearn'.",
+				Computed:    true,
 				Optional:    true,
+				Default:     stringdefault.StaticString(""),
 			},
 			"s3_external_id": schema.StringAttribute{
 				Description: "The AWS External ID that Tailscale supplies when authenticating using role-based authentication. Required if destination_type is 's3' and s3_authentication_type is 'rolearn'. This can be obtained via the tailscale_aws_external_id resource.",
+				Computed:    true,
 				Optional:    true,
+				Default:     stringdefault.StaticString(""),
 			},
 			"gcs_credentials": schema.StringAttribute{
 				Description: "The encoded string of JSON that is used to authenticate for workload identity in GCS",
+				Computed:    true,
 				Optional:    true,
+				Default:     stringdefault.StaticString(""),
 				PlanModifiers: []planmodifier.String{
 					jsonSemanticDiffModifier{},
 				},
 			},
 			"gcs_bucket": schema.StringAttribute{
 				Description: "The name of the GCS bucket",
+				Computed:    true,
 				Optional:    true,
+				Default:     stringdefault.StaticString(""),
 			},
 			"gcs_scopes": schema.SetAttribute{
 				Description: "The GCS scopes needed to be able to write in the bucket",
@@ -175,7 +193,9 @@ func (r *logstreamConfigurationResource) Schema(_ context.Context, _ resource.Sc
 			},
 			"gcs_key_prefix": schema.StringAttribute{
 				Description: "The GCS key prefix for the bucket",
+				Computed:    true,
 				Optional:    true,
+				Default:     stringdefault.StaticString(""),
 			},
 		},
 	}
@@ -238,7 +258,7 @@ func (d *logstreamConfigurationResourceModel) updateFields(ctx context.Context, 
 	d.ID = types.StringValue(string(config.LogType))
 	d.LogType = types.StringValue(string(config.LogType))
 	d.DestinationType = types.StringValue(string(config.DestinationType))
-	d.URL = StringValueNullIfEmpty(config.URL)
+	d.URL = types.StringValue(config.URL)
 	d.User = types.StringValue(config.User)
 
 	if config.UploadPeriodMinutes != 0 {
@@ -249,18 +269,18 @@ func (d *logstreamConfigurationResourceModel) updateFields(ctx context.Context, 
 
 	d.CompressionFormat = types.StringValue(string(config.CompressionFormat))
 
-	d.S3Bucket = StringValueNullIfEmpty(config.S3Bucket)
-	d.S3Region = StringValueNullIfEmpty(config.S3Region)
-	d.S3KeyPrefix = StringValueNullIfEmpty(config.S3KeyPrefix)
+	d.S3Bucket = types.StringValue(config.S3Bucket)
+	d.S3Region = types.StringValue(config.S3Region)
+	d.S3KeyPrefix = types.StringValue(config.S3KeyPrefix)
 	d.S3AuthenticationType = StringValueNullIfEmpty(string(config.S3AuthenticationType))
-	d.S3AccessKeyID = StringValueNullIfEmpty(config.S3AccessKeyID)
-	d.S3RoleARN = StringValueNullIfEmpty(config.S3RoleARN)
-	d.S3ExternalID = StringValueNullIfEmpty(config.S3ExternalID)
+	d.S3AccessKeyID = types.StringValue(config.S3AccessKeyID)
+	d.S3RoleARN = types.StringValue(config.S3RoleARN)
+	d.S3ExternalID = types.StringValue(config.S3ExternalID)
 
 	d.GCSScopes = SetOfStringValue(ctx, config.GCSScopes, diags)
-	d.GCSCredentials = StringValueNullIfEmpty(config.GCSCredentials)
-	d.GCSKeyPrefix = StringValueNullIfEmpty(config.GCSKeyPrefix)
-	d.GCSBucket = StringValueNullIfEmpty(config.GCSBucket)
+	d.GCSCredentials = types.StringValue(config.GCSCredentials)
+	d.GCSKeyPrefix = types.StringValue(config.GCSKeyPrefix)
+	d.GCSBucket = types.StringValue(config.GCSBucket)
 }
 
 // updateLogstreamConfiguration calls the Tailscale API to set logstream configuration.

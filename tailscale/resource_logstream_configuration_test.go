@@ -54,12 +54,46 @@ const testLogstreamConfigurationUpdateS3RoleARN = `
 	resource "tailscale_aws_external_id" "external_id" {}
 	`
 
+const testLogstreamConfigurationS3EmptyOptionals = `
+	resource "tailscale_logstream_configuration" "test_logstream_configuration" {
+		log_type              = "configuration"
+		destination_type      = "panther"
+		url                   = "https://example.com"
+		token                 = "some-token"
+		# upload_period_minutes = 0 # TODO(zofrex): fix this one too
+		s3_bucket             = ""
+		s3_region             = ""
+		s3_key_prefix         = ""
+		s3_access_key_id      = ""
+		s3_secret_access_key  = "" # not read back, doesn't cause diffs vs null
+		s3_role_arn           = ""
+		s3_external_id        = ""
+		gcs_credentials       = ""
+		gcs_bucket            = ""
+		# gcs_scopes            = [] # TODO(zofrex): fix this one too
+		gcs_key_prefix        = ""
+	}
+	`
+
+const testLogstreamConfigurationUrlEmpty = `
+	resource "tailscale_logstream_configuration" "test_logstream_configuration" {
+		log_type               = "network"
+		destination_type       = "s3"
+		s3_bucket              = "example-bucket"
+		s3_region              = "us-west-2"
+		s3_authentication_type = "accesskey"
+		s3_access_key_id       = "example-access-key-id"
+		s3_secret_access_key   = "example-secret-access-key"
+		url                    = ""
+	}
+	`
+
 const testLogstreamConfigurationUpdateS3AccessKey = `
 	resource "tailscale_logstream_configuration" "test_logstream_configuration" {
 		log_type               = "network"
 		destination_type       = "s3"
 		s3_bucket              = "example-bucket"
-		s3_region			   = "us-west-2"
+		s3_region              = "us-west-2"
 		s3_authentication_type = "accesskey"
 		s3_access_key_id       = "example-access-key-id"
 		s3_secret_access_key   = "example-secret-access-key"
@@ -370,6 +404,12 @@ func TestAccTailscaleLogstreamConfiguration(t *testing.T) {
 				resource.TestCheckResourceAttr(resourceName, "upload_period_minutes", "5"),
 				resource.TestCheckResourceAttr(resourceName, "compression_format", "zstd"),
 			),
+		},
+		{
+			Config: testLogstreamConfigurationS3EmptyOptionals,
+		},
+		{
+			Config: testLogstreamConfigurationUrlEmpty,
 		},
 		{
 			ResourceName:            resourceName,
