@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -102,7 +103,9 @@ func (r *logstreamConfigurationResource) Schema(_ context.Context, _ resource.Sc
 			},
 			"upload_period_minutes": schema.Int32Attribute{
 				Description: "An optional number of minutes to wait in between uploading new logs. If the quantity of logs does not fit within a single upload, multiple uploads will be made.",
+				Computed:    true,
 				Optional:    true,
+				Default:     int32default.StaticInt32(0),
 			},
 			"compression_format": schema.StringAttribute{
 				Description: "The compression algorithm used for logs. Valid values are `none`, `zstd` or `gzip`. Defaults to `none`.",
@@ -261,11 +264,7 @@ func (d *logstreamConfigurationResourceModel) updateFields(ctx context.Context, 
 	d.URL = types.StringValue(config.URL)
 	d.User = types.StringValue(config.User)
 
-	if config.UploadPeriodMinutes != 0 {
-		d.UploadPeriodMinutes = types.Int32Value(int32(config.UploadPeriodMinutes))
-	} else {
-		d.UploadPeriodMinutes = types.Int32Null()
-	}
+	d.UploadPeriodMinutes = types.Int32Value(int32(config.UploadPeriodMinutes))
 
 	d.CompressionFormat = types.StringValue(string(config.CompressionFormat))
 
