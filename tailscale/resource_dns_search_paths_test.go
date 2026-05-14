@@ -47,6 +47,11 @@ func TestProvider_TailscaleDNSSearchPaths(t *testing.T) {
 func TestAccTailscaleDNSSearchPaths(t *testing.T) {
 	const resourceName = "tailscale_dns_search_paths.test_search_paths"
 
+	const testSearchPathsEmpty = `
+	resource "tailscale_dns_search_paths" "test_search_paths" {
+		search_paths = []
+	}`
+
 	checkProperties := func(expected []string) func(client *tailscale.Client, rs *terraform.ResourceState) error {
 		return func(client *tailscale.Client, rs *terraform.ResourceState) error {
 			actual, err := client.DNS().SearchPaths(context.Background())
@@ -85,6 +90,9 @@ func TestAccTailscaleDNSSearchPaths(t *testing.T) {
 					),
 					resource.TestCheckTypeSetElemAttr(resourceName, "search_paths.*", "example.com"),
 				),
+			},
+			{
+				Config: testSearchPathsEmpty,
 			},
 			{
 				ResourceName:      resourceName,
