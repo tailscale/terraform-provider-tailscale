@@ -23,7 +23,7 @@ func TestAccTailscaleDeviceKey(t *testing.T) {
 		data "tailscale_device" "test_device" {
 			name = "%s"
 		}
-		
+
 		resource "tailscale_device_key" "test_key" {
 			device_id = data.tailscale_device.test_device.id
 			key_expiry_disabled = false
@@ -33,10 +33,19 @@ func TestAccTailscaleDeviceKey(t *testing.T) {
 		data "tailscale_device" "test_device" {
 			name = "%s"
 		}
-		
+
 		resource "tailscale_device_key" "test_key" {
 			device_id = data.tailscale_device.test_device.id
 			key_expiry_disabled = true
+		}`
+
+	const testDeviceKeyEmpty = `
+		data "tailscale_device" "test_device" {
+			name = "%s"
+		}
+
+		resource "tailscale_device_key" "test_key" {
+			device_id = data.tailscale_device.test_device.id
 		}`
 
 	checkProperties := func(expectExpiryDisabled bool) func(client *tailscale.Client, rs *terraform.ResourceState) error {
@@ -92,6 +101,14 @@ func TestAccTailscaleDeviceKey(t *testing.T) {
 					checkResourceRemoteProperties(resourceName, checkProperties(true)),
 					checkResourceRemoteProperties(resourceName, checkLegacyID),
 					resource.TestCheckResourceAttr(resourceName, "key_expiry_disabled", "true"),
+				),
+			},
+			{
+				Config: fmt.Sprintf(testDeviceKeyEmpty, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName, checkProperties(false)),
+					checkResourceRemoteProperties(resourceName, checkLegacyID),
+					resource.TestCheckResourceAttr(resourceName, "key_expiry_disabled", "false"),
 				),
 			},
 			{
