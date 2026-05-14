@@ -89,6 +89,9 @@ func (r *dnsSplitNameserversResource) Read(ctx context.Context, req resource.Rea
 
 	domain := state.Domain.ValueString()
 	nameservers := splitDNS[domain]
+	if nameservers == nil {
+		nameservers = []string{}
+	}
 	state.Nameservers = SetOfStringValue(ctx, nameservers, &resp.Diagnostics)
 
 	if resp.Diagnostics.HasError() {
