@@ -4,9 +4,12 @@
 package tailscale
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -92,6 +95,76 @@ func TestAclHuJSONValidator(t *testing.T) {
 	}
 
 	runStringValidatorTests(t, aclHuJSONValidator{}, testCases)
+}
+
+func TestAtLeastOneBlockRequiredValidator(t *testing.T) {
+	const blockName = "blockName"
+	block := types.ObjectValueMust(map[string]attr.Type{}, map[string]attr.Value{})
+
+	testCases := []struct {
+		name    string
+		config  types.List
+		wantErr bool
+	}{
+		{
+			name:    "one-block",
+			config:  types.ListValueMust(types.ObjectType{}, []attr.Value{block}),
+			wantErr: false,
+		},
+		{
+			name:    "multiple-blocks",
+			config:  types.ListValueMust(types.ObjectType{}, []attr.Value{block, block}),
+			wantErr: false,
+		},
+		{
+			name:    "no-blocks",
+			config:  types.ListValueMust(types.ObjectType{}, []attr.Value{}),
+			wantErr: true,
+		},
+		{
+			name:    "null",
+			config:  types.ListNull(types.ObjectType{}),
+			wantErr: true,
+		},
+		{
+			name:    "unknown",
+			config:  types.ListUnknown(types.ObjectType{}),
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			req := validator.ListRequest{
+				ConfigValue: tt.config,
+				Path:        path.Empty().AtName("parent").AtName(blockName),
+			}
+
+			resp := validator.ListResponse{
+				Diagnostics: diag.Diagnostics{},
+			}
+
+			atLeastOneBlockRequiredValidator{}.ValidateList(t.Context(), req, &resp)
+
+			errors := resp.Diagnostics.Errors()
+			errorCount := len(errors)
+			if tt.wantErr {
+				if errorCount != 1 {
+					t.Errorf("got %d errors, want 1 error", errorCount)
+				} else {
+					gotErr := errors[0]
+					if !strings.Contains(gotErr.Detail(), blockName) {
+						t.Errorf("got error %q, want error to contain %q", gotErr.Detail(), blockName)
+					}
+					if !strings.Contains(gotErr.Summary(), blockName) {
+						t.Errorf("got error %q, want error to contain %q", gotErr.Summary(), blockName)
+					}
+				}
+			} else if errorCount != 0 {
+				t.Errorf("got %d errors, want 0 errors: %v", errorCount, errors)
+			}
+		})
+	}
 }
 
 type stringValidatorTestCase struct {

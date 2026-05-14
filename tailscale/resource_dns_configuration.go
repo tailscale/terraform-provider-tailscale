@@ -8,7 +8,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -107,8 +106,9 @@ func (r *dnsConfigurationResource) Schema(_ context.Context, _ resource.SchemaRe
 					Blocks: map[string]schema.Block{
 						"nameservers": schema.ListNestedBlock{
 							Description: "Set the nameservers used by devices on your network to resolve DNS queries.",
+
 							Validators: []validator.List{
-								listvalidator.SizeAtLeast(1),
+								AtLeastOneBlockRequired(),
 							},
 							NestedObject: schema.NestedBlockObject{
 								Attributes: map[string]schema.Attribute{
