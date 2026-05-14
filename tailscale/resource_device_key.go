@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -56,7 +57,9 @@ func (d deviceKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 			"key_expiry_disabled": schema.BoolAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "Determines whether or not the device's key will expire. Defaults to `false`.",
+				Default:     booldefault.StaticBool(false),
 			},
 		},
 	}
