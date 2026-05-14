@@ -77,6 +77,9 @@ func (r *dnsSearchPathsResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
+	if paths == nil {
+		paths = []string{}
+	}
 	state.SearchPaths = ListOfStringValue(ctx, paths, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
