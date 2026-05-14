@@ -62,6 +62,15 @@ const testDNSConfigurationUpdate = `
 		magic_dns = false
 	}`
 
+const testDNSConfigurationOptionalUnset = `
+	resource "tailscale_dns_configuration" "test_configuration" {
+	}`
+
+const testDNSConfigurationOptionalEmpty = `
+	resource "tailscale_dns_configuration" "test_configuration" {
+		search_paths       = []
+	}`
+
 func TestProvider_TailscaleDNSConfiguration(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		IsUnitTest: true,
@@ -162,6 +171,12 @@ func TestAccTailscaleDNSConfiguration(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "override_local_dns", "false"),
 					resource.TestCheckResourceAttr(resourceName, "magic_dns", "false"),
 				),
+			},
+			{
+				Config: testDNSConfigurationOptionalUnset,
+			},
+			{
+				Config: testDNSConfigurationOptionalEmpty,
 			},
 			{
 				ResourceName:      resourceName,

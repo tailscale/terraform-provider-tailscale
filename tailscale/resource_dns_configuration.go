@@ -9,10 +9,12 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -57,6 +59,8 @@ func (r *dnsConfigurationResource) Schema(_ context.Context, _ resource.SchemaRe
 				Description: "Additional search domains. When MagicDNS is on, the tailnet domain is automatically included as the first search domain.",
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
+				Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 			},
 			"override_local_dns": schema.BoolAttribute{
 				Description: "When enabled, use the configured DNS servers in `nameservers` to resolve names outside the tailnet. When disabled, devices will prefer their local DNS configuration. Defaults to false.",
@@ -185,6 +189,9 @@ func (r *dnsConfigurationResource) Read(ctx context.Context, req resource.ReadRe
 		})
 	}
 	state.SplitDNS = splitDNS
+	if remote.SearchPaths == nil {
+		remote.SearchPaths = []string{}
+	}
 	state.SearchPaths = ListOfStringValue(ctx, remote.SearchPaths, &resp.Diagnostics)
 	state.OverrideLocalDNS = types.BoolValue(remote.Preferences.OverrideLocalDNS)
 	state.MagicDNS = types.BoolValue(remote.Preferences.MagicDNS)
