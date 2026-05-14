@@ -97,7 +97,7 @@ func TestAclHuJSONValidator(t *testing.T) {
 	runStringValidatorTests(t, aclHuJSONValidator{}, testCases)
 }
 
-func TestAtLeastOneBlockRequiredValidator(t *testing.T) {
+func TestAtLeastOneBlockRequiredListValidator(t *testing.T) {
 	const blockName = "blockName"
 	block := types.ObjectValueMust(map[string]attr.Type{}, map[string]attr.Value{})
 
@@ -144,7 +144,77 @@ func TestAtLeastOneBlockRequiredValidator(t *testing.T) {
 				Diagnostics: diag.Diagnostics{},
 			}
 
-			atLeastOneBlockRequiredValidator{}.ValidateList(t.Context(), req, &resp)
+			atLeastOneBlockRequiredListValidator{}.ValidateList(t.Context(), req, &resp)
+
+			errors := resp.Diagnostics.Errors()
+			errorCount := len(errors)
+			if tt.wantErr {
+				if errorCount != 1 {
+					t.Errorf("got %d errors, want 1 error", errorCount)
+				} else {
+					gotErr := errors[0]
+					if !strings.Contains(gotErr.Detail(), blockName) {
+						t.Errorf("got error %q, want error to contain %q", gotErr.Detail(), blockName)
+					}
+					if !strings.Contains(gotErr.Summary(), blockName) {
+						t.Errorf("got error %q, want error to contain %q", gotErr.Summary(), blockName)
+					}
+				}
+			} else if errorCount != 0 {
+				t.Errorf("got %d errors, want 0 errors: %v", errorCount, errors)
+			}
+		})
+	}
+}
+
+func TestExactlyOneBlockRequiredSetValidator(t *testing.T) {
+	const blockName = "blockName"
+	block := types.ObjectValueMust(map[string]attr.Type{}, map[string]attr.Value{})
+
+	testCases := []struct {
+		name    string
+		config  types.Set
+		wantErr bool
+	}{
+		{
+			name:    "one-block",
+			config:  types.SetValueMust(types.ObjectType{}, []attr.Value{block}),
+			wantErr: false,
+		},
+		{
+			name:    "multiple-blocks",
+			config:  types.SetValueMust(types.ObjectType{}, []attr.Value{block, block}),
+			wantErr: true,
+		},
+		{
+			name:    "no-blocks",
+			config:  types.SetValueMust(types.ObjectType{}, []attr.Value{}),
+			wantErr: true,
+		},
+		{
+			name:    "null",
+			config:  types.SetNull(types.ObjectType{}),
+			wantErr: true,
+		},
+		{
+			name:    "unknown",
+			config:  types.SetUnknown(types.ObjectType{}),
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			req := validator.SetRequest{
+				ConfigValue: tt.config,
+				Path:        path.Empty().AtName("parent").AtName(blockName),
+			}
+
+			resp := validator.SetResponse{
+				Diagnostics: diag.Diagnostics{},
+			}
+
+			exactlyOneBlockRequiredSetValidator{}.ValidateSet(t.Context(), req, &resp)
 
 			errors := resp.Diagnostics.Errors()
 			errorCount := len(errors)

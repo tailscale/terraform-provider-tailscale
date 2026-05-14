@@ -20,7 +20,8 @@ var (
 	_ validator.String = cidrValidator{}
 	_ validator.String = retryDeadlineValidator{}
 	_ validator.String = aclHuJSONValidator{}
-	_ validator.List   = atLeastOneBlockRequiredValidator{}
+	_ validator.List   = atLeastOneBlockRequiredListValidator{}
+	_ validator.Set    = exactlyOneBlockRequiredSetValidator{}
 )
 
 // cidrValidator is a [validator.String] for CIDR addresses.
@@ -110,22 +111,22 @@ func (v aclHuJSONValidator) ValidateString(ctx context.Context, req validator.St
 	}
 }
 
-// atLeastOneBlockRequiredValidator validates that a list has a configuration
+// atLeastOneBlockRequiredListValidator validates that a list has a configuration
 // value. Intended for use with `schema.ListNestedBlock`.
-type atLeastOneBlockRequiredValidator struct{}
+type atLeastOneBlockRequiredListValidator struct{}
 
 // Description describes the validation in plain text formatting.
-func (v atLeastOneBlockRequiredValidator) Description(_ context.Context) string {
+func (v atLeastOneBlockRequiredListValidator) Description(_ context.Context) string {
 	return "must have at least one nested block configured"
 }
 
 // MarkdownDescription describes the validation in Markdown formatting.
-func (v atLeastOneBlockRequiredValidator) MarkdownDescription(ctx context.Context) string {
+func (v atLeastOneBlockRequiredListValidator) MarkdownDescription(ctx context.Context) string {
 	return v.Description(ctx)
 }
 
 // Validate performs the validation.
-func (v atLeastOneBlockRequiredValidator) ValidateList(ctx context.Context, req validator.ListRequest, resp *validator.ListResponse) {
+func (v atLeastOneBlockRequiredListValidator) ValidateList(ctx context.Context, req validator.ListRequest, resp *validator.ListResponse) {
 	len := req.ConfigValue.Length(basetypes.CollectionLengthOptions{
 		UnhandledNullAsZero:    true,
 		UnhandledUnknownAsZero: true,
@@ -138,13 +139,56 @@ func (v atLeastOneBlockRequiredValidator) ValidateList(ctx context.Context, req 
 	}
 }
 
-// AtLeastOneBlockRequired returns a validator which ensures that at least one
+// AtLeastOneBlockRequiredList returns a validator which ensures that at least one
 // instance of the nested block is configured.
 //
 // This validator is similar to the `Required` field on attributes and is only
 // practical for use with `schema.ListNestedBlock`.
 //
 // Unlike [listvalidator.SizeAtLeast] it does not ignore null or unknown values.
-func AtLeastOneBlockRequired() validator.List {
-	return atLeastOneBlockRequiredValidator{}
+func AtLeastOneBlockRequiredList() validator.List {
+	return atLeastOneBlockRequiredListValidator{}
+}
+
+// exactlyOneBlockRequiredSetValidator validates that a set has a configuration
+// value. Intended for use with `schema.SetNestedBlock`.
+type exactlyOneBlockRequiredSetValidator struct{}
+
+// Description describes the validation in plain text formatting.
+func (v exactlyOneBlockRequiredSetValidator) Description(_ context.Context) string {
+	return "must have exactly one nested block configured"
+}
+
+// MarkdownDescription describes the validation in Markdown formatting.
+func (v exactlyOneBlockRequiredSetValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+// Validate performs the validation.
+func (v exactlyOneBlockRequiredSetValidator) ValidateSet(ctx context.Context, req validator.SetRequest, resp *validator.SetResponse) {
+	len := req.ConfigValue.Length(basetypes.CollectionLengthOptions{
+		UnhandledNullAsZero:    true,
+		UnhandledUnknownAsZero: true,
+	})
+	last, _ := req.Path.Steps().LastStep()
+	if len == 0 {
+		resp.Diagnostics.AddAttributeError(req.Path,
+			fmt.Sprintf("No %s block", last),
+			fmt.Sprintf("A %q block is required.", last))
+	} else if len > 1 {
+		resp.Diagnostics.AddAttributeError(req.Path,
+			fmt.Sprintf("Too many %s blocks", last),
+			fmt.Sprintf("Only one %q block is allowed.", last))
+	}
+}
+
+// ExactlyOneBlockRequiredSet returns a validator which ensures that exactly one
+// instance of the nested block is configured.
+//
+// This validator is similar to the `Required` field on attributes and is only
+// practical for use with `schema.SetNestedBlock`.
+//
+// Unlike [setvalidator.SizeAtLeast] it does not ignore null or unknown values.
+func ExactlyOneBlockRequiredSet() validator.Set {
+	return exactlyOneBlockRequiredSetValidator{}
 }

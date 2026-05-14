@@ -108,7 +108,7 @@ func (r *dnsConfigurationResource) Schema(_ context.Context, _ resource.SchemaRe
 							Description: "Set the nameservers used by devices on your network to resolve DNS queries.",
 
 							Validators: []validator.List{
-								AtLeastOneBlockRequired(),
+								AtLeastOneBlockRequiredList(),
 							},
 							NestedObject: schema.NestedBlockObject{
 								Attributes: map[string]schema.Attribute{
