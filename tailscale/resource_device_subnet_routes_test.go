@@ -369,6 +369,16 @@ func TestAccTailscaleDeviceSubnetRoutes_LegacyIDToNodeID(t *testing.T) {
 			]
 		}`
 
+	const testDeviceSubnetRoutesEmpty = `
+		data "tailscale_device" "test_device" {
+			name = "%s"
+		}
+
+		resource "tailscale_device_subnet_routes" "test_subnet_routes" {
+			device_id = data.tailscale_device.test_device.node_id
+			routes = []
+		}`
+
 	checkProperties := func(expectedRoutes []string) func(client *tailscale.Client, rs *terraform.ResourceState) error {
 		return func(client *tailscale.Client, rs *terraform.ResourceState) error {
 			deviceID := rs.Primary.Attributes["device_id"]
@@ -425,6 +435,12 @@ func TestAccTailscaleDeviceSubnetRoutes_LegacyIDToNodeID(t *testing.T) {
 					checkResourceRemoteProperties(resourceName, checkLegacyID),
 					resource.TestCheckTypeSetElemAttr(resourceName, "routes.*", "10.0.1.0/24"),
 					resource.TestCheckTypeSetElemAttr(resourceName, "routes.*", "2.0.0.0/24"),
+				),
+			},
+			{
+				Config: fmt.Sprintf(testDeviceSubnetRoutesEmpty, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName, checkProperties([]string{})),
 				),
 			},
 			{

@@ -108,6 +108,10 @@ func (d deviceSubnetRoutesResource) Read(ctx context.Context, req resource.ReadR
 		return
 	}
 
+	if deviceRoutes.Enabled == nil {
+		deviceRoutes.Enabled = []string{}
+	}
+
 	state.Routes = SetOfStringValue(ctx, deviceRoutes.Enabled, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
