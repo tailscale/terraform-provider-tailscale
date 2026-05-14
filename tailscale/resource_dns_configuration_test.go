@@ -6,6 +6,7 @@ package tailscale
 import (
 	"context"
 	"net/http"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -71,6 +72,13 @@ const testDNSConfigurationOptionalEmpty = `
 		search_paths       = []
 	}`
 
+const testDNSConfigurationNoNameservers = `
+	resource "tailscale_dns_configuration" "test_configuration" {
+		split_dns {
+			domain = "bar.example.com"
+		}
+	}`
+
 func TestProvider_TailscaleDNSConfiguration(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		IsUnitTest: true,
@@ -82,6 +90,13 @@ func TestProvider_TailscaleDNSConfiguration(t *testing.T) {
 		Steps: []resource.TestStep{
 			testResourceCreated("tailscale_dns_configuration.test_configuration", testDNSConfigurationCreate),
 			testResourceDestroyed("tailscale_dns_configuration.test_configuration", testDNSConfigurationCreate),
+			resource.TestStep{
+				PreConfig: func() {
+
+				},
+				Config:      testDNSConfigurationNoNameservers,
+				ExpectError: regexp.MustCompile(`nameservers.*blocks`),
+			},
 		},
 	})
 }
