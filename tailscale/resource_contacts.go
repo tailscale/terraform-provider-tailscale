@@ -6,7 +6,6 @@ package tailscale
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -69,8 +68,7 @@ func (r *contactsResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					},
 				},
 				Validators: []validator.Set{
-					setvalidator.SizeAtLeast(1),
-					setvalidator.SizeAtMost(1),
+					ExactlyOneBlockRequiredSet(),
 				},
 			},
 			"support": schema.SetNestedBlock{
@@ -84,8 +82,7 @@ func (r *contactsResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					},
 				},
 				Validators: []validator.Set{
-					setvalidator.SizeAtLeast(1),
-					setvalidator.SizeAtMost(1),
+					ExactlyOneBlockRequiredSet(),
 				},
 			},
 			"security": schema.SetNestedBlock{
@@ -99,8 +96,7 @@ func (r *contactsResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					},
 				},
 				Validators: []validator.Set{
-					setvalidator.SizeAtLeast(1),
-					setvalidator.SizeAtMost(1),
+					ExactlyOneBlockRequiredSet(),
 				},
 			},
 		},
