@@ -52,6 +52,12 @@ func TestAccTailscaleDNSSplitNameservers(t *testing.T) {
 			nameservers = ["8.8.9.9"]
 		}`
 
+	const testSplitNameserversEmpty = `
+		resource "tailscale_dns_split_nameservers" "test_nameservers" {
+			domain = "sub.example.com"
+			nameservers = []
+		}`
+
 	const testSplitNameserversUpdateSameDomain = `
 		resource "tailscale_dns_split_nameservers" "test_nameservers" {
 			domain = "sub.example.com"
@@ -99,6 +105,14 @@ func TestAccTailscaleDNSSplitNameservers(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "domain", "sub.example.com"),
 					resource.TestCheckTypeSetElemAttr(resourceName, "nameservers.*", "8.8.7.7"),
 					resource.TestCheckTypeSetElemAttr(resourceName, "nameservers.*", "8.8.9.9"),
+				),
+			},
+			{
+				Config: testSplitNameserversEmpty,
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName,
+						checkSplitDNSProperties(tailscale.SplitDNSResponse{}),
+					),
 				),
 			},
 			{
