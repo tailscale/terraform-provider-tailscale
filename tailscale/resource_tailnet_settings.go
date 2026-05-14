@@ -193,7 +193,6 @@ func (s *tailnetSettingsResource) readSettings(ctx context.Context, state *tailn
 		return err
 	}
 
-	state.ID = types.StringValue("singleton")
 	state.ACLsExternallyManagedOn = types.BoolValue(settings.ACLsExternallyManagedOn)
 	state.ACLsExternalLink = types.StringValue(settings.ACLsExternalLink)
 	state.DevicesApprovalOn = types.BoolValue(settings.DevicesApprovalOn)
@@ -221,7 +220,6 @@ func (s *tailnetSettingsResource) Create(ctx context.Context, req resource.Creat
 	// create a state with all unknown values so we'll update any fields set in
 	// the plan - and only fields set in the plan.
 	pretendState := tailnetSettingsResourceModel{
-		ID:                                    types.StringUnknown(),
 		ACLsExternallyManagedOn:               types.BoolUnknown(),
 		ACLsExternalLink:                      types.StringUnknown(),
 		DevicesApprovalOn:                     types.BoolUnknown(),
@@ -246,6 +244,7 @@ func (s *tailnetSettingsResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
+	plan.ID = types.StringValue(createUUID())
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 }
