@@ -381,3 +381,25 @@ func TestProvider_TailscaleACL_InvalidConfig(t *testing.T) {
 
 	runExpectedErrorTests(t, testCases)
 }
+
+// TestProvider_TailscaleACL_ValidationFailsAtPlan confirms that a policy file
+// rejected by the API's validate endpoint surfaces as an error during plan,
+// before any create or update is attempted.
+func TestProvider_TailscaleACL_ValidationFailsAtPlan(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		IsUnitTest: true,
+		PreCheck: func() {
+			testServer.ResponseCode = http.StatusBadRequest
+			testServer.ResponseBody = map[string]any{
+				"message": "test for user1@example.com failed",
+			}
+		},
+		ProtoV5ProviderFactories: testProviderFactories(t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testACL,
+				ExpectError: regexp.MustCompile(`test for user1@example.com failed`),
+			},
+		},
+	})
+}
