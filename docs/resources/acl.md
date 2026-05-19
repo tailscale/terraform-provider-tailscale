@@ -3,14 +3,14 @@ page_title: "tailscale_acl Resource - terraform-provider-tailscale"
 subcategory: ""
 description: |-
   The acl resource allows you to configure a Tailscale policy file. See https://tailscale.com/kb/1395/tailnet-policy-file for more information. Note that this resource will completely overwrite existing policy file contents for a given tailnet.
-  If tests are defined in the policy file (the top-level "tests" section), policy file validation will occur before creation and update operations are applied.
+  The policy file is validated against the Tailscale API during planning, so syntax errors and failing tests (the top-level "tests" section) are surfaced before apply.
 ---
 
 # tailscale_acl (Resource)
 
 The acl resource allows you to configure a Tailscale policy file. See https://tailscale.com/kb/1395/tailnet-policy-file for more information. Note that this resource will completely overwrite existing policy file contents for a given tailnet.
 
-If tests are defined in the policy file (the top-level "tests" section), policy file validation will occur before creation and update operations are applied.
+The policy file is validated against the Tailscale API during planning, so syntax errors and failing tests (the top-level "tests" section) are surfaced before apply.
 
 ~> **Note:** The naming of this resource predates Tailscale's usage of the term "policy file" to refer to the centralized configuration file for a tailnet. This resource controls a tailnet's entire policy file and not just the ACLs section within it.
 

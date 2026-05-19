@@ -7,6 +7,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -19,6 +20,7 @@ var (
 	_ resource.Resource                = &aclResource{}
 	_ resource.ResourceWithConfigure   = &aclResource{}
 	_ resource.ResourceWithImportState = &aclResource{}
+	_ resource.ResourceWithModifyPlan  = &aclResource{}
 )
 
 type aclResourceModel struct {
@@ -45,7 +47,7 @@ func (r *aclResource) Metadata(_ context.Context, req resource.MetadataRequest, 
 
 const resourceACLDescription = `The acl resource allows you to configure a Tailscale policy file. See https://tailscale.com/kb/1395/tailnet-policy-file for more information. Note that this resource will completely overwrite existing policy file contents for a given tailnet.
 
-If tests are defined in the policy file (the top-level "tests" section), policy file validation will occur before creation and update operations are applied.`
+The policy file is validated against the Tailscale API during planning, so syntax errors and failing tests (the top-level "tests" section) are surfaced before apply.`
 
 // From https://github.com/hashicorp/terraform-plugin-sdk/blob/34d8a9ebca6bed68fddb983123d6fda72481752c/internal/configs/hcl2shim/values.go#L19
 // TODO: use an exported variable when https://github.com/hashicorp/terraform-plugin-sdk/issues/803 has been addressed.
@@ -142,6 +144,33 @@ func (r *aclResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
+
+// ModifyPlan validates the planned ACL against the Tailscale API so that
+// syntax errors and failing tests are surfaced at plan time rather than apply.
+func (r *aclResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	// Nothing to validate when destroying or before the provider is configured.
+	if req.Plan.Raw.IsNull() || r.Client == nil {
+		return
+	}
+
+	var plan aclResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if plan.ACL.IsUnknown() || plan.ACL.IsNull() {
+		return
+	}
+
+	if err := r.Client.PolicyFile().Validate(ctx, plan.ACL.ValueString()); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("acl"),
+			"Invalid ACL",
+			err.Error(),
+		)
+	}
 }
 
 func (r *aclResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
