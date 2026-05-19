@@ -110,7 +110,7 @@ func (t *tailnetKeyResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				Optional:      true,
 				Computed:      true,
 				Description:   "The expiry of the key in seconds. Defaults to `7776000` (90 days).",
-				PlanModifiers: []planmodifier.Int64{int64planmodifier.RequiresReplace()},
+				PlanModifiers: []planmodifier.Int64{int64planmodifier.RequiresReplace(), int64planmodifier.UseStateForUnknown()},
 			},
 			"created_at": schema.StringAttribute{
 				Description:   "The creation timestamp of the key in RFC3339 format",
@@ -239,6 +239,8 @@ func (t *tailnetKeyResource) Read(ctx context.Context, req resource.ReadRequest,
 	key, err := t.Client.Keys().Get(ctx, state.ID.ValueString())
 	if tailscale.IsNotFound(err) {
 		state.Invalid = types.BoolValue(true)
+		resp.State.RemoveResource(ctx)
+		return
 	} else if err != nil {
 		resp.Diagnostics.AddError("Failed to fetch key", fmt.Sprintf("Error reading tailnet key with id %q: %s", state.ID, err.Error()))
 		return
@@ -268,7 +270,6 @@ func (t *tailnetKeyResource) Read(ctx context.Context, req resource.ReadRequest,
 	}
 	state.Tags = tags
 	state.Preauthorized = types.BoolValue(key.Capabilities.Devices.Create.Preauthorized)
-	state.Key = types.StringValue(key.Key)
 	state.Expiry = types.Int64PointerValue((*int64)(key.ExpirySeconds))
 	state.CreatedAt = types.StringValue(key.Created.Format(time.RFC3339))
 	state.ExpiresAt = types.StringValue(key.Expires.Format(time.RFC3339))
@@ -305,7 +306,6 @@ func (t *tailnetKeyResource) Update(ctx context.Context, req resource.UpdateRequ
 		state.Invalid = types.BoolValue(true)
 	}
 
-	state.Key = types.StringValue(key.Key)
 	state.CreatedAt = types.StringValue(key.Created.Format(time.RFC3339))
 	state.ExpiresAt = types.StringValue(key.Expires.Format(time.RFC3339))
 	state.Description = types.StringValue(key.Description)
