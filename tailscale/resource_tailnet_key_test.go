@@ -207,6 +207,17 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 			description = "Test key changed"
 		}`
 
+	const testTailnetKeyUpdateRecreateIfInvalid = `
+		resource "tailscale_tailnet_key" "test_key" {
+			reusable = false
+			ephemeral = false
+			preauthorized = false
+			tags = ["tag:b"]
+			expiry = 7200
+			description = "Test key changed"
+            recreate_if_invalid = "always"
+		}`
+
 	const testTailnetKeyUnsetOptionals = `
 		resource "tailscale_tailnet_key" "test_key" {
 		}`
@@ -302,6 +313,23 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr(resourceName, "tags.*", "tag:a"),
 					resource.TestCheckResourceAttr(resourceName, "expiry", "7776000"),
 					resource.TestCheckResourceAttr(resourceName, "description", "Test key"),
+					resource.TestCheckResourceAttrSet(resourceName, "key"),
+				),
+			},
+			// Do a re-apply of the existing configuration to ensure that "key" remains set
+			{
+				Config: testTailnetKeyCreate,
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName,
+						checkProperties(&expectedKey, 7776000),
+					),
+					resource.TestCheckResourceAttr(resourceName, "reusable", "true"),
+					resource.TestCheckResourceAttr(resourceName, "ephemeral", "true"),
+					resource.TestCheckResourceAttr(resourceName, "preauthorized", "true"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "tags.*", "tag:a"),
+					resource.TestCheckResourceAttr(resourceName, "expiry", "7776000"),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test key"),
+					resource.TestCheckResourceAttrSet(resourceName, "key"),
 				),
 			},
 			{
@@ -321,6 +349,23 @@ func TestAccTailscaleTailnetKey(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr(resourceName, "tags.*", "tag:b"),
 					resource.TestCheckResourceAttr(resourceName, "expiry", "7200"),
 					resource.TestCheckResourceAttr(resourceName, "description", "Test key changed"),
+					resource.TestCheckResourceAttrSet(resourceName, "key")),
+			},
+			// Ensure that updating "recreate_if_invalid" does not change other properties since it is not a
+			// "force new" operation.
+			{
+				Config: testTailnetKeyUpdateRecreateIfInvalid,
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName,
+						checkProperties(&expectedKeyUpdated, 7200),
+					),
+					resource.TestCheckResourceAttr(resourceName, "reusable", "false"),
+					resource.TestCheckResourceAttr(resourceName, "ephemeral", "false"),
+					resource.TestCheckResourceAttr(resourceName, "preauthorized", "false"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "tags.*", "tag:b"),
+					resource.TestCheckResourceAttr(resourceName, "expiry", "7200"),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test key changed"),
+					resource.TestCheckResourceAttrSet(resourceName, "key"),
 				),
 			},
 			{
