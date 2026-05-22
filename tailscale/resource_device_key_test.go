@@ -85,7 +85,7 @@ func TestAccTailscaleDeviceKey(t *testing.T) {
 		// After delete, device key should revert to its default properties
 		// This is probably not how we actually want things to work, but it's the released behavior.
 		// See https://github.com/tailscale/terraform-provider-tailscale/issues/401.
-		CheckDestroy: checkResourceDestroyed(resourceName, checkProperties(false)),
+		CheckDestroy: checkResourceDestroyed(resourceName, checkProperties(true)),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testDeviceKeyCreate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
@@ -110,6 +110,26 @@ func TestAccTailscaleDeviceKey(t *testing.T) {
 					checkResourceRemoteProperties(resourceName, checkLegacyID),
 					resource.TestCheckResourceAttr(resourceName, "key_expiry_disabled", "false"),
 				),
+			},
+			// set it to true again to test what happens on delete
+			{
+				Config: fmt.Sprintf(testDeviceKeyUpdate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName, checkProperties(true)),
+					checkResourceRemoteProperties(resourceName, checkLegacyID),
+					resource.TestCheckResourceAttr(resourceName, "key_expiry_disabled", "true"),
+				),
+			},
+			{
+				Config:  fmt.Sprintf(testDeviceKeyUpdate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
+				Destroy: true,
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName, checkProperties(true)), // should not be changed by destruction
+				),
+			},
+			// recreate it to test import
+			{
+				Config: fmt.Sprintf(testDeviceKeyUpdate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),
 			},
 			{
 				ResourceName:      resourceName,
@@ -198,7 +218,7 @@ func TestAccTailscaleDeviceKey_UsesNodeID(t *testing.T) {
 		// After delete, device key should revert to its default properties
 		// This is probably not how we actually want things to work, but it's the released behavior.
 		// See https://github.com/tailscale/terraform-provider-tailscale/issues/401.
-		CheckDestroy: checkResourceDestroyed(resourceName, checkProperties(false)),
+		CheckDestroy: checkResourceDestroyed(resourceName, checkProperties(true)),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testDeviceKeyCreate, os.Getenv("TAILSCALE_TEST_DEVICE_NAME")),

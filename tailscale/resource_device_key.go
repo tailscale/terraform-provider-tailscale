@@ -19,6 +19,7 @@ var (
 	_ resource.Resource                = &deviceKeyResource{}
 	_ resource.ResourceWithConfigure   = &deviceKeyResource{}
 	_ resource.ResourceWithImportState = &deviceKeyResource{}
+	_ resource.ResourceWithModifyPlan  = &deviceKeyResource{}
 )
 
 type deviceKeyResourceModel struct {
@@ -94,23 +95,8 @@ func (d deviceKeyResource) Create(ctx context.Context, req resource.CreateReques
 }
 
 func (d deviceKeyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state deviceKeyResourceModel
-	diags := req.State.Get(ctx, &state)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	deviceID := state.DeviceID.ValueString()
-	key := tailscale.DeviceKey{}
-
-	if err := d.Client.Devices().SetKey(ctx, deviceID, key); err != nil {
-		resp.Diagnostics.AddError(
-			"Failed to update device key",
-			"Failed to update key for device with ID "+deviceID+": "+err.Error(),
-		)
-		return
-	}
+	// we don't know what key_expiry_disabled was set to before so we can't
+	// restore it, so deletion is a no-op
 }
 
 func (d deviceKeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -177,4 +163,14 @@ func (d deviceKeyResource) Update(ctx context.Context, req resource.UpdateReques
 	plan.ID = types.StringValue(deviceID)
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
+}
+
+func (d deviceKeyResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() {
+		resp.Diagnostics.AddWarning(
+			"Resource Destruction Considerations",
+			"Destroying this resource will only remove the resource from the Terraform state and will not undo or change the device's key settings. "+
+				"Use a tailscale_device_key resource to explicitly change the key expiry setting, or manually update it via the admin console.",
+		)
+	}
 }
