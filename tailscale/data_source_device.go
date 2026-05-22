@@ -5,7 +5,6 @@ package tailscale
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"maps"
 	"time"
@@ -112,7 +111,7 @@ func (d singleDeviceDataSource) Read(ctx context.Context, req datasource.ReadReq
 		}
 
 		if len(devices) == 0 {
-			return errors.New("could not find device with" + filterDesc)
+			return fmt.Errorf("could not find device with %s", filterDesc)
 		}
 
 		selected = &devices[0]
