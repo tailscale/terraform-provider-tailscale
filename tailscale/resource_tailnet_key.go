@@ -239,7 +239,7 @@ func (t *tailnetKeyResource) Read(ctx context.Context, req resource.ReadRequest,
 	key, err := t.Client.Keys().Get(ctx, state.ID.ValueString())
 	if tailscale.IsNotFound(err) {
 		state.Invalid = types.BoolValue(true)
-		resp.State.RemoveResource(ctx)
+		resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 		return
 	} else if err != nil {
 		resp.Diagnostics.AddError("Failed to fetch key", fmt.Sprintf("Error reading tailnet key with id %q: %s", state.ID, err.Error()))

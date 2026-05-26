@@ -103,9 +103,32 @@ func setKeyStep(reusable bool, recreateIfInvalid string) resource.TestStep {
 	}
 }
 
-func checkInvalidKeyRecreated(description string, reusable bool, recreateIfInvalid string, wantRecreated bool) resource.TestStep {
+type checkInvalidKeyRecreatedParams struct {
+	description       string
+	reusable          bool
+	recreateIfInvalid string
+	keyNotFound       bool
+	wantRecreated     bool
+}
+
+func checkInvalidKeyRecreated(params checkInvalidKeyRecreatedParams) resource.TestStep {
+	description := params.description
+	reusable := params.reusable
+	recreateIfInvalid := params.recreateIfInvalid
+	keyNotFound := params.keyNotFound
+	wantRecreated := params.wantRecreated
+
 	return resource.TestStep{
 		PreConfig: func() {
+			if keyNotFound {
+				newKey := testTailnetKeyStructWithID("new-key-id", reusable)
+				testServer.SetResponses([]TestResponse{
+					{Code: http.StatusNotFound},
+					{Code: http.StatusOK, Body: newKey},
+				})
+				return
+			}
+
 			oldKey := testTailnetKeyStructWithID("old-key-id", reusable)
 			oldKey.Invalid = true
 			newKey := testTailnetKeyStructWithID("new-key-id", reusable)
@@ -147,40 +170,79 @@ func checkInvalidKeyRecreated(description string, reusable bool, recreateIfInval
 
 func TestProvider_TailscaleTailnetKeyInvalid(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		IsUnitTest: true,
-		PreCheck: func() {
-			testServer.ResponseCode = http.StatusOK
-			testServer.ResponseBody = tailscale.Key{
-				ID:      "test",
-				KeyType: "auth",
-				Key:     "thisisatestkey",
-			}
-		},
+		IsUnitTest:               true,
 		ProtoV5ProviderFactories: testProviderFactories(t),
 		Steps: []resource.TestStep{
 			// Create a reusable key.
 			setKeyStep(true, ""),
-			checkInvalidKeyRecreated("Confirm that the reusable key will be recreated when invalid", true, "", true),
+			checkInvalidKeyRecreated(checkInvalidKeyRecreatedParams{
+				description:       "Confirm that the reusable key will be recreated when invalid",
+				reusable:          true,
+				recreateIfInvalid: "",
+				wantRecreated:     true,
+			}),
 
 			// Now make it a single-use key.
 			setKeyStep(false, ""),
-			checkInvalidKeyRecreated("Confirm that the single-use key is not recreated", false, "", false),
+			checkInvalidKeyRecreated(checkInvalidKeyRecreatedParams{
+				description:       "Confirm that the single-use key is not recreated",
+				reusable:          false,
+				recreateIfInvalid: "",
+				wantRecreated:     false,
+			}),
+			// Validate that key is not recreated if it is not found.
+			checkInvalidKeyRecreated(checkInvalidKeyRecreatedParams{
+				description:       "Confirm that single-use key is not recreated when not found",
+				reusable:          false,
+				recreateIfInvalid: "",
+				keyNotFound:       true,
+				wantRecreated:     false,
+			}),
 
 			// A single-use key with recreate=always, should be recreated.
 			setKeyStep(false, "always"),
-			checkInvalidKeyRecreated("A single-use key with recreate=always, should be recreated", false, "always", true),
+			checkInvalidKeyRecreated(checkInvalidKeyRecreatedParams{
+				description:       "A single-use key with recreate=always, should be recreated",
+				reusable:          false,
+				recreateIfInvalid: "always",
+				wantRecreated:     true,
+			}),
+			// A single-use key with recreate=always, should be recreated when the key is not found.
+			setKeyStep(false, "always"),
+			checkInvalidKeyRecreated(checkInvalidKeyRecreatedParams{
+				description:       "A single-use key with recreate=always, should be recreated",
+				reusable:          false,
+				recreateIfInvalid: "always",
+				keyNotFound:       true,
+				wantRecreated:     true,
+			}),
 
 			// A single-use key with recreate=never, should not be recreated.
 			setKeyStep(false, "never"),
-			checkInvalidKeyRecreated("A single-use key with recreate=never, should not be recreated", false, "never", false),
+			checkInvalidKeyRecreated(checkInvalidKeyRecreatedParams{
+				description:       "A single-use key with recreate=never, should not be recreated",
+				reusable:          false,
+				recreateIfInvalid: "never",
+				wantRecreated:     false,
+			}),
 
 			// A reusable key with recreate=always, should be recreated.
 			setKeyStep(true, "always"),
-			checkInvalidKeyRecreated("A reusable key with recreate=always, should be recreated", true, "always", true),
+			checkInvalidKeyRecreated(checkInvalidKeyRecreatedParams{
+				description:       "A reusable key with recreate=always, should be recreated",
+				reusable:          true,
+				recreateIfInvalid: "always",
+				wantRecreated:     true,
+			}),
 
 			// A reusable key with recreate=always, should be recreated.
 			setKeyStep(true, "always"),
-			checkInvalidKeyRecreated("A reusable key with recreate=always, should be recreated", true, "always", true),
+			checkInvalidKeyRecreated(checkInvalidKeyRecreatedParams{
+				description:       "A reusable key with recreate=always, should be recreated",
+				reusable:          true,
+				recreateIfInvalid: "always",
+				wantRecreated:     true,
+			}),
 		},
 	})
 }
