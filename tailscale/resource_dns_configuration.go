@@ -166,29 +166,7 @@ func (r *dnsConfigurationResource) Read(ctx context.Context, req resource.ReadRe
 	}
 
 	state.Nameservers = reconcileNameservers(state.Nameservers, remote.Nameservers)
-
-	// Read existing SplitDNS to preserve order in TF resource
-	// TODO(alexc): Extract this into a reconcileSplitDNS function to match nameservers.
-	splitDNS := make([]splitDNSModel, 0, len(state.SplitDNS))
-	for _, s := range state.SplitDNS {
-		domain := s.Domain.ValueString()
-		nameservers, found := remote.SplitDNS[domain]
-		if found {
-			splitDNS = append(splitDNS, splitDNSModel{
-				Domain:      s.Domain,
-				Nameservers: reconcileNameservers(s.Nameservers, nameservers),
-			})
-			delete(remote.SplitDNS, domain)
-		}
-	}
-	// Add new SplitDNS
-	for domain, nameservers := range remote.SplitDNS {
-		splitDNS = append(splitDNS, splitDNSModel{
-			Domain:      types.StringValue(domain),
-			Nameservers: reconcileNameservers(nil, nameservers),
-		})
-	}
-	state.SplitDNS = splitDNS
+	state.SplitDNS = reconcileSplitDNS(state.SplitDNS, remote.SplitDNS)
 	if remote.SearchPaths == nil {
 		remote.SearchPaths = []string{}
 	}
@@ -224,6 +202,33 @@ func reconcileNameservers(existing []nameserverModel, updates []tailscale.DNSCon
 	}
 
 	return nameservers
+}
+
+// reconcileSplitDNS updates an existing list of split DNS entries with an updated list
+// of domains and nameservers, preserving the original ordering of any retained
+// existing nameservers.
+func reconcileSplitDNS(existing []splitDNSModel, updates map[string][]tailscale.DNSConfigurationResolver) []splitDNSModel {
+	splitDNS := make([]splitDNSModel, 0, len(existing))
+	for _, s := range existing {
+		domain := s.Domain.ValueString()
+		nameservers, found := updates[domain]
+		if found {
+			splitDNS = append(splitDNS, splitDNSModel{
+				Domain:      s.Domain,
+				Nameservers: reconcileNameservers(s.Nameservers, nameservers),
+			})
+			delete(updates, domain)
+		}
+	}
+	// Add new SplitDNS
+	for domain, nameservers := range updates {
+		splitDNS = append(splitDNS, splitDNSModel{
+			Domain:      types.StringValue(domain),
+			Nameservers: reconcileNameservers(nil, nameservers),
+		})
+	}
+
+	return splitDNS
 }
 
 func nameserverToMap(nameserver tailscale.DNSConfigurationResolver) nameserverModel {

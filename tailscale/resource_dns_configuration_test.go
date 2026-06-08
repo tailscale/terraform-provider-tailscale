@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"tailscale.com/client/tailscale/v2"
@@ -206,4 +208,187 @@ func TestAccTailscaleDNSConfiguration(t *testing.T) {
 	//
 	// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#terraform-data-resource-example
 	checkResourceIsUnchangedInPluginFramework(t, testDNSConfigurationCreate, createCheck)
+}
+
+func TestReconcileNameservers(t *testing.T) {
+	testCases := []struct {
+		name     string
+		existing []nameserverModel
+		updates  []tailscale.DNSConfigurationResolver
+		want     []nameserverModel
+	}{
+		{
+			name:     "empty-inputs",
+			existing: nil,
+			updates:  nil,
+			want:     []nameserverModel{},
+		},
+		{
+			// new nameservers are appended when there's no existing state
+			name:     "new-nameservers-on-empty",
+			existing: nil,
+			updates: []tailscale.DNSConfigurationResolver{
+				{Address: "1.1.1.1", UseWithExitNode: true},
+				{Address: "8.8.8.8", UseWithExitNode: false},
+			},
+			want: []nameserverModel{
+				{Address: types.StringValue("1.1.1.1"), UseWithExitNode: types.BoolValue(true)},
+				{Address: types.StringValue("8.8.8.8"), UseWithExitNode: types.BoolValue(false)},
+			},
+		},
+		{
+			// When you're updating fields, the existing order is preserved
+			name: "preserves-existing-order",
+			existing: []nameserverModel{
+				{Address: types.StringValue("8.8.8.8"), UseWithExitNode: types.BoolValue(false)},
+				{Address: types.StringValue("1.1.1.1"), UseWithExitNode: types.BoolValue(false)},
+			},
+			updates: []tailscale.DNSConfigurationResolver{
+				// both configs: UseWithExitNode: false -> true
+				{Address: "1.1.1.1", UseWithExitNode: true},
+				{Address: "8.8.8.8", UseWithExitNode: true},
+			},
+			want: []nameserverModel{
+				{Address: types.StringValue("8.8.8.8"), UseWithExitNode: types.BoolValue(true)},
+				{Address: types.StringValue("1.1.1.1"), UseWithExitNode: types.BoolValue(true)},
+			},
+		},
+		{
+			// When the update changes one field and removes another, the missing entry is removed
+			// and the remaining entry is updated.
+			name: "mix-of-update-and-removal",
+			existing: []nameserverModel{
+				{Address: types.StringValue("1.1.1.1"), UseWithExitNode: types.BoolValue(false)},
+				{Address: types.StringValue("9.9.9.9"), UseWithExitNode: types.BoolValue(false)},
+			},
+			updates: []tailscale.DNSConfigurationResolver{
+				// 1.1.1.1: UseWithExitNode: false -> true
+				{Address: "1.1.1.1", UseWithExitNode: types.BoolValue(true).ValueBool()},
+				// 8.8.8.8: added in update, not in existing
+				{Address: "8.8.8.8", UseWithExitNode: false},
+				// 9.9.9.9: present in existing, not in update
+			},
+			want: []nameserverModel{
+				{Address: types.StringValue("1.1.1.1"), UseWithExitNode: types.BoolValue(true)},
+				{Address: types.StringValue("8.8.8.8"), UseWithExitNode: types.BoolValue(false)},
+			},
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := reconcileNameservers(tt.existing, tt.updates)
+			if diff := cmp.Diff(tt.want, got); diff != "" {
+				t.Errorf("reconcileNameservers() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestReconcileSplitDNS(t *testing.T) {
+	testCases := []struct {
+		name     string
+		existing []splitDNSModel
+		updates  map[string][]tailscale.DNSConfigurationResolver
+		want     []splitDNSModel
+	}{
+		{
+			name:     "empty-inputs",
+			existing: nil,
+			updates:  nil,
+			want:     []splitDNSModel{},
+		},
+		{
+			// When you're updating domains, the existing order is preserved
+			name: "preserves-domain-order",
+			existing: []splitDNSModel{
+				{
+					Domain: types.StringValue("example.com"),
+					Nameservers: []nameserverModel{
+						{Address: types.StringValue("10.0.0.1"), UseWithExitNode: types.BoolValue(false)},
+					},
+				},
+				{
+					Domain: types.StringValue("internal.net"),
+					Nameservers: []nameserverModel{
+						{Address: types.StringValue("192.168.1.1"), UseWithExitNode: types.BoolValue(false)},
+					},
+				},
+			},
+			updates: map[string][]tailscale.DNSConfigurationResolver{
+				// both domains: UseWithExitNode: false -> true
+				"example.com":  {{Address: "10.0.0.1", UseWithExitNode: true}},
+				"internal.net": {{Address: "192.168.1.1", UseWithExitNode: true}},
+			},
+			want: []splitDNSModel{
+				{
+					Domain: types.StringValue("example.com"),
+					Nameservers: []nameserverModel{
+						{Address: types.StringValue("10.0.0.1"), UseWithExitNode: types.BoolValue(true)},
+					},
+				},
+				{
+					Domain: types.StringValue("internal.net"),
+					Nameservers: []nameserverModel{
+						{Address: types.StringValue("192.168.1.1"), UseWithExitNode: types.BoolValue(true)},
+					},
+				},
+			},
+		},
+		{
+			// When the update changes one field and removes another, the missing entry is removed
+			// and the remaining entry is updated.
+			name: "mix-of-update-and-removal",
+			existing: []splitDNSModel{
+				{
+					Domain: types.StringValue("example.com"),
+					Nameservers: []nameserverModel{
+						{Address: types.StringValue("10.0.0.1"), UseWithExitNode: types.BoolValue(false)},
+					},
+				},
+				{
+					Domain: types.StringValue("old-domain.com"),
+					Nameservers: []nameserverModel{
+						{Address: types.StringValue("10.0.0.1"), UseWithExitNode: types.BoolValue(false)},
+					},
+				},
+			},
+			updates: map[string][]tailscale.DNSConfigurationResolver{
+				// example.com: Address: 10.0.0.1 -> 1.1.1.1, UseWithExitNode: false -> true
+				"example.com": {{Address: "1.1.1.1", UseWithExitNode: true}},
+				// new-domain.com: added in update, not in existing
+				"new-domain.com": {
+					{Address: "1.1.1.1", UseWithExitNode: false},
+				},
+				// old-domain.com: present in existing, not in update
+			},
+			want: []splitDNSModel{
+				{
+					Domain: types.StringValue("example.com"),
+					Nameservers: []nameserverModel{
+						{Address: types.StringValue("1.1.1.1"), UseWithExitNode: types.BoolValue(true)},
+					},
+				},
+				{
+					Domain: types.StringValue("new-domain.com"),
+					Nameservers: []nameserverModel{
+						{Address: types.StringValue("1.1.1.1"), UseWithExitNode: types.BoolValue(false)},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := reconcileSplitDNS(tt.existing, tt.updates)
+			if diff := cmp.Diff(tt.want, got); diff != "" {
+				t.Errorf("reconcileSplitDNS() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
 }
