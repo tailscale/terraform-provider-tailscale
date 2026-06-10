@@ -29,6 +29,8 @@ type TestServer struct {
 	Path   string
 	Body   *bytes.Buffer
 
+	HandleRequest func(method string, path string) TestResponse
+
 	calls     int
 	Responses []TestResponse
 
@@ -41,6 +43,12 @@ func NewTestHarness(t *testing.T) (baseURL string, server *TestServer) {
 
 	testServer := &TestServer{
 		t: t,
+	}
+	testServer.HandleRequest = func(method, path string) TestResponse {
+		return TestResponse{
+			Code: testServer.ResponseCode,
+			Body: testServer.ResponseBody,
+		}
 	}
 
 	mux := http.NewServeMux()
@@ -71,17 +79,7 @@ func (t *TestServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	t.Method = r.Method
 	t.Path = r.URL.Path
 
-	var resp TestResponse
-	if len(t.Responses) > 0 {
-		next := min(t.calls, len(t.Responses)-1)
-		t.calls += 1
-		resp = t.Responses[next]
-	} else {
-		resp = TestResponse{
-			Code: t.ResponseCode,
-			Body: t.ResponseBody,
-		}
-	}
+	resp := t.HandleRequest(r.Method, t.Path)
 
 	t.Body = bytes.NewBuffer([]byte{})
 	_, err := io.Copy(t.Body, r.Body)
@@ -99,6 +97,14 @@ func (t *TestServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (t *TestServer) SetResponses(responses []TestResponse) {
 	t.Responses = responses
 	t.calls = 0
+	t.HandleRequest = func(method, path string) TestResponse {
+		if len(t.Responses) > 0 {
+			next := min(t.calls, len(t.Responses)-1)
+			t.calls += 1
+			return t.Responses[next]
+		}
+		return TestResponse{}
+	}
 }
 
 type expectedErrorTestCase struct {

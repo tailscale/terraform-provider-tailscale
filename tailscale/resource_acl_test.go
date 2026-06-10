@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -130,7 +131,17 @@ func TestProvider_TailscaleACLDiffs(t *testing.T) {
 			// Now we check that whitespace changes result in empty plan.
 			{ResourceName: "tailscale_acl.test_acl", Config: toHCL(policyJSON(" ")),
 				PreConfig: func() {
-					testServer.ResponseBody = policyJSON(" ")
+					testServer.HandleRequest = func(method string, path string) TestResponse {
+						if strings.Contains(path, "validate") {
+							return TestResponse{
+								Code: 200,
+							}
+						}
+						return TestResponse{
+							Code: 200,
+							Body: policyJSON("  "),
+						}
+					}
 				},
 			},
 			{ResourceName: "tailscale_acl.test_acl", Config: toHCL(policyJSON("\t"))},
@@ -144,7 +155,17 @@ func TestProvider_TailscaleACLDiffs(t *testing.T) {
 			// Further changes in whitespace are not causing a diff.
 			{ResourceName: "tailscale_acl.test_acl", Config: toHCL(toHuJSON(policyJSON("\t"))),
 				PreConfig: func() {
-					testServer.ResponseBody = toHuJSON(policyJSON("  "))
+					testServer.HandleRequest = func(method string, path string) TestResponse {
+						if strings.Contains(path, "validate") {
+							return TestResponse{
+								Code: 200,
+							}
+						}
+						return TestResponse{
+							Code: 200,
+							Body: toHuJSON(policyJSON("  ")),
+						}
+					}
 				},
 			},
 		},
