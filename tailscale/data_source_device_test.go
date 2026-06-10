@@ -139,7 +139,7 @@ func TestDeviceRetry_EventualSuccess(t *testing.T) {
 		IsUnitTest: true,
 		PreCheck: func() {
 			// The first response is an error, the second one empty, the third one succeeds.
-			testServer.Responses = []TestResponse{
+			testServer.SetResponses([]TestResponse{
 				{Code: http.StatusInternalServerError, Body: map[string]string{"message": "oh no"}},
 				{Code: http.StatusOK, Body: map[string][]tsclient.Device{
 					"devices": {},
@@ -147,7 +147,7 @@ func TestDeviceRetry_EventualSuccess(t *testing.T) {
 				{Code: http.StatusOK, Body: map[string][]tsclient.Device{
 					"devices": {targetDevice},
 				}},
-			}
+			})
 		},
 		ProtoV5ProviderFactories: testProviderFactories(t),
 		Steps: []resource.TestStep{
@@ -174,9 +174,9 @@ func TestDeviceRetry_PersistentFailure(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		IsUnitTest: true,
 		PreCheck: func() {
-			testServer.Responses = []TestResponse{
+			testServer.SetResponses([]TestResponse{
 				{Code: http.StatusInternalServerError, Body: map[string]string{"message": "oh no"}},
-			}
+			})
 		},
 		ProtoV5ProviderFactories: testProviderFactories(t),
 		Steps: []resource.TestStep{
