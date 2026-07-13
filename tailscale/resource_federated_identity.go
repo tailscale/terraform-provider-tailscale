@@ -267,7 +267,11 @@ func (r *federatedIdentityResource) populateFromKey(ctx context.Context, data *f
 	var diags diag.Diagnostics
 
 	data.ID = types.StringValue(key.ID)
-	data.Description = CoalesceStringEmptyOrNull(data.Description, key.Description)
+	// description has a schema Default of "", so represent an empty description as
+	// "" rather than null. Otherwise an empty description reads back as null on
+	// import, leaving a permanent null-vs-"" mismatch that plans as a spurious
+	// in-place update (which also flips the computed updated_at to known-after-apply).
+	data.Description = types.StringValue(key.Description)
 	data.Audience = types.StringValue(key.Audience)
 	data.Subject = types.StringValue(key.Subject)
 	data.Issuer = types.StringValue(key.Issuer)
