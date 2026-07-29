@@ -175,11 +175,6 @@ func (r *dnsConfigurationResource) Read(ctx context.Context, req resource.ReadRe
 	state.MagicDNS = types.BoolValue(remote.Preferences.MagicDNS)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-
-	resp.Diagnostics.AddWarning(
-		"Alpha Resource",
-		"The tailscale_dns_configuration resource is currently in alpha and subject to change, proceed with caution.",
-	)
 }
 
 // reconcileNameservers updates an existing list of nameservers with an updated list of nameservers,
