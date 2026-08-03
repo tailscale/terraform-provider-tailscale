@@ -9,6 +9,7 @@ import (
 	"reflect"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/tailscale/hujson"
 )
@@ -80,4 +81,6 @@ func (m aclHuJSONModifier) PlanModifyString(ctx context.Context, req planmodifie
 			return
 		}
 	}
+
+	resp.PlanValue = types.StringValue(normalizedConfig)
 }

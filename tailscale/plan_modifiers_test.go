@@ -80,15 +80,43 @@ func TestAclHuJSONModifier(t *testing.T) {
 			expectedPlan: types.StringValue(`{"wheels": 3, "seats": 2}`),
 		},
 		{
-			name: "unformatted-plan-is-left-as-is",
+			name: "unformatted-plan-is-canonicalized",
 			config: types.StringValue(`{
 				"wheels": 6,
 					"seats": 8
 			}`),
+			expectedPlan: types.StringValue("{\n\t\"wheels\": 6,\n\t\"seats\":  8\n}\n"),
+		},
+		{
+			name: "semantic-change-uses-canonical-plan",
+			state: types.StringValue(`{
+	"hosts": {
+		"vector": "100.64.0.1",
+	},
+	"ipsets": {
+		"ipset:monitoring-endpoints": ["add host:vector"],
+	},
+}
+`),
+			config: types.StringValue(`{
+  "hosts": {
+    "vector": "100.64.0.1",
+    "vector-stage": "100.64.0.2",
+  },
+  "ipsets": {
+    "ipset:monitoring-endpoints": ["add host:vector", "add host:vector-stage"],
+  },
+}`),
 			expectedPlan: types.StringValue(`{
-				"wheels": 6,
-					"seats": 8
-			}`),
+	"hosts": {
+		"vector":       "100.64.0.1",
+		"vector-stage": "100.64.0.2",
+	},
+	"ipsets": {
+		"ipset:monitoring-endpoints": ["add host:vector", "add host:vector-stage"],
+	},
+}
+`),
 		},
 		{
 			// This assumes the Terraform state contains non-canonicalised HuJSON,
