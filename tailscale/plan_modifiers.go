@@ -9,7 +9,6 @@ import (
 	"reflect"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/tailscale/hujson"
 )
@@ -49,9 +48,8 @@ func (m jsonSemanticDiffModifier) PlanModifyString(ctx context.Context, req plan
 	}
 }
 
-// aclHuJSONModifier stores strings as their canonical HuJSON representation in
-// the state, and treats strings as equivalent if their canonicalical representation
-// is the same.
+// aclHuJSONModifier treats strings as equivalent if their canonical HuJSON
+// representation is the same.
 type aclHuJSONModifier struct{}
 
 func (m aclHuJSONModifier) Description(_ context.Context) string {
@@ -81,6 +79,4 @@ func (m aclHuJSONModifier) PlanModifyString(ctx context.Context, req planmodifie
 			return
 		}
 	}
-
-	resp.PlanValue = types.StringValue(normalizedConfig)
 }
