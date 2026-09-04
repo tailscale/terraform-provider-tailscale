@@ -289,7 +289,12 @@ func (t *tailnetKeyResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	key, err := t.Client.Keys().Get(ctx, state.ID.ValueString())
 	if tailscale.IsNotFound(err) {
+		// key is nil in this case: persist the planned config (including any
+		// attribute changes, e.g. recreate_if_invalid) with Invalid set, same
+		// as Read does, rather than falling through to dereference it below.
 		state.Invalid = types.BoolValue(true)
+		resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+		return
 	} else if err != nil {
 		resp.Diagnostics.AddError("Failed to fetch key", fmt.Sprintf("Error reading tailnet key with id %q: %s", state.ID, err.Error()))
 		return

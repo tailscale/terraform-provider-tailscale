@@ -247,6 +247,65 @@ func TestProvider_TailscaleTailnetKeyInvalid(t *testing.T) {
 	})
 }
 
+// TestProvider_TailscaleTailnetKeyUpdateWhenNotFound is a regression test for
+// a panic in Update: unlike Read, Update did not return after handling the
+// IsNotFound case, so it went on to dereference the nil *tailscale.Key it
+// got back from a 404. It only reproduces when an actual attribute changes
+// (forcing Terraform to call Update rather than just refresh via Read)
+// while the key is no longer found - e.g. adding recreate_if_invalid to an
+// existing resource whose key has since expired and been purged.
+func TestProvider_TailscaleTailnetKeyUpdateWhenNotFound(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		ProtoV5ProviderFactories: testProviderFactories(t),
+		Steps: []resource.TestStep{
+			// Create a reusable key with recreate_if_invalid unset.
+			setKeyStep(true, ""),
+			// Change recreate_if_invalid (a real attribute diff, so
+			// Terraform calls Update) while the key is not found.
+			{
+				PreConfig: func() {
+					testServer.SetResponses([]TestResponse{
+						{Code: http.StatusNotFound},
+					})
+				},
+				ResourceName: "tailscale_tailnet_key.example_key",
+				Config: `
+					resource "tailscale_tailnet_key" "example_key" {
+						reusable = true
+						recreate_if_invalid = "never"
+						ephemeral = true
+						preauthorized = true
+						tags = ["tag:server"]
+						expiry = 3600
+						description = "Example key"
+					}
+				`,
+				Check: func(s *terraform.State) error {
+					rs, ok := s.RootModule().Resources["tailscale_tailnet_key.example_key"]
+					if !ok {
+						return errors.New("key not found")
+					}
+
+					if rs.Primary.ID != "old-key-id" {
+						return fmt.Errorf("expected key to be updated in place, not recreated; got ID %q", rs.Primary.ID)
+					}
+
+					if rs.Primary.Attributes["invalid"] != "true" {
+						return fmt.Errorf("expected invalid=true, got %q", rs.Primary.Attributes["invalid"])
+					}
+
+					if rs.Primary.Attributes["recreate_if_invalid"] != "never" {
+						return fmt.Errorf("expected recreate_if_invalid=never to be persisted, got %q", rs.Primary.Attributes["recreate_if_invalid"])
+					}
+
+					return nil
+				},
+			},
+		},
+	})
+}
+
 func TestAccTailscaleTailnetKey(t *testing.T) {
 	const resourceName = "tailscale_tailnet_key.test_key"
 
