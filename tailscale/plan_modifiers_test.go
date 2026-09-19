@@ -91,6 +91,36 @@ func TestAclHuJSONModifier(t *testing.T) {
 			}`),
 		},
 		{
+			name: "semantic-change-keeps-configured-plan",
+			state: types.StringValue(`{
+	"hosts": {
+		"vector": "100.64.0.1",
+	},
+	"ipsets": {
+		"ipset:monitoring-endpoints": ["add host:vector"],
+	},
+}
+`),
+			config: types.StringValue(`{
+  "hosts": {
+    "vector": "100.64.0.1",
+    "vector-stage": "100.64.0.2",
+  },
+  "ipsets": {
+    "ipset:monitoring-endpoints": ["add host:vector", "add host:vector-stage"],
+  },
+}`),
+			expectedPlan: types.StringValue(`{
+  "hosts": {
+    "vector": "100.64.0.1",
+    "vector-stage": "100.64.0.2",
+  },
+  "ipsets": {
+    "ipset:monitoring-endpoints": ["add host:vector", "add host:vector-stage"],
+  },
+}`),
+		},
+		{
 			// This assumes the Terraform state contains non-canonicalised HuJSON,
 			// which seems unlikely, but check it would produce an empty diff just in case.
 			name: "plan-matches-state-if-equivalent",
