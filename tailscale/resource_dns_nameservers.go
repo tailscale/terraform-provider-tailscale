@@ -10,10 +10,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"tailscale.com/client/tailscale/v2"
 )
 
 var (
@@ -56,13 +59,20 @@ func (r *dnsNameserversResource) Schema(_ context.Context, _ resource.SchemaRequ
 					listvalidator.SizeAtLeast(1),
 				},
 			},
+			"use_with_exit_node": schema.BoolAttribute{
+				Description: "All nameservers will continue to be used when an exit node is selected (requires Tailscale v1.88.1 or later). Defaults to false.",
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(false),
+			},
 		},
 	}
 }
 
 type dnsNameserversResourceData struct {
-	ID          types.String `tfsdk:"id"`
-	Nameservers types.List   `tfsdk:"nameservers"`
+	ID              types.String `tfsdk:"id"`
+	Nameservers     types.List   `tfsdk:"nameservers"`
+	UseWithExitNode types.Bool   `tfsdk:"use_with_exit_node"`
 }
 
 func (r *dnsNameserversResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -73,7 +83,7 @@ func (r *dnsNameserversResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	servers, err := r.Client.DNS().Nameservers(ctx)
+	configuration, err := r.Client.DNS().Configuration(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error fetching DNS name servers",
@@ -82,7 +92,14 @@ func (r *dnsNameserversResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
+	servers := make([]string, 0, len(configuration.Nameservers))
+	useWithExitNode := len(configuration.Nameservers) > 0
+	for _, nameserver := range configuration.Nameservers {
+		servers = append(servers, nameserver.Address)
+		useWithExitNode = useWithExitNode && nameserver.UseWithExitNode
+	}
 	state.Nameservers = ListOfStringValue(ctx, servers, &resp.Diagnostics)
+	state.UseWithExitNode = types.BoolValue(useWithExitNode)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -123,7 +140,14 @@ func (r *dnsNameserversResource) Update(ctx context.Context, req resource.Update
 }
 
 func (r *dnsNameserversResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	if err := r.Client.DNS().SetNameservers(ctx, []string{}); err != nil {
+	configuration, err := r.Client.DNS().Configuration(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to fetch DNS configuration", err.Error())
+		return
+	}
+
+	configuration.Nameservers = nil
+	if err := r.Client.DNS().SetConfiguration(ctx, *configuration); err != nil {
 		resp.Diagnostics.AddError("Failed to delete DNS nameservers", err.Error())
 	}
 }
@@ -131,16 +155,30 @@ func (r *dnsNameserversResource) Delete(ctx context.Context, req resource.Delete
 // updateDNSNameservers calls the Tailscale API to update the DNS nameservers based
 // on the given input.
 func (r *dnsNameserversResource) updateDNSNameservers(ctx context.Context, data *dnsNameserversResourceData, diags *diag.Diagnostics) {
-	var nameservers []string
+	configuration, err := r.Client.DNS().Configuration(ctx)
+	if err != nil {
+		diags.AddError("Failed to fetch DNS configuration", err.Error())
+		return
+	}
+
+	var addresses []string
 
 	if !data.Nameservers.IsNull() {
-		diags.Append(data.Nameservers.ElementsAs(ctx, &nameservers, false)...)
+		diags.Append(data.Nameservers.ElementsAs(ctx, &addresses, false)...)
 		if diags.HasError() {
 			return
 		}
 	}
 
-	if err := r.Client.DNS().SetNameservers(ctx, nameservers); err != nil {
+	configuration.Nameservers = make([]tailscale.DNSConfigurationResolver, 0, len(addresses))
+	for _, address := range addresses {
+		configuration.Nameservers = append(configuration.Nameservers, tailscale.DNSConfigurationResolver{
+			Address:         address,
+			UseWithExitNode: data.UseWithExitNode.ValueBool(),
+		})
+	}
+
+	if err := r.Client.DNS().SetConfiguration(ctx, *configuration); err != nil {
 		diags.AddError("Failed to update DNS nameservers", err.Error())
 		return
 	}

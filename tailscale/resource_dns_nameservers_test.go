@@ -20,12 +20,22 @@ const testNameserversCreate = `
 			"8.8.8.8",
 			"8.8.4.4",
 		]
+		use_with_exit_node = true
 	}`
 
 const testNameserversUpdate = `
 	resource "tailscale_dns_nameservers" "test_nameservers" {
 		nameservers = [
 			"1.1.1.1",
+		]
+		use_with_exit_node = false
+	}`
+
+const testNameserversLegacy = `
+	resource "tailscale_dns_nameservers" "test_nameservers" {
+		nameservers = [
+			"8.8.8.8",
+			"8.8.4.4",
 		]
 	}`
 
@@ -47,14 +57,14 @@ func TestProvider_TailscaleDNSNameservers(t *testing.T) {
 func TestAccTailscaleDNSNameservers(t *testing.T) {
 	const resourceName = "tailscale_dns_nameservers.test_nameservers"
 
-	checkProperties := func(expected []string) func(client *tailscale.Client, rs *terraform.ResourceState) error {
+	checkProperties := func(expected []tailscale.DNSConfigurationResolver) func(client *tailscale.Client, rs *terraform.ResourceState) error {
 		return func(client *tailscale.Client, rs *terraform.ResourceState) error {
-			actual, err := client.DNS().Nameservers(context.Background())
+			configuration, err := client.DNS().Configuration(context.Background())
 			if err != nil {
 				return err
 			}
 
-			if err := assertEqual(expected, actual, "wrong nameservers"); err != nil {
+			if err := assertEqual(expected, configuration.Nameservers, "wrong nameservers"); err != nil {
 				return err
 			}
 
@@ -65,25 +75,30 @@ func TestAccTailscaleDNSNameservers(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy:             checkResourceDestroyed(resourceName, checkProperties([]string{})),
+		CheckDestroy:             checkResourceDestroyed(resourceName, checkProperties([]tailscale.DNSConfigurationResolver{})),
 		Steps: []resource.TestStep{
 			{
 				Config: testNameserversCreate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkProperties([]string{"8.8.8.8", "8.8.4.4"}),
+						checkProperties([]tailscale.DNSConfigurationResolver{
+							{Address: "8.8.8.8", UseWithExitNode: true},
+							{Address: "8.8.4.4", UseWithExitNode: true},
+						}),
 					),
 					resource.TestCheckTypeSetElemAttr(resourceName, "nameservers.*", "8.8.8.8"),
 					resource.TestCheckTypeSetElemAttr(resourceName, "nameservers.*", "8.8.4.4"),
+					resource.TestCheckResourceAttr(resourceName, "use_with_exit_node", "true"),
 				),
 			},
 			{
 				Config: testNameserversUpdate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkProperties([]string{"1.1.1.1"}),
+						checkProperties([]tailscale.DNSConfigurationResolver{{Address: "1.1.1.1"}}),
 					),
 					resource.TestCheckTypeSetElemAttr(resourceName, "nameservers.*", "1.1.1.1"),
+					resource.TestCheckResourceAttr(resourceName, "use_with_exit_node", "false"),
 				),
 			},
 			{
@@ -98,11 +113,15 @@ func TestAccTailscaleDNSNameservers(t *testing.T) {
 	// from the plugin SDK to the plugin framework.
 	//
 	// See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#terraform-data-resource-example
-	checkResourceIsUnchangedInPluginFramework(t, testNameserversCreate, resource.ComposeTestCheckFunc(
+	checkResourceIsUnchangedInPluginFramework(t, testNameserversLegacy, resource.ComposeTestCheckFunc(
 		checkResourceRemoteProperties(resourceName,
-			checkProperties([]string{"8.8.8.8", "8.8.4.4"}),
+			checkProperties([]tailscale.DNSConfigurationResolver{
+				{Address: "8.8.8.8"},
+				{Address: "8.8.4.4"},
+			}),
 		),
 		resource.TestCheckTypeSetElemAttr(resourceName, "nameservers.*", "8.8.8.8"),
 		resource.TestCheckTypeSetElemAttr(resourceName, "nameservers.*", "8.8.4.4"),
+		resource.TestCheckResourceAttr(resourceName, "use_with_exit_node", "false"),
 	))
 }

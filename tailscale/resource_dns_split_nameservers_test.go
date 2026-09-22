@@ -20,6 +20,7 @@ const testSplitNameservers = `
 	resource "tailscale_dns_split_nameservers" "test_nameservers" {
         domain = "example.com"
 		nameservers = ["1.2.3.4", "4.5.6.7"]
+		use_with_exit_node = true
 	}`
 
 func TestProvider_TailscaleSplitDNSNameservers(t *testing.T) {
@@ -44,74 +45,87 @@ func TestAccTailscaleDNSSplitNameservers(t *testing.T) {
 		resource "tailscale_dns_split_nameservers" "test_nameservers" {
 			domain = "example.com"
 			nameservers = ["1.2.3.4", "4.5.6.7"]
+			use_with_exit_node = true
 		}`
 
 	const testSplitNameserversUpdate = `
 		resource "tailscale_dns_split_nameservers" "test_nameservers" {
 			domain = "sub.example.com"
 			nameservers = ["8.8.9.9"]
+			use_with_exit_node = false
 		}`
 
 	const testSplitNameserversEmpty = `
 		resource "tailscale_dns_split_nameservers" "test_nameservers" {
 			domain = "sub.example.com"
 			nameservers = []
+			use_with_exit_node = false
 		}`
 
 	const testSplitNameserversUpdateSameDomain = `
 		resource "tailscale_dns_split_nameservers" "test_nameservers" {
 			domain = "sub.example.com"
 			nameservers = ["8.8.7.7", "8.8.9.9"]
+			use_with_exit_node = true
 		}`
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy:             checkResourceDestroyed(resourceName, checkSplitDNSProperties(tailscale.SplitDNSResponse{})),
+		CheckDestroy:             checkResourceDestroyed(resourceName, checkSplitDNSProperties(map[string][]tailscale.DNSConfigurationResolver{})),
 		Steps: []resource.TestStep{
 			{
 				Config: testSplitNameserversCreate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkSplitDNSProperties(tailscale.SplitDNSResponse{
-							"example.com": []string{"1.2.3.4", "4.5.6.7"},
+						checkSplitDNSProperties(map[string][]tailscale.DNSConfigurationResolver{
+							"example.com": {
+								{Address: "1.2.3.4", UseWithExitNode: true},
+								{Address: "4.5.6.7", UseWithExitNode: true},
+							},
 						}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "domain", "example.com"),
 					resource.TestCheckTypeSetElemAttr(resourceName, "nameservers.*", "1.2.3.4"),
 					resource.TestCheckTypeSetElemAttr(resourceName, "nameservers.*", "4.5.6.7"),
+					resource.TestCheckResourceAttr(resourceName, "use_with_exit_node", "true"),
 				),
 			},
 			{
 				Config: testSplitNameserversUpdate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkSplitDNSProperties(tailscale.SplitDNSResponse{
-							"sub.example.com": []string{"8.8.9.9"},
+						checkSplitDNSProperties(map[string][]tailscale.DNSConfigurationResolver{
+							"sub.example.com": {{Address: "8.8.9.9"}},
 						}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "domain", "sub.example.com"),
 					resource.TestCheckTypeSetElemAttr(resourceName, "nameservers.*", "8.8.9.9"),
+					resource.TestCheckResourceAttr(resourceName, "use_with_exit_node", "false"),
 				),
 			},
 			{
 				Config: testSplitNameserversUpdateSameDomain,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkSplitDNSProperties(tailscale.SplitDNSResponse{
-							"sub.example.com": []string{"8.8.7.7", "8.8.9.9"},
+						checkSplitDNSProperties(map[string][]tailscale.DNSConfigurationResolver{
+							"sub.example.com": {
+								{Address: "8.8.7.7", UseWithExitNode: true},
+								{Address: "8.8.9.9", UseWithExitNode: true},
+							},
 						}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "domain", "sub.example.com"),
 					resource.TestCheckTypeSetElemAttr(resourceName, "nameservers.*", "8.8.7.7"),
 					resource.TestCheckTypeSetElemAttr(resourceName, "nameservers.*", "8.8.9.9"),
+					resource.TestCheckResourceAttr(resourceName, "use_with_exit_node", "true"),
 				),
 			},
 			{
 				Config: testSplitNameserversEmpty,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkSplitDNSProperties(tailscale.SplitDNSResponse{}),
+						checkSplitDNSProperties(map[string][]tailscale.DNSConfigurationResolver{}),
 					),
 				),
 			},
@@ -124,14 +138,14 @@ func TestAccTailscaleDNSSplitNameservers(t *testing.T) {
 	})
 }
 
-func checkSplitDNSProperties(expected tailscale.SplitDNSResponse) func(client *tailscale.Client, rs *terraform.ResourceState) error {
+func checkSplitDNSProperties(expected map[string][]tailscale.DNSConfigurationResolver) func(client *tailscale.Client, rs *terraform.ResourceState) error {
 	return func(client *tailscale.Client, rs *terraform.ResourceState) error {
-		actual, err := client.DNS().SplitDNS(context.Background())
+		configuration, err := client.DNS().Configuration(context.Background())
 		if err != nil {
 			return err
 		}
 
-		if diff := cmp.Diff(actual, expected); diff != "" {
+		if diff := cmp.Diff(configuration.SplitDNS, expected); diff != "" {
 			return fmt.Errorf("wrong split dns: (-got+want) \n%s", diff)
 		}
 
@@ -153,8 +167,8 @@ func TestAccTailscaleDNSSplitNameServers_UpgradeToPluginFramework(t *testing.T) 
 		}`,
 		resource.ComposeTestCheckFunc(
 			checkResourceRemoteProperties(resourceName,
-				checkSplitDNSProperties(tailscale.SplitDNSResponse{
-					"example.com": []string{"1.2.3.4", "4.5.6.7"},
+				checkSplitDNSProperties(map[string][]tailscale.DNSConfigurationResolver{
+					"example.com": {{Address: "1.2.3.4"}, {Address: "4.5.6.7"}},
 				}),
 			),
 			resource.TestCheckResourceAttr(resourceName, "domain", "example.com"),

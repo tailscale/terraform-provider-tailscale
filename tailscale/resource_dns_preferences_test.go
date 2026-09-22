@@ -16,12 +16,19 @@ import (
 
 const testDNSPreferencesCreate = `
 	resource "tailscale_dns_preferences" "test_preferences" {
-		magic_dns = true
+		magic_dns         = true
+		override_local_dns = true
 	}`
 
 const testDNSPreferencesUpdate = `
 	resource "tailscale_dns_preferences" "test_preferences" {
-		magic_dns = false
+		magic_dns          = false
+		override_local_dns = false
+	}`
+
+const testDNSPreferencesLegacy = `
+	resource "tailscale_dns_preferences" "test_preferences" {
+		magic_dns = true
 	}`
 
 func TestProvider_TailscaleDNSPreferences(t *testing.T) {
@@ -39,14 +46,14 @@ func TestProvider_TailscaleDNSPreferences(t *testing.T) {
 	})
 }
 
-func checkDNSProperties(expected *tailscale.DNSPreferences) func(client *tailscale.Client, rs *terraform.ResourceState) error {
+func checkDNSProperties(expected tailscale.DNSConfigurationPreferences) func(client *tailscale.Client, rs *terraform.ResourceState) error {
 	return func(client *tailscale.Client, rs *terraform.ResourceState) error {
-		actual, err := client.DNS().Preferences(context.Background())
+		configuration, err := client.DNS().Configuration(context.Background())
 		if err != nil {
 			return err
 		}
 
-		if err := assertEqual(expected, actual, "wrong DNS preferences"); err != nil {
+		if err := assertEqual(expected, configuration.Preferences, "wrong DNS preferences"); err != nil {
 			return err
 		}
 
@@ -60,24 +67,26 @@ func TestAccTailscaleDNSPreferences(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy:             checkResourceDestroyed(resourceName, checkDNSProperties(&tailscale.DNSPreferences{})),
+		CheckDestroy:             checkResourceDestroyed(resourceName, checkDNSProperties(tailscale.DNSConfigurationPreferences{})),
 		Steps: []resource.TestStep{
 			{
 				Config: testDNSPreferencesCreate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkDNSProperties(&tailscale.DNSPreferences{MagicDNS: true}),
+						checkDNSProperties(tailscale.DNSConfigurationPreferences{MagicDNS: true, OverrideLocalDNS: true}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "magic_dns", "true"),
+					resource.TestCheckResourceAttr(resourceName, "override_local_dns", "true"),
 				),
 			},
 			{
 				Config: testDNSPreferencesUpdate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkDNSProperties(&tailscale.DNSPreferences{MagicDNS: false}),
+						checkDNSProperties(tailscale.DNSConfigurationPreferences{}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "magic_dns", "false"),
+					resource.TestCheckResourceAttr(resourceName, "override_local_dns", "false"),
 				),
 			},
 			{
@@ -94,10 +103,11 @@ func TestAccTailscaleDNSPreferences(t *testing.T) {
 //
 // See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#terraform-data-resource-example
 func TestAccTailscaleDNSPreferences_UpgradeToPluginFramework(t *testing.T) {
-	checkResourceIsUnchangedInPluginFramework(t, testDNSPreferencesCreate, resource.ComposeTestCheckFunc(
+	checkResourceIsUnchangedInPluginFramework(t, testDNSPreferencesLegacy, resource.ComposeTestCheckFunc(
 		checkResourceRemoteProperties("tailscale_dns_preferences.test_preferences",
-			checkDNSProperties(&tailscale.DNSPreferences{MagicDNS: true}),
+			checkDNSProperties(tailscale.DNSConfigurationPreferences{MagicDNS: true}),
 		),
 		resource.TestCheckResourceAttr("tailscale_dns_preferences.test_preferences", "magic_dns", "true"),
+		resource.TestCheckResourceAttr("tailscale_dns_preferences.test_preferences", "override_local_dns", "false"),
 	))
 }
