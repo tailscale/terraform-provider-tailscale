@@ -140,14 +140,7 @@ func (r *dnsNameserversResource) Update(ctx context.Context, req resource.Update
 }
 
 func (r *dnsNameserversResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	configuration, err := r.Client.DNS().Configuration(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError("Failed to fetch DNS configuration", err.Error())
-		return
-	}
-
-	configuration.Nameservers = nil
-	if err := r.Client.DNS().SetConfiguration(ctx, *configuration); err != nil {
+	if err := r.Client.DNS().SetNameserversWithOptions(ctx, nil); err != nil {
 		resp.Diagnostics.AddError("Failed to delete DNS nameservers", err.Error())
 	}
 }
@@ -155,12 +148,6 @@ func (r *dnsNameserversResource) Delete(ctx context.Context, req resource.Delete
 // updateDNSNameservers calls the Tailscale API to update the DNS nameservers based
 // on the given input.
 func (r *dnsNameserversResource) updateDNSNameservers(ctx context.Context, data *dnsNameserversResourceData, diags *diag.Diagnostics) {
-	configuration, err := r.Client.DNS().Configuration(ctx)
-	if err != nil {
-		diags.AddError("Failed to fetch DNS configuration", err.Error())
-		return
-	}
-
 	var addresses []string
 
 	if !data.Nameservers.IsNull() {
@@ -170,15 +157,15 @@ func (r *dnsNameserversResource) updateDNSNameservers(ctx context.Context, data 
 		}
 	}
 
-	configuration.Nameservers = make([]tailscale.DNSConfigurationResolver, 0, len(addresses))
+	nameservers := make([]tailscale.DNSConfigurationResolver, 0, len(addresses))
 	for _, address := range addresses {
-		configuration.Nameservers = append(configuration.Nameservers, tailscale.DNSConfigurationResolver{
+		nameservers = append(nameservers, tailscale.DNSConfigurationResolver{
 			Address:         address,
 			UseWithExitNode: data.UseWithExitNode.ValueBool(),
 		})
 	}
 
-	if err := r.Client.DNS().SetConfiguration(ctx, *configuration); err != nil {
+	if err := r.Client.DNS().SetNameserversWithOptions(ctx, nameservers); err != nil {
 		diags.AddError("Failed to update DNS nameservers", err.Error())
 		return
 	}
