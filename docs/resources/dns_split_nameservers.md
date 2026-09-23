@@ -16,7 +16,8 @@ The dns_split_nameservers resource allows you to configure split DNS nameservers
 resource "tailscale_dns_split_nameservers" "sample_split_nameservers" {
   domain = "foo.example.com"
 
-  nameservers = ["1.1.1.1"]
+  nameservers        = ["1.1.1.1"]
+  use_with_exit_node = true
 }
 ```
 
@@ -27,6 +28,10 @@ resource "tailscale_dns_split_nameservers" "sample_split_nameservers" {
 
 - `domain` (String) Domain to configure split DNS for. Requests for this domain will be resolved using the provided nameservers. Changing this will force the resource to be recreated.
 - `nameservers` (Set of String) Devices on your network will use these nameservers to resolve DNS names. IPv4 or IPv6 addresses are accepted.
+
+### Optional
+
+- `use_with_exit_node` (Boolean) Whether all of these nameservers will continue to be used when an exit node is selected (requires Tailscale v1.88.1 or later). Leave unset to preserve each nameserver's current setting.
 
 ### Read-Only
 

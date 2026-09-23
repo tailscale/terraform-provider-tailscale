@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"tailscale.com/client/tailscale/v2"
 )
 
 var (
@@ -56,13 +58,19 @@ func (r *dnsNameserversResource) Schema(_ context.Context, _ resource.SchemaRequ
 					listvalidator.SizeAtLeast(1),
 				},
 			},
+			"use_with_exit_node": schema.BoolAttribute{
+				Description: "Whether all of these nameservers will continue to be used when an exit node is selected (requires Tailscale v1.88.1 or later). Leave unset to preserve each nameserver's current setting.",
+				Optional:    true,
+				Computed:    true,
+			},
 		},
 	}
 }
 
 type dnsNameserversResourceData struct {
-	ID          types.String `tfsdk:"id"`
-	Nameservers types.List   `tfsdk:"nameservers"`
+	ID              types.String `tfsdk:"id"`
+	Nameservers     types.List   `tfsdk:"nameservers"`
+	UseWithExitNode types.Bool   `tfsdk:"use_with_exit_node"`
 }
 
 func (r *dnsNameserversResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -73,16 +81,18 @@ func (r *dnsNameserversResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	servers, err := r.Client.DNS().Nameservers(ctx)
+	configuration, err := r.Client.DNS().Configuration(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error fetching DNS name servers",
-			"Failed to fetch DNS name servers: "+err.Error(),
+			"Failed to fetch DNS configuration",
+			"Failed to fetch DNS configuration: "+err.Error(),
 		)
 		return
 	}
 
-	state.Nameservers = ListOfStringValue(ctx, servers, &resp.Diagnostics)
+	servers := make([]string, 0, len(configuration.Nameservers))
+	state.Nameservers = ListOfStringValue(ctx, appendNameserverAddresses(servers, configuration.Nameservers), &resp.Diagnostics)
+	state.UseWithExitNode = types.BoolValue(allUseWithExitNode(configuration.Nameservers))
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -91,13 +101,14 @@ func (r *dnsNameserversResource) Read(ctx context.Context, req resource.ReadRequ
 }
 
 func (r *dnsNameserversResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan dnsNameserversResourceData
+	var plan, config dnsNameserversResourceData
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	r.updateDNSNameservers(ctx, &plan, &resp.Diagnostics)
+	r.updateDNSNameservers(ctx, &plan, !config.UseWithExitNode.IsNull(), &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -107,13 +118,14 @@ func (r *dnsNameserversResource) Create(ctx context.Context, req resource.Create
 }
 
 func (r *dnsNameserversResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan dnsNameserversResourceData
+	var plan, config dnsNameserversResourceData
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	r.updateDNSNameservers(ctx, &plan, &resp.Diagnostics)
+	r.updateDNSNameservers(ctx, &plan, !config.UseWithExitNode.IsNull(), &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -128,20 +140,66 @@ func (r *dnsNameserversResource) Delete(ctx context.Context, req resource.Delete
 	}
 }
 
-// updateDNSNameservers calls the Tailscale API to update the DNS nameservers based
-// on the given input.
-func (r *dnsNameserversResource) updateDNSNameservers(ctx context.Context, data *dnsNameserversResourceData, diags *diag.Diagnostics) {
-	var nameservers []string
+// updateDNSNameservers calls the Tailscale API to update the DNS nameservers
+// based on the given input. When use_with_exit_node is unset in the
+// configuration, the nameservers are sent as plain addresses so the server
+// preserves each matching nameserver's current options.
+func (r *dnsNameserversResource) updateDNSNameservers(ctx context.Context, data *dnsNameserversResourceData, manageUseWithExitNode bool, diags *diag.Diagnostics) {
+	var addresses []string
 
 	if !data.Nameservers.IsNull() {
-		diags.Append(data.Nameservers.ElementsAs(ctx, &nameservers, false)...)
+		diags.Append(data.Nameservers.ElementsAs(ctx, &addresses, false)...)
 		if diags.HasError() {
 			return
 		}
 	}
 
-	if err := r.Client.DNS().SetNameservers(ctx, nameservers); err != nil {
+	if !manageUseWithExitNode {
+		if err := r.Client.DNS().SetNameservers(ctx, addresses); err != nil {
+			diags.AddError("Failed to update DNS nameservers", err.Error())
+			return
+		}
+
+		// The preserved options are not known until after the update, so
+		// read them back for the state value.
+		configuration, err := r.Client.DNS().Configuration(ctx)
+		if err != nil {
+			diags.AddError("Failed to fetch DNS configuration", err.Error())
+			return
+		}
+		data.UseWithExitNode = types.BoolValue(allUseWithExitNode(configuration.Nameservers))
+		return
+	}
+
+	nameservers := make([]tailscale.DNSConfigurationResolver, 0, len(addresses))
+	for _, address := range addresses {
+		nameservers = append(nameservers, tailscale.DNSConfigurationResolver{
+			Address:         address,
+			UseWithExitNode: data.UseWithExitNode.ValueBool(),
+		})
+	}
+
+	if err := r.Client.DNS().SetNameserverResolvers(ctx, nameservers); err != nil {
 		diags.AddError("Failed to update DNS nameservers", err.Error())
 		return
 	}
+}
+
+func appendNameserverAddresses(addresses []string, nameservers []tailscale.DNSConfigurationResolver) []string {
+	for _, nameserver := range nameservers {
+		addresses = append(addresses, nameserver.Address)
+	}
+	return addresses
+}
+
+// allUseWithExitNode reports whether every nameserver has the
+// use-with-exit-node option. Mixed values collapse to false because the
+// resource manages one value for all of its nameservers.
+func allUseWithExitNode(nameservers []tailscale.DNSConfigurationResolver) bool {
+	for _, nameserver := range nameservers {
+		if !nameserver.UseWithExitNode {
+			return false
+		}
+	}
+	return len(nameservers) > 0
 }

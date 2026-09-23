@@ -60,14 +60,20 @@ func (r *dnsSplitNameserversResource) Schema(_ context.Context, _ resource.Schem
 				Description: "Devices on your network will use these nameservers to resolve DNS names. IPv4 or IPv6 addresses are accepted.",
 				Required:    true,
 			},
+			"use_with_exit_node": schema.BoolAttribute{
+				Description: "Whether all of these nameservers will continue to be used when an exit node is selected (requires Tailscale v1.88.1 or later). Leave unset to preserve each nameserver's current setting.",
+				Optional:    true,
+				Computed:    true,
+			},
 		},
 	}
 }
 
 type dnsSplitNameserversResourceData struct {
-	ID          types.String `tfsdk:"id"`
-	Domain      types.String `tfsdk:"domain"`
-	Nameservers types.Set    `tfsdk:"nameservers"`
+	ID              types.String `tfsdk:"id"`
+	Domain          types.String `tfsdk:"domain"`
+	Nameservers     types.Set    `tfsdk:"nameservers"`
+	UseWithExitNode types.Bool   `tfsdk:"use_with_exit_node"`
 }
 
 func (r *dnsSplitNameserversResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -78,7 +84,7 @@ func (r *dnsSplitNameserversResource) Read(ctx context.Context, req resource.Rea
 		return
 	}
 
-	splitDNS, err := r.Client.DNS().SplitDNS(ctx)
+	configuration, err := r.Client.DNS().Configuration(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error fetching split DNS config",
@@ -88,11 +94,16 @@ func (r *dnsSplitNameserversResource) Read(ctx context.Context, req resource.Rea
 	}
 
 	domain := state.Domain.ValueString()
-	nameservers := splitDNS[domain]
-	if nameservers == nil {
-		nameservers = []string{}
+	resolvers := configuration.SplitDNS[domain]
+	nameservers := make([]string, 0, len(resolvers))
+	state.Nameservers = SetOfStringValue(ctx, appendNameserverAddresses(nameservers, resolvers), &resp.Diagnostics)
+	if len(resolvers) > 0 {
+		state.UseWithExitNode = types.BoolValue(allUseWithExitNode(resolvers))
+	} else if state.UseWithExitNode.IsNull() {
+		// There are no nameservers to derive the value from, so keep the
+		// prior state value when one exists.
+		state.UseWithExitNode = types.BoolValue(false)
 	}
-	state.Nameservers = SetOfStringValue(ctx, nameservers, &resp.Diagnostics)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -102,13 +113,14 @@ func (r *dnsSplitNameserversResource) Read(ctx context.Context, req resource.Rea
 }
 
 func (r *dnsSplitNameserversResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan dnsSplitNameserversResourceData
+	var plan, config dnsSplitNameserversResourceData
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	r.updateSplitDNSConfig(ctx, &plan, &resp.Diagnostics)
+	r.updateSplitDNSConfig(ctx, &plan, !config.UseWithExitNode.IsNull(), &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -118,13 +130,14 @@ func (r *dnsSplitNameserversResource) Create(ctx context.Context, req resource.C
 }
 
 func (r *dnsSplitNameserversResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan dnsSplitNameserversResourceData
+	var plan, config dnsSplitNameserversResourceData
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	r.updateSplitDNSConfig(ctx, &plan, &resp.Diagnostics)
+	r.updateSplitDNSConfig(ctx, &plan, !config.UseWithExitNode.IsNull(), &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -133,9 +146,11 @@ func (r *dnsSplitNameserversResource) Update(ctx context.Context, req resource.U
 	resp.Diagnostics.Append(diags...)
 }
 
-// updateSplitDNSConfig calls the Tailscale API to update the split DNS config based
-// on the given input.
-func (r *dnsSplitNameserversResource) updateSplitDNSConfig(ctx context.Context, data *dnsSplitNameserversResourceData, diags *diag.Diagnostics) {
+// updateSplitDNSConfig calls the Tailscale API to update the split DNS config
+// based on the given input. When use_with_exit_node is unset in the
+// configuration, the nameservers are sent as plain addresses so the server
+// preserves each matching nameserver's current options.
+func (r *dnsSplitNameserversResource) updateSplitDNSConfig(ctx context.Context, data *dnsSplitNameserversResourceData, manageUseWithExitNode bool, diags *diag.Diagnostics) {
 	domain := data.Domain.ValueString()
 
 	var nameservers []string
@@ -144,11 +159,32 @@ func (r *dnsSplitNameserversResource) updateSplitDNSConfig(ctx context.Context, 
 		return
 	}
 
-	updateReq := tailscale.SplitDNSRequest{
-		domain: nameservers,
+	if !manageUseWithExitNode {
+		if _, err := r.Client.DNS().UpdateSplitDNS(ctx, tailscale.SplitDNSRequest{domain: nameservers}); err != nil {
+			diags.AddError("Failed to update DNS split nameservers", err.Error())
+			return
+		}
+
+		// The preserved options are not known until after the update, so
+		// read them back for the state value.
+		configuration, err := r.Client.DNS().Configuration(ctx)
+		if err != nil {
+			diags.AddError("Failed to fetch DNS configuration", err.Error())
+			return
+		}
+		data.UseWithExitNode = types.BoolValue(allUseWithExitNode(configuration.SplitDNS[domain]))
+		return
 	}
 
-	if _, err := r.Client.DNS().UpdateSplitDNS(ctx, updateReq); err != nil {
+	resolvers := make([]tailscale.DNSConfigurationResolver, 0, len(nameservers))
+	for _, address := range nameservers {
+		resolvers = append(resolvers, tailscale.DNSConfigurationResolver{
+			Address:         address,
+			UseWithExitNode: data.UseWithExitNode.ValueBool(),
+		})
+	}
+
+	if _, err := r.Client.DNS().UpdateSplitDNSResolvers(ctx, tailscale.SplitDNSResolverRequest{domain: resolvers}); err != nil {
 		diags.AddError("Failed to update DNS split nameservers", err.Error())
 		return
 	}
@@ -162,9 +198,8 @@ func (r *dnsSplitNameserversResource) Delete(ctx context.Context, req resource.D
 	}
 
 	domain := state.Domain.ValueString()
-	updateReq := tailscale.SplitDNSRequest{domain: {}}
 
-	if _, err := r.Client.DNS().UpdateSplitDNS(ctx, updateReq); err != nil {
+	if _, err := r.Client.DNS().UpdateSplitDNS(ctx, tailscale.SplitDNSRequest{domain: nil}); err != nil {
 		resp.Diagnostics.AddError("Failed to delete DNS split nameservers", err.Error())
 		return
 	}

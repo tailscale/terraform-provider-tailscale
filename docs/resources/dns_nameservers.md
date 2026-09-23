@@ -18,6 +18,7 @@ resource "tailscale_dns_nameservers" "sample_nameservers" {
     "8.8.8.8",
     "8.8.4.4"
   ]
+  use_with_exit_node = true
 }
 ```
 
@@ -27,6 +28,10 @@ resource "tailscale_dns_nameservers" "sample_nameservers" {
 ### Required
 
 - `nameservers` (List of String) Devices on your network will use these nameservers to resolve DNS names. IPv4 or IPv6 addresses are accepted.
+
+### Optional
+
+- `use_with_exit_node` (Boolean) Whether all of these nameservers will continue to be used when an exit node is selected (requires Tailscale v1.88.1 or later). Leave unset to preserve each nameserver's current setting.
 
 ### Read-Only
 
