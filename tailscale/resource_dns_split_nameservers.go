@@ -159,15 +159,6 @@ func (r *dnsSplitNameserversResource) updateSplitDNSConfig(ctx context.Context, 
 		return
 	}
 
-	configuration, err := r.Client.DNS().Configuration(ctx)
-	if err != nil {
-		diags.AddError("Failed to fetch DNS configuration", err.Error())
-		return
-	}
-
-	if configuration.SplitDNS == nil {
-		configuration.SplitDNS = make(map[string][]tailscale.DNSConfigurationResolver)
-	}
 	resolvers := make([]tailscale.DNSConfigurationResolver, 0, len(nameservers))
 	for _, address := range nameservers {
 		resolvers = append(resolvers, tailscale.DNSConfigurationResolver{
@@ -175,9 +166,9 @@ func (r *dnsSplitNameserversResource) updateSplitDNSConfig(ctx context.Context, 
 			UseWithExitNode: data.UseWithExitNode.ValueBool(),
 		})
 	}
-	configuration.SplitDNS[domain] = resolvers
+	updateReq := tailscale.SplitDNSResolverRequest{domain: resolvers}
 
-	if err := r.Client.DNS().SetConfiguration(ctx, *configuration); err != nil {
+	if _, err := r.Client.DNS().UpdateSplitDNSResolvers(ctx, updateReq); err != nil {
 		diags.AddError("Failed to update DNS split nameservers", err.Error())
 		return
 	}
@@ -191,14 +182,9 @@ func (r *dnsSplitNameserversResource) Delete(ctx context.Context, req resource.D
 	}
 
 	domain := state.Domain.ValueString()
-	configuration, err := r.Client.DNS().Configuration(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError("Failed to fetch DNS configuration", err.Error())
-		return
-	}
-	delete(configuration.SplitDNS, domain)
+	updateReq := tailscale.SplitDNSResolverRequest{domain: nil}
 
-	if err := r.Client.DNS().SetConfiguration(ctx, *configuration); err != nil {
+	if _, err := r.Client.DNS().UpdateSplitDNSResolvers(ctx, updateReq); err != nil {
 		resp.Diagnostics.AddError("Failed to delete DNS split nameservers", err.Error())
 		return
 	}
