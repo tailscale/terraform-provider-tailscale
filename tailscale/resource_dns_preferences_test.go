@@ -14,35 +14,14 @@ import (
 	"tailscale.com/client/tailscale/v2"
 )
 
-// override_local_dns only takes effect when global nameservers are
-// configured, so the acceptance configurations include some.
 const testDNSPreferencesCreate = `
-	resource "tailscale_dns_nameservers" "test_nameservers" {
-		nameservers = ["8.8.8.8"]
-	}
-
 	resource "tailscale_dns_preferences" "test_preferences" {
-		magic_dns          = true
-		override_local_dns = true
-
-		depends_on = [tailscale_dns_nameservers.test_nameservers]
+		magic_dns = true
 	}`
 
 const testDNSPreferencesUpdate = `
-	resource "tailscale_dns_nameservers" "test_nameservers" {
-		nameservers = ["8.8.8.8"]
-	}
-
 	resource "tailscale_dns_preferences" "test_preferences" {
-		magic_dns          = false
-		override_local_dns = false
-
-		depends_on = [tailscale_dns_nameservers.test_nameservers]
-	}`
-
-const testDNSPreferencesLegacy = `
-	resource "tailscale_dns_preferences" "test_preferences" {
-		magic_dns = true
+		magic_dns = false
 	}`
 
 func TestProvider_TailscaleDNSPreferences(t *testing.T) {
@@ -60,14 +39,14 @@ func TestProvider_TailscaleDNSPreferences(t *testing.T) {
 	})
 }
 
-func checkDNSProperties(expected tailscale.DNSConfigurationPreferences) func(client *tailscale.Client, rs *terraform.ResourceState) error {
+func checkDNSProperties(expected *tailscale.DNSPreferences) func(client *tailscale.Client, rs *terraform.ResourceState) error {
 	return func(client *tailscale.Client, rs *terraform.ResourceState) error {
-		configuration, err := client.DNS().Configuration(context.Background())
+		actual, err := client.DNS().Preferences(context.Background())
 		if err != nil {
 			return err
 		}
 
-		if err := assertEqual(expected, configuration.Preferences, "wrong DNS preferences"); err != nil {
+		if err := assertEqual(expected, actual, "wrong DNS preferences"); err != nil {
 			return err
 		}
 
@@ -81,26 +60,24 @@ func TestAccTailscaleDNSPreferences(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy:             checkResourceDestroyed(resourceName, checkDNSProperties(tailscale.DNSConfigurationPreferences{})),
+		CheckDestroy:             checkResourceDestroyed(resourceName, checkDNSProperties(&tailscale.DNSPreferences{})),
 		Steps: []resource.TestStep{
 			{
 				Config: testDNSPreferencesCreate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkDNSProperties(tailscale.DNSConfigurationPreferences{MagicDNS: true, OverrideLocalDNS: true}),
+						checkDNSProperties(&tailscale.DNSPreferences{MagicDNS: true}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "magic_dns", "true"),
-					resource.TestCheckResourceAttr(resourceName, "override_local_dns", "true"),
 				),
 			},
 			{
 				Config: testDNSPreferencesUpdate,
 				Check: resource.ComposeTestCheckFunc(
 					checkResourceRemoteProperties(resourceName,
-						checkDNSProperties(tailscale.DNSConfigurationPreferences{}),
+						checkDNSProperties(&tailscale.DNSPreferences{MagicDNS: false}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "magic_dns", "false"),
-					resource.TestCheckResourceAttr(resourceName, "override_local_dns", "false"),
 				),
 			},
 			{
@@ -117,9 +94,9 @@ func TestAccTailscaleDNSPreferences(t *testing.T) {
 //
 // See https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing#terraform-data-resource-example
 func TestAccTailscaleDNSPreferences_UpgradeToPluginFramework(t *testing.T) {
-	checkResourceIsUnchangedInPluginFramework(t, testDNSPreferencesLegacy, resource.ComposeTestCheckFunc(
+	checkResourceIsUnchangedInPluginFramework(t, testDNSPreferencesCreate, resource.ComposeTestCheckFunc(
 		checkResourceRemoteProperties("tailscale_dns_preferences.test_preferences",
-			checkDNSProperties(tailscale.DNSConfigurationPreferences{MagicDNS: true}),
+			checkDNSProperties(&tailscale.DNSPreferences{MagicDNS: true}),
 		),
 		resource.TestCheckResourceAttr("tailscale_dns_preferences.test_preferences", "magic_dns", "true"),
 	))
