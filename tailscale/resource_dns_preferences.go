@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -54,10 +53,9 @@ func (r *dnsPreferencesResource) Schema(_ context.Context, _ resource.SchemaRequ
 				Required:    true,
 			},
 			"override_local_dns": schema.BoolAttribute{
-				Description: "When enabled, use the configured DNS servers to resolve names outside the tailnet. When disabled, devices will prefer their local DNS configuration. Defaults to false.",
+				Description: "When enabled, use the configured DNS servers to resolve names outside the tailnet. When disabled, devices will prefer their local DNS configuration. Leave unset to preserve the tailnet's current setting.",
 				Optional:    true,
 				Computed:    true,
-				Default:     booldefault.StaticBool(false),
 			},
 		},
 	}
@@ -77,7 +75,7 @@ func (r *dnsPreferencesResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	configuration, err := r.Client.DNS().Configuration(ctx)
+	preferences, err := r.Client.DNS().Preferences(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error fetching DNS preferences",
@@ -86,45 +84,42 @@ func (r *dnsPreferencesResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	state.MagicDNS = types.BoolValue(configuration.Preferences.MagicDNS)
-	state.OverrideLocalDNS = types.BoolValue(configuration.Preferences.OverrideLocalDNS)
+	state.MagicDNS = types.BoolValue(preferences.MagicDNS)
+	state.OverrideLocalDNS = types.BoolValue(preferences.OverrideLocalDNS != nil && *preferences.OverrideLocalDNS)
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 }
 
 func (r *dnsPreferencesResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan dnsPreferencesResourceData
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
+	var plan, config dnsPreferencesResourceData
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	plan.ID = types.StringValue(createUUID())
 
-	r.updateDNSPreferences(ctx, &plan, &resp.Diagnostics)
+	r.updateDNSPreferences(ctx, &plan, !config.OverrideLocalDNS.IsNull(), &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	diags = resp.State.Set(ctx, &plan)
+	diags := resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 }
 
 func (r *dnsPreferencesResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan, state dnsPreferencesResourceData
+	var plan, config dnsPreferencesResourceData
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
-
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if !plan.MagicDNS.Equal(state.MagicDNS) || !plan.OverrideLocalDNS.Equal(state.OverrideLocalDNS) {
-		r.updateDNSPreferences(ctx, &plan, &resp.Diagnostics)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+	r.updateDNSPreferences(ctx, &plan, !config.OverrideLocalDNS.IsNull(), &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	diags := resp.State.Set(ctx, &plan)
@@ -132,33 +127,38 @@ func (r *dnsPreferencesResource) Update(ctx context.Context, req resource.Update
 }
 
 func (r *dnsPreferencesResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	configuration, err := r.Client.DNS().Configuration(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError("Failed to fetch DNS configuration", err.Error())
-		return
-	}
-
-	configuration.Preferences = tailscale.DNSConfigurationPreferences{}
-	if err := r.Client.DNS().SetConfiguration(ctx, *configuration); err != nil {
+	// Omitting OverrideLocalDNS preserves the tailnet's current setting.
+	if err := r.Client.DNS().SetPreferences(ctx, tailscale.DNSPreferences{}); err != nil {
 		resp.Diagnostics.AddError("Failed to set DNS preferences", "Failed to set DNS preferences: "+err.Error())
 	}
 }
 
-// updateDNSPreferences calls the Tailscale API to update the DNS preferences based
-// on the given input.
-func (r *dnsPreferencesResource) updateDNSPreferences(ctx context.Context, data *dnsPreferencesResourceData, diags *diag.Diagnostics) {
-	configuration, err := r.Client.DNS().Configuration(ctx)
-	if err != nil {
-		diags.AddError("Failed to fetch DNS configuration", err.Error())
+// updateDNSPreferences calls the Tailscale API to update the DNS preferences
+// based on the given input. When override_local_dns is unset in the
+// configuration, the field is omitted from the request so the server
+// preserves the tailnet's current setting.
+func (r *dnsPreferencesResource) updateDNSPreferences(ctx context.Context, data *dnsPreferencesResourceData, manageOverrideLocalDNS bool, diags *diag.Diagnostics) {
+	prefs := tailscale.DNSPreferences{
+		MagicDNS: data.MagicDNS.ValueBool(),
+	}
+	if manageOverrideLocalDNS {
+		override := data.OverrideLocalDNS.ValueBool()
+		prefs.OverrideLocalDNS = &override
+	}
+
+	if err := r.Client.DNS().SetPreferences(ctx, prefs); err != nil {
+		diags.AddError("Failed to set DNS preferences", "Failed to set DNS preferences: "+err.Error())
 		return
 	}
 
-	configuration.Preferences = tailscale.DNSConfigurationPreferences{
-		MagicDNS:         data.MagicDNS.ValueBool(),
-		OverrideLocalDNS: data.OverrideLocalDNS.ValueBool(),
-	}
-
-	if err := r.Client.DNS().SetConfiguration(ctx, *configuration); err != nil {
-		diags.AddError("Failed to set DNS preferences", "Failed to set DNS preferences: "+err.Error())
+	if !manageOverrideLocalDNS {
+		// The preserved setting is not known until after the update, so
+		// read it back for the state value.
+		preferences, err := r.Client.DNS().Preferences(ctx)
+		if err != nil {
+			diags.AddError("Error fetching DNS preferences", "Failed to fetch DNS preferences: "+err.Error())
+			return
+		}
+		data.OverrideLocalDNS = types.BoolValue(preferences.OverrideLocalDNS != nil && *preferences.OverrideLocalDNS)
 	}
 }

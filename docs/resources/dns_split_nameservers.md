@@ -31,7 +31,7 @@ resource "tailscale_dns_split_nameservers" "sample_split_nameservers" {
 
 ### Optional
 
-- `use_with_exit_node` (Boolean) All nameservers will continue to be used when an exit node is selected (requires Tailscale v1.88.1 or later). Defaults to false.
+- `use_with_exit_node` (Boolean) Whether all of these nameservers will continue to be used when an exit node is selected (requires Tailscale v1.88.1 or later). Leave unset to preserve each nameserver's current setting.
 
 ### Read-Only
 
