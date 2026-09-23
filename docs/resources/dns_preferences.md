@@ -14,7 +14,8 @@ The dns_preferences resource allows you to configure DNS preferences for your Ta
 
 ```terraform
 resource "tailscale_dns_preferences" "sample_preferences" {
-  magic_dns = true
+  magic_dns          = true
+  override_local_dns = true
 }
 ```
 
@@ -24,6 +25,10 @@ resource "tailscale_dns_preferences" "sample_preferences" {
 ### Required
 
 - `magic_dns` (Boolean) Whether or not to enable magic DNS
+
+### Optional
+
+- `override_local_dns` (Boolean) When enabled, use the configured DNS servers to resolve names outside the tailnet. When disabled, devices will prefer their local DNS configuration. Takes effect when global nameservers are configured. Leave unset to preserve the tailnet's current setting.
 
 ### Read-Only
 

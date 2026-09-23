@@ -1,3 +1,4 @@
 resource "tailscale_dns_preferences" "sample_preferences" {
-  magic_dns = true
+  magic_dns          = true
+  override_local_dns = true
 }
