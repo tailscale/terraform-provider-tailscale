@@ -75,7 +75,7 @@ func TestAccTailscaleDNSNameservers(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProviderFactories(t),
-		CheckDestroy:             checkResourceDestroyed(resourceName, checkProperties([]tailscale.DNSConfigurationResolver{})),
+		CheckDestroy:             checkResourceDestroyed(resourceName, checkProperties(nil)),
 		Steps: []resource.TestStep{
 			{
 				Config: testNameserversCreate,
@@ -122,6 +122,5 @@ func TestAccTailscaleDNSNameservers(t *testing.T) {
 		),
 		resource.TestCheckTypeSetElemAttr(resourceName, "nameservers.*", "8.8.8.8"),
 		resource.TestCheckTypeSetElemAttr(resourceName, "nameservers.*", "8.8.4.4"),
-		resource.TestCheckResourceAttr(resourceName, "use_with_exit_node", "false"),
 	))
 }

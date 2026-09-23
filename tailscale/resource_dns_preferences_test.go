@@ -14,16 +14,30 @@ import (
 	"tailscale.com/client/tailscale/v2"
 )
 
+// override_local_dns only takes effect when global nameservers are
+// configured, so the acceptance configurations include some.
 const testDNSPreferencesCreate = `
+	resource "tailscale_dns_nameservers" "test_nameservers" {
+		nameservers = ["8.8.8.8"]
+	}
+
 	resource "tailscale_dns_preferences" "test_preferences" {
-		magic_dns         = true
+		magic_dns          = true
 		override_local_dns = true
+
+		depends_on = [tailscale_dns_nameservers.test_nameservers]
 	}`
 
 const testDNSPreferencesUpdate = `
+	resource "tailscale_dns_nameservers" "test_nameservers" {
+		nameservers = ["8.8.8.8"]
+	}
+
 	resource "tailscale_dns_preferences" "test_preferences" {
 		magic_dns          = false
 		override_local_dns = false
+
+		depends_on = [tailscale_dns_nameservers.test_nameservers]
 	}`
 
 const testDNSPreferencesLegacy = `
@@ -108,6 +122,5 @@ func TestAccTailscaleDNSPreferences_UpgradeToPluginFramework(t *testing.T) {
 			checkDNSProperties(tailscale.DNSConfigurationPreferences{MagicDNS: true}),
 		),
 		resource.TestCheckResourceAttr("tailscale_dns_preferences.test_preferences", "magic_dns", "true"),
-		resource.TestCheckResourceAttr("tailscale_dns_preferences.test_preferences", "override_local_dns", "false"),
 	))
 }

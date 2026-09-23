@@ -53,7 +53,7 @@ func (r *dnsPreferencesResource) Schema(_ context.Context, _ resource.SchemaRequ
 				Required:    true,
 			},
 			"override_local_dns": schema.BoolAttribute{
-				Description: "When enabled, use the configured DNS servers to resolve names outside the tailnet. When disabled, devices will prefer their local DNS configuration. Leave unset to preserve the tailnet's current setting.",
+				Description: "When enabled, use the configured DNS servers to resolve names outside the tailnet. When disabled, devices will prefer their local DNS configuration. Takes effect when global nameservers are configured. Leave unset to preserve the tailnet's current setting.",
 				Optional:    true,
 				Computed:    true,
 			},

@@ -28,7 +28,7 @@ resource "tailscale_dns_preferences" "sample_preferences" {
 
 ### Optional
 
-- `override_local_dns` (Boolean) When enabled, use the configured DNS servers to resolve names outside the tailnet. When disabled, devices will prefer their local DNS configuration. Leave unset to preserve the tailnet's current setting.
+- `override_local_dns` (Boolean) When enabled, use the configured DNS servers to resolve names outside the tailnet. When disabled, devices will prefer their local DNS configuration. Takes effect when global nameservers are configured. Leave unset to preserve the tailnet's current setting.
 
 ### Read-Only
 
