@@ -5,7 +5,7 @@ go 1.26.6
 require (
 	github.com/google/go-cmp v0.7.0
 	github.com/hashicorp/go-cty v1.5.0 // indirect
-	github.com/hashicorp/go-uuid v1.0.3
+	github.com/hashicorp/go-uuid v1.0.4
 	github.com/hashicorp/terraform-plugin-docs v0.25.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.40.1 // indirect
 	github.com/stretchr/testify v1.11.1
