@@ -7,6 +7,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
@@ -274,4 +279,43 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 		},
 	})
 
+}
+
+func TestTailnetSettingsACLsExternalLinkValidation(t *testing.T) {
+	var resp fwresource.SchemaResponse
+	(&tailnetSettingsResource{}).Schema(context.Background(), fwresource.SchemaRequest{}, &resp)
+	attr, ok := resp.Schema.Attributes["acls_external_link"].(schema.StringAttribute)
+	if !ok {
+		t.Fatal("acls_external_link is not a string attribute")
+	}
+
+	testCases := []struct {
+		name    string
+		value   string
+		wantErr bool
+	}{
+		{name: "https", value: "https://example.com"},
+		{name: "http", value: "http://example.com"},
+		// The empty string is how a configuration clears the link.
+		{name: "empty", value: ""},
+		{name: "no-scheme", value: "example.com", wantErr: true},
+		{name: "other-scheme", value: "ftp://example.com", wantErr: true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := validator.StringRequest{
+				Path:           path.Root("acls_external_link"),
+				PathExpression: path.MatchRoot("acls_external_link"),
+				ConfigValue:    types.StringValue(tc.value),
+			}
+			var got validator.StringResponse
+			for _, v := range attr.Validators {
+				v.ValidateString(context.Background(), req, &got)
+			}
+			if gotErr := got.Diagnostics.HasError(); gotErr != tc.wantErr {
+				t.Errorf("value %q: got error = %v, want error = %v (%v)", tc.value, gotErr, tc.wantErr, got.Diagnostics)
+			}
+		})
+	}
 }

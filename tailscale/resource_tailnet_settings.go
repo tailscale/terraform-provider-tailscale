@@ -73,13 +73,13 @@ func (s *tailnetSettingsResource) Schema(_ context.Context, _ resource.SchemaReq
 				},
 			},
 			"acls_external_link": schema.StringAttribute{
-				Description: "Link to your external ACL definition or management system. Must be a valid URL.",
+				Description: "Link to your external ACL definition or management system. Must be a valid URL, or an empty string to clear the link.",
 				Optional:    true,
 				Computed:    true,
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(
-						regexp.MustCompile(`^https?://`),
-						"must be a valid URL with http or https scheme",
+						regexp.MustCompile(`^(https?://|$)`),
+						"must be a valid URL with http or https scheme, or empty",
 					),
 				},
 				PlanModifiers: []planmodifier.String{
