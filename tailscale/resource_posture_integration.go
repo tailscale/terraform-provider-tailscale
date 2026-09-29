@@ -109,6 +109,12 @@ func (p *postureIntegrationResource) Read(ctx context.Context, req resource.Read
 
 	integration, err := p.Client.DevicePosture().GetIntegration(ctx, state.ID.ValueString())
 	if err != nil {
+		// If the integration is not found, remove it from the state so it can be created again.
+		if tailscale.IsNotFound(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
 		resp.Diagnostics.AddError("Failed to fetch posture integration",
 			fmt.Sprintf("Error reading posture integration with id %q: %s", state.ID.ValueString(), err.Error()))
 		return
@@ -190,7 +196,7 @@ func (p *postureIntegrationResource) Delete(ctx context.Context, req resource.De
 	}
 
 	err := p.Client.DevicePosture().DeleteIntegration(ctx, plan.ID.ValueString())
-	if err != nil {
+	if err != nil && !tailscale.IsNotFound(err) {
 		resp.Diagnostics.AddError("Failed to delete posture integration",
 			fmt.Sprintf("Error deleting posture integration with id %q: %s", plan.ID.ValueString(), err.Error()))
 		return

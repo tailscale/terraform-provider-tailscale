@@ -55,6 +55,35 @@ func TestProvider_TailscaleWebhook(t *testing.T) {
 	})
 }
 
+// TestProvider_TailscaleWebhookDeletedOutsideTerraform checks that a webhook
+// that no longer exists is dropped from state on refresh, so Terraform plans
+// to recreate it instead of failing.
+func TestProvider_TailscaleWebhookDeletedOutsideTerraform(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		IsUnitTest: true,
+		PreCheck: func() {
+			testServer.ResponseCode = http.StatusOK
+			testServer.ResponseBody = tailscale.Webhook{
+				EndpointID: "12345",
+				Secret:     new("123"),
+			}
+		},
+		ProtoV5ProviderFactories: testProviderFactories(t),
+		Steps: []resource.TestStep{
+			testResourceCreated("tailscale_webhook.test_webhook", testWebhookCreate),
+			{
+				PreConfig: func() {
+					testServer.ResponseCode = http.StatusNotFound
+					testServer.ResponseBody = map[string]string{"message": "webhook not found"}
+				},
+				Config:             testWebhookCreate,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+}
+
 func TestAccTailscaleWebhook(t *testing.T) {
 	const resourceName = "tailscale_webhook.test_webhook"
 
