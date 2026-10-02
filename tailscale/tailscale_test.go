@@ -14,7 +14,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/stretchr/testify/assert"
 )
 
 type TestResponse struct {
@@ -59,7 +58,9 @@ func NewTestHarness(t *testing.T) (baseURL string, server *TestServer) {
 
 	// Start a listener on a random port
 	listener, err := net.Listen("tcp", ":0")
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	go func() {
 		_ = svr.Serve(listener)
@@ -67,7 +68,9 @@ func NewTestHarness(t *testing.T) (baseURL string, server *TestServer) {
 
 	// When the test is over, close the server
 	t.Cleanup(func() {
-		assert.NoError(t, svr.Close())
+		if err := svr.Close(); err != nil {
+			t.Fatal(err)
+		}
 	})
 
 	baseURL = fmt.Sprintf("http://localhost:%v", listener.Addr().(*net.TCPAddr).Port)
@@ -82,15 +85,19 @@ func (t *TestServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resp := t.HandleRequest(r.Method, t.Path)
 
 	t.Body = bytes.NewBuffer([]byte{})
-	_, err := io.Copy(t.Body, r.Body)
-	assert.NoError(t.t, err)
+	if _, err := io.Copy(t.Body, r.Body); err != nil {
+		t.t.Fatalf("Copy: %v", err)
+	}
 	w.WriteHeader(resp.Code)
 	switch body := resp.Body.(type) {
 	case []byte:
-		_, err := w.Write(body)
-		assert.NoError(t.t, err)
+		if _, err := w.Write(body); err != nil {
+			t.t.Fatalf("Write: %v", err)
+		}
 	default:
-		assert.NoError(t.t, json.NewEncoder(w).Encode(body))
+		if err := json.NewEncoder(w).Encode(body); err != nil {
+			t.t.Fatalf("Encode: %v", err)
+		}
 	}
 }
 

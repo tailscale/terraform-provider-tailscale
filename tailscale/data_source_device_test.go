@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/stretchr/testify/assert"
 	"tailscale.com/client/tailscale/v2"
 	tsclient "tailscale.com/client/tailscale/v2"
 	"tailscale.com/tstest"
@@ -51,26 +51,33 @@ func TestDeviceToMap(t *testing.T) {
 
 	m := deviceToMap(dev)
 
-	assert.Equal(t, dev.Name, m["name"].(string))
-	assert.Equal(t, dev.Hostname, m["hostname"].(string))
-	assert.Equal(t, dev.User, m["user"].(string))
-	assert.Equal(t, dev.NodeID, m["node_id"].(string))
-	assert.Equal(t, dev.Addresses, m["addresses"].([]string))
-	assert.Equal(t, dev.Tags, m["tags"].([]string))
-	assert.Equal(t, dev.Authorized, m["authorized"].(bool))
-	assert.Equal(t, dev.KeyExpiryDisabled, m["key_expiry_disabled"].(bool))
-	assert.Equal(t, dev.BlocksIncomingConnections, m["blocks_incoming_connections"].(bool))
-	assert.Equal(t, dev.ClientVersion, m["client_version"].(string))
-	assert.Equal(t, created.Format(time.RFC3339), m["created"].(string))
-	assert.Equal(t, expires.Format(time.RFC3339), m["expires"].(string))
-	assert.Equal(t, dev.IsExternal, m["is_external"].(bool))
-	assert.Equal(t, lastSeen.Format(time.RFC3339), m["last_seen"].(string))
-	assert.Equal(t, dev.MachineKey, m["machine_key"].(string))
-	assert.Equal(t, dev.NodeKey, m["node_key"].(string))
-	assert.Equal(t, dev.OS, m["os"].(string))
-	assert.Equal(t, dev.UpdateAvailable, m["update_available"].(bool))
-	assert.Equal(t, dev.TailnetLockError, m["tailnet_lock_error"].(string))
-	assert.Equal(t, dev.TailnetLockKey, m["tailnet_lock_key"].(string))
+	assertEqual := func(t *testing.T, want, got any) {
+		t.Helper()
+		if diff := cmp.Diff(want, got); diff != "" {
+			t.Errorf("wrong BuildRequest (-want +got):\n%s", diff)
+		}
+	}
+
+	assertEqual(t, dev.Name, m["name"].(string))
+	assertEqual(t, dev.Hostname, m["hostname"].(string))
+	assertEqual(t, dev.User, m["user"].(string))
+	assertEqual(t, dev.NodeID, m["node_id"].(string))
+	assertEqual(t, dev.Addresses, m["addresses"].([]string))
+	assertEqual(t, dev.Tags, m["tags"].([]string))
+	assertEqual(t, dev.Authorized, m["authorized"].(bool))
+	assertEqual(t, dev.KeyExpiryDisabled, m["key_expiry_disabled"].(bool))
+	assertEqual(t, dev.BlocksIncomingConnections, m["blocks_incoming_connections"].(bool))
+	assertEqual(t, dev.ClientVersion, m["client_version"].(string))
+	assertEqual(t, created.Format(time.RFC3339), m["created"].(string))
+	assertEqual(t, expires.Format(time.RFC3339), m["expires"].(string))
+	assertEqual(t, dev.IsExternal, m["is_external"].(bool))
+	assertEqual(t, lastSeen.Format(time.RFC3339), m["last_seen"].(string))
+	assertEqual(t, dev.MachineKey, m["machine_key"].(string))
+	assertEqual(t, dev.NodeKey, m["node_key"].(string))
+	assertEqual(t, dev.OS, m["os"].(string))
+	assertEqual(t, dev.UpdateAvailable, m["update_available"].(bool))
+	assertEqual(t, dev.TailnetLockError, m["tailnet_lock_error"].(string))
+	assertEqual(t, dev.TailnetLockKey, m["tailnet_lock_key"].(string))
 }
 func TestDeviceToMap_LastSeenNil(t *testing.T) {
 	t.Parallel()
@@ -103,26 +110,33 @@ func TestDeviceToMap_LastSeenNil(t *testing.T) {
 
 	m := deviceToMap(dev)
 
-	assert.Equal(t, dev.Name, m["name"].(string))
-	assert.Equal(t, dev.Hostname, m["hostname"].(string))
-	assert.Equal(t, dev.User, m["user"].(string))
-	assert.Equal(t, dev.NodeID, m["node_id"].(string))
-	assert.Equal(t, dev.Addresses, m["addresses"].([]string))
-	assert.Equal(t, dev.Tags, m["tags"].([]string))
-	assert.Equal(t, dev.Authorized, m["authorized"].(bool))
-	assert.Equal(t, dev.KeyExpiryDisabled, m["key_expiry_disabled"].(bool))
-	assert.Equal(t, dev.BlocksIncomingConnections, m["blocks_incoming_connections"].(bool))
-	assert.Equal(t, dev.ClientVersion, m["client_version"].(string))
-	assert.Equal(t, created.Format(time.RFC3339), m["created"].(string))
-	assert.Equal(t, expires.Format(time.RFC3339), m["expires"].(string))
-	assert.Equal(t, dev.IsExternal, m["is_external"].(bool))
-	assert.Equal(t, "", m["last_seen"]) // Expect empty string for nil LastSeen
-	assert.Equal(t, dev.MachineKey, m["machine_key"].(string))
-	assert.Equal(t, dev.NodeKey, m["node_key"].(string))
-	assert.Equal(t, dev.OS, m["os"].(string))
-	assert.Equal(t, dev.UpdateAvailable, m["update_available"].(bool))
-	assert.Equal(t, dev.TailnetLockError, m["tailnet_lock_error"].(string))
-	assert.Equal(t, dev.TailnetLockKey, m["tailnet_lock_key"].(string))
+	assertEqual := func(t *testing.T, want, got any) {
+		t.Helper()
+		if diff := cmp.Diff(want, got); diff != "" {
+			t.Errorf("wrong BuildRequest (-want +got):\n%s", diff)
+		}
+	}
+
+	assertEqual(t, dev.Name, m["name"].(string))
+	assertEqual(t, dev.Hostname, m["hostname"].(string))
+	assertEqual(t, dev.User, m["user"].(string))
+	assertEqual(t, dev.NodeID, m["node_id"].(string))
+	assertEqual(t, dev.Addresses, m["addresses"].([]string))
+	assertEqual(t, dev.Tags, m["tags"].([]string))
+	assertEqual(t, dev.Authorized, m["authorized"].(bool))
+	assertEqual(t, dev.KeyExpiryDisabled, m["key_expiry_disabled"].(bool))
+	assertEqual(t, dev.BlocksIncomingConnections, m["blocks_incoming_connections"].(bool))
+	assertEqual(t, dev.ClientVersion, m["client_version"].(string))
+	assertEqual(t, created.Format(time.RFC3339), m["created"].(string))
+	assertEqual(t, expires.Format(time.RFC3339), m["expires"].(string))
+	assertEqual(t, dev.IsExternal, m["is_external"].(bool))
+	assertEqual(t, "", m["last_seen"]) // Expect empty string for nil LastSeen
+	assertEqual(t, dev.MachineKey, m["machine_key"].(string))
+	assertEqual(t, dev.NodeKey, m["node_key"].(string))
+	assertEqual(t, dev.OS, m["os"].(string))
+	assertEqual(t, dev.UpdateAvailable, m["update_available"].(bool))
+	assertEqual(t, dev.TailnetLockError, m["tailnet_lock_error"].(string))
+	assertEqual(t, dev.TailnetLockKey, m["tailnet_lock_key"].(string))
 }
 
 func TestDeviceRetry_EventualSuccess(t *testing.T) {
