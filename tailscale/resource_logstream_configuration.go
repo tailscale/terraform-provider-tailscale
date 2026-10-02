@@ -6,9 +6,11 @@ package tailscale
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
@@ -17,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"tailscale.com/client/tailscale/v2"
@@ -96,11 +99,32 @@ func (r *logstreamConfigurationResource) Schema(_ context.Context, _ resource.Sc
 				Default:     stringdefault.StaticString("user"),
 			},
 			"token": schema.StringAttribute{
-				Description: "The token/password with which log streams to this endpoint should be authenticated, required unless destination_type is 's3'.",
+				Description: "The token/password with which log streams to this endpoint should be authenticated, required unless destination_type is 's3' or token_wo is set. Conflicts with token_wo. This value is stored in state; use token_wo to avoid persisting it.",
 				Optional:    true,
 				Sensitive:   true,
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(path.MatchRoot("token_wo")),
+				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"token_wo": schema.StringAttribute{
+				Description: "The write-only token/password with which log streams to this endpoint should be authenticated. This value is never stored in state or plan files and may be supplied by an ephemeral value. Conflicts with token and requires token_wo_version. Sent on creation and every configuration update. Requires Terraform 1.11+ or OpenTofu 1.11+.",
+				Optional:    true,
+				Sensitive:   true,
+				WriteOnly:   true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+					stringvalidator.AlsoRequires(path.MatchRoot("token_wo_version")),
+				},
+			},
+			"token_wo_version": schema.Int64Attribute{
+				Description: "A positive version number for token_wo. Increment this value to trigger an update when only the token changes. Requires token_wo.",
+				Optional:    true,
+				Validators: []validator.Int64{
+					int64validator.AtLeast(1),
+					int64validator.AlsoRequires(path.MatchRoot("token_wo")),
 				},
 			},
 			"upload_period_minutes": schema.Int32Attribute{
@@ -215,6 +239,8 @@ type logstreamConfigurationResourceModel struct {
 	URL                  types.String `tfsdk:"url"`
 	User                 types.String `tfsdk:"user"`
 	Token                types.String `tfsdk:"token"`
+	TokenWO              types.String `tfsdk:"token_wo"`
+	TokenWOVersion       types.Int64  `tfsdk:"token_wo_version"`
 	UploadPeriodMinutes  types.Int32  `tfsdk:"upload_period_minutes"`
 	CompressionFormat    types.String `tfsdk:"compression_format"`
 	S3Bucket             types.String `tfsdk:"s3_bucket"`
@@ -290,10 +316,18 @@ func (d *logstreamConfigurationResourceModel) updateFields(ctx context.Context, 
 }
 
 // updateLogstreamConfiguration calls the Tailscale API to set logstream configuration.
-func (r *logstreamConfigurationResource) updateLogstreamConfiguration(ctx context.Context, data *logstreamConfigurationResourceModel, diags *diag.Diagnostics) {
+func (r *logstreamConfigurationResource) updateLogstreamConfiguration(ctx context.Context, data *logstreamConfigurationResourceModel, config tfsdk.Config, diags *diag.Diagnostics) {
 	logType, request := data.asRequest(ctx, diags)
+	var tokenWO types.String
+	diags.Append(config.GetAttribute(ctx, path.Root("token_wo"), &tokenWO)...)
 	if diags.HasError() {
 		return
+	}
+
+	// Write-only values are available only in configuration. Keep the token in
+	// the API request, without copying it into the model that is saved to state.
+	if !tokenWO.IsNull() {
+		request.Token = tokenWO.ValueString()
 	}
 
 	if err := r.Client.Logging().SetLogstreamConfiguration(ctx, logType, request); err != nil {
@@ -308,7 +342,7 @@ func (r *logstreamConfigurationResource) Create(ctx context.Context, req resourc
 		return
 	}
 
-	r.updateLogstreamConfiguration(ctx, &plan, &resp.Diagnostics)
+	r.updateLogstreamConfiguration(ctx, &plan, req.Config, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -345,7 +379,10 @@ func (r *logstreamConfigurationResource) Update(ctx context.Context, req resourc
 		return
 	}
 
-	r.updateLogstreamConfiguration(ctx, &plan, &resp.Diagnostics)
+	r.updateLogstreamConfiguration(ctx, &plan, req.Config, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
