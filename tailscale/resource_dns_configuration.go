@@ -94,7 +94,7 @@ func (r *dnsConfigurationResource) Schema(_ context.Context, _ resource.SchemaRe
 					},
 				},
 			},
-			"split_dns": schema.ListNestedBlock{
+			"split_dns": schema.SetNestedBlock{
 				Description: "Set the nameservers used by devices on your network to resolve DNS queries on specific domains (requires Tailscale v1.8 or later). Configuration does not depend on `override_local_dns`.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
