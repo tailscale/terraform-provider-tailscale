@@ -273,6 +273,25 @@ func TestReconcileNameservers(t *testing.T) {
 				{Address: types.StringValue("8.8.8.8"), UseWithExitNode: types.BoolValue(false)},
 			},
 		},
+		{
+			// Noop update should preserve the existing order.
+			name: "preserves-existing-order-noop",
+			existing: []nameserverModel{
+				{Address: types.StringValue("1.1.1.3"), UseWithExitNode: types.BoolValue(false)},
+				{Address: types.StringValue("1.0.0.3"), UseWithExitNode: types.BoolValue(false)},
+				{Address: types.StringValue("1.1.1.1"), UseWithExitNode: types.BoolValue(false)},
+			},
+			updates: []tailscale.DNSConfigurationResolver{
+				{Address: "1.1.1.3", UseWithExitNode: false},
+				{Address: "1.0.0.3", UseWithExitNode: false},
+				{Address: "1.1.1.1", UseWithExitNode: false},
+			},
+			want: []nameserverModel{
+				{Address: types.StringValue("1.1.1.3"), UseWithExitNode: types.BoolValue(false)},
+				{Address: types.StringValue("1.0.0.3"), UseWithExitNode: types.BoolValue(false)},
+				{Address: types.StringValue("1.1.1.1"), UseWithExitNode: types.BoolValue(false)},
+			},
+		},
 	}
 
 	for _, tt := range testCases {
