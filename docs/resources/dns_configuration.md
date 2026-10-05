@@ -54,7 +54,7 @@ resource "tailscale_dns_configuration" "sample_configuration" {
 - `nameservers` (Block List) Set the nameservers used by devices on your network to resolve DNS queries. `override_local_dns` must also be true to prefer these nameservers over local DNS configuration. (see [below for nested schema](#nestedblock--nameservers))
 - `override_local_dns` (Boolean) When enabled, use the configured DNS servers in `nameservers` to resolve names outside the tailnet. When disabled, devices will prefer their local DNS configuration. Defaults to false.
 - `search_paths` (List of String) Additional search domains. When MagicDNS is on, the tailnet domain is automatically included as the first search domain.
-- `split_dns` (Block List) Set the nameservers used by devices on your network to resolve DNS queries on specific domains (requires Tailscale v1.8 or later). Configuration does not depend on `override_local_dns`. (see [below for nested schema](#nestedblock--split_dns))
+- `split_dns` (Block Set) Set the nameservers used by devices on your network to resolve DNS queries on specific domains (requires Tailscale v1.8 or later). Configuration does not depend on `override_local_dns`. (see [below for nested schema](#nestedblock--split_dns))
 
 ### Read-Only
 
