@@ -6,7 +6,6 @@ package tailscale
 import (
 	"context"
 	"slices"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -180,13 +179,14 @@ func (r *dnsConfigurationResource) Read(ctx context.Context, req resource.ReadRe
 // reconcileNameservers updates an existing list of nameservers with an updated list of nameservers,
 // preserving the original ordering of any retained existing nameservers.
 func reconcileNameservers(existing []nameserverModel, updates []tailscale.DNSConfigurationResolver) []nameserverModel {
+	updates = slices.Clone(updates)
 	nameservers := make([]nameserverModel, 0, len(updates))
 
 	for _, nameserver := range existing {
-		idx, found := slices.BinarySearchFunc(updates, nameserver.Address.ValueString(), func(a tailscale.DNSConfigurationResolver, b string) int {
-			return strings.Compare(a.Address, b)
+		idx := slices.IndexFunc(updates, func(u tailscale.DNSConfigurationResolver) bool {
+			return u.Address == nameserver.Address.ValueString()
 		})
-		if found {
+		if idx >= 0 {
 			nameservers = append(nameservers, nameserverToMap(updates[idx]))
 			updates = slices.Delete(updates, idx, idx+1)
 		}
