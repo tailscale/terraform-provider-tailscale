@@ -241,6 +241,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 						RegionalRoutingOn:                      new(true),
 						UsersApprovalOn:                        new(true),
 						UsersRoleAllowedToJoinExternalTailnets: new(tailscale.RoleAllowedToJoinExternalTailnets("member")),
+						RouteSelection:                         new(tailscale.RouteSelectionRegionalRouting),
 					}
 					err := client.TailnetSettings().Update(context.Background(), settingsRequest)
 					if err != nil {
@@ -267,6 +268,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 							RegionalRoutingOn:                      true,
 							UsersApprovalOn:                        true,
 							UsersRoleAllowedToJoinExternalTailnets: "member",
+							RouteSelection:                         tailscale.RouteSelectionRegionalRouting,
 						}),
 					),
 				),

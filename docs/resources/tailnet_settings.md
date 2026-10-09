@@ -40,6 +40,7 @@ resource "tailscale_tailnet_settings" "sample_tailnet_settings" {
 - `network_flow_logging_on` (Boolean) Whether network flow logs are enabled for the tailnet
 - `posture_identity_collection_on` (Boolean) Whether identity collection is enabled for device posture integrations for the tailnet
 - `regional_routing_on` (Boolean) Whether regional routing is enabled for the tailnet
+- `route_selection` (String) The route selection algorithm in use by the tailnet
 - `users_approval_on` (Boolean) Whether user approval is enabled for this tailnet
 - `users_role_allowed_to_join_external_tailnet` (String) Which user roles are allowed to join external tailnets
 
