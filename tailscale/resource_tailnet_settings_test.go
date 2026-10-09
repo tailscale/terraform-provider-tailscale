@@ -40,6 +40,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 			users_role_allowed_to_join_external_tailnet = "admin"
 			posture_identity_collection_on = false
 			https_enabled = false
+			route_selection = "magicroute"
 		}`
 
 	const testTailnetSettingsEmpty = `
@@ -89,6 +90,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 							UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsMember,
 							PostureIdentityCollectionOn:            true,
 							HTTPSEnabled:                           true,
+							RouteSelection:                         tailscale.RouteSelectionActivePassiveFailover,
 						}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "acls_externally_managed_on", "true"),
@@ -100,6 +102,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "users_role_allowed_to_join_external_tailnet", "member"),
 					resource.TestCheckResourceAttr(resourceName, "posture_identity_collection_on", "true"),
 					resource.TestCheckResourceAttr(resourceName, "https_enabled", "true"),
+					resource.TestCheckResourceAttr(resourceName, "route_selection", "active-passive-failover"),
 				),
 			},
 			{
@@ -116,6 +119,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 							UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsAdmin,
 							PostureIdentityCollectionOn:            false,
 							HTTPSEnabled:                           false,
+							RouteSelection:                         tailscale.RouteSelectionMagicRoute,
 						}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "acls_externally_managed_on", "false"),
@@ -127,6 +131,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "users_role_allowed_to_join_external_tailnet", "admin"),
 					resource.TestCheckResourceAttr(resourceName, "posture_identity_collection_on", "false"),
 					resource.TestCheckResourceAttr(resourceName, "https_enabled", "false"),
+					resource.TestCheckResourceAttr(resourceName, "route_selection", "magicroute"),
 				),
 			},
 			{
@@ -143,6 +148,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 							UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsAdmin,
 							PostureIdentityCollectionOn:            false,
 							HTTPSEnabled:                           false,
+							RouteSelection:                         tailscale.RouteSelectionMagicRoute,
 						}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "acls_externally_managed_on", "false"),
@@ -154,6 +160,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "users_role_allowed_to_join_external_tailnet", "admin"),
 					resource.TestCheckResourceAttr(resourceName, "posture_identity_collection_on", "false"),
 					resource.TestCheckResourceAttr(resourceName, "https_enabled", "false"),
+					resource.TestCheckResourceAttr(resourceName, "route_selection", "magicroute"),
 				),
 			},
 			{
@@ -170,6 +177,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 							UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsAdmin,
 							PostureIdentityCollectionOn:            false,
 							HTTPSEnabled:                           false,
+							RouteSelection:                         tailscale.RouteSelectionMagicRoute,
 						}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "acls_externally_managed_on", "true"),
@@ -181,6 +189,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "users_role_allowed_to_join_external_tailnet", "admin"),
 					resource.TestCheckResourceAttr(resourceName, "posture_identity_collection_on", "false"),
 					resource.TestCheckResourceAttr(resourceName, "https_enabled", "false"),
+					resource.TestCheckResourceAttr(resourceName, "route_selection", "magicroute"),
 				),
 			},
 			{
@@ -206,6 +215,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 					UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsMember,
 					PostureIdentityCollectionOn:            true,
 					HTTPSEnabled:                           true,
+					RouteSelection:                         tailscale.RouteSelectionMagicRoute,
 				}),
 			),
 			resource.TestCheckResourceAttr(resourceName, "acls_externally_managed_on", "true"),
@@ -243,9 +253,9 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 						HTTPSEnabled:                           new(true),
 						NetworkFlowLoggingOn:                   new(true),
 						PostureIdentityCollectionOn:            new(true),
-						RegionalRoutingOn:                      new(true),
 						UsersApprovalOn:                        new(true),
 						UsersRoleAllowedToJoinExternalTailnets: new(tailscale.RoleAllowedToJoinExternalTailnets("member")),
+						RouteSelection:                         new(tailscale.RouteSelectionRegionalRouting),
 					}
 					err := client.TailnetSettings().Update(context.Background(), settingsRequest)
 					if err != nil {
@@ -272,6 +282,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 							RegionalRoutingOn:                      true,
 							UsersApprovalOn:                        true,
 							UsersRoleAllowedToJoinExternalTailnets: "member",
+							RouteSelection:                         tailscale.RouteSelectionRegionalRouting,
 						}),
 					),
 				),

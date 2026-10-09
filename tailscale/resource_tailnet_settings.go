@@ -41,6 +41,7 @@ type tailnetSettingsResourceModel struct {
 	RegionalRoutingOn                     types.Bool   `tfsdk:"regional_routing_on"`
 	PostureIdentityCollectionOn           types.Bool   `tfsdk:"posture_identity_collection_on"`
 	HTTPSEnabled                          types.Bool   `tfsdk:"https_enabled"`
+	RouteSelection                        types.String `tfsdk:"route_selection"`
 }
 
 func NewTailnetSettingsResource() resource.Resource {
@@ -165,6 +166,22 @@ func (s *tailnetSettingsResource) Schema(_ context.Context, _ resource.SchemaReq
 					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"route_selection": schema.StringAttribute{
+				Description: "The route selection algorithm in use by the tailnet",
+				Optional:    true,
+				Computed:    true,
+				Validators: []validator.String{
+					stringvalidator.OneOf(
+						string(tailscale.RouteSelectionActivePassiveFailover),
+						string(tailscale.RouteSelectionRegionalRouting),
+						string(tailscale.RouteSelectionRegionalRoutingInRegionFailover),
+						string(tailscale.RouteSelectionMagicRoute),
+					),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 		},
 	}
 }
@@ -204,6 +221,7 @@ func (s *tailnetSettingsResource) readSettings(ctx context.Context, state *tailn
 	state.RegionalRoutingOn = types.BoolValue(settings.RegionalRoutingOn)
 	state.PostureIdentityCollectionOn = types.BoolValue(settings.PostureIdentityCollectionOn)
 	state.HTTPSEnabled = types.BoolValue(settings.HTTPSEnabled)
+	state.RouteSelection = types.StringValue(string(settings.RouteSelection))
 
 	return nil
 }
@@ -231,6 +249,7 @@ func (s *tailnetSettingsResource) Create(ctx context.Context, req resource.Creat
 		RegionalRoutingOn:                     types.BoolUnknown(),
 		PostureIdentityCollectionOn:           types.BoolUnknown(),
 		HTTPSEnabled:                          types.BoolUnknown(),
+		RouteSelection:                        types.StringUnknown(),
 	}
 
 	if err := s.resourceTailnetSettingsDoUpdate(ctx, plan, pretendState); err != nil {
@@ -297,6 +316,10 @@ func (s *tailnetSettingsResource) resourceTailnetSettingsDoUpdate(ctx context.Co
 		return (*tailscale.RoleAllowedToJoinExternalTailnets)(strIfDiff(plan, state))
 	}
 
+	routeSelectionIfDiff := func(plan types.String, state types.String) *tailscale.RouteSelection {
+		return (*tailscale.RouteSelection)(strIfDiff(plan, state))
+	}
+
 	intIfDiff := func(plan types.Int64, state types.Int64) *int {
 		if plan.Equal(state) {
 			return nil
@@ -318,6 +341,7 @@ func (s *tailnetSettingsResource) resourceTailnetSettingsDoUpdate(ctx context.Co
 		RegionalRoutingOn:                      boolIfDiff(plan.RegionalRoutingOn, state.RegionalRoutingOn),
 		PostureIdentityCollectionOn:            boolIfDiff(plan.PostureIdentityCollectionOn, state.PostureIdentityCollectionOn),
 		HTTPSEnabled:                           boolIfDiff(plan.HTTPSEnabled, state.HTTPSEnabled),
+		RouteSelection:                         routeSelectionIfDiff(plan.RouteSelection, state.RouteSelection),
 	}
 
 	return s.Client.TailnetSettings().Update(ctx, settingsRequest)
