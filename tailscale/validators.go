@@ -20,7 +20,7 @@ var (
 	_ validator.String = cidrValidator{}
 	_ validator.String = retryDeadlineValidator{}
 	_ validator.String = aclHuJSONValidator{}
-	_ validator.List   = atLeastOneBlockRequiredListValidator{}
+	_ validator.Set    = atLeastOneBlockRequiredSetValidator{}
 	_ validator.Set    = exactlyOneBlockRequiredSetValidator{}
 )
 
@@ -111,22 +111,22 @@ func (v aclHuJSONValidator) ValidateString(ctx context.Context, req validator.St
 	}
 }
 
-// atLeastOneBlockRequiredListValidator validates that a list has a configuration
-// value. Intended for use with `schema.ListNestedBlock`.
-type atLeastOneBlockRequiredListValidator struct{}
+// atLeastOneBlockRequiredSetValidator validates that a set has a configuration
+// value. Intended for use with `schema.SetNestedBlock`.
+type atLeastOneBlockRequiredSetValidator struct{}
 
 // Description describes the validation in plain text formatting.
-func (v atLeastOneBlockRequiredListValidator) Description(_ context.Context) string {
+func (v atLeastOneBlockRequiredSetValidator) Description(_ context.Context) string {
 	return "must have at least one nested block configured"
 }
 
 // MarkdownDescription describes the validation in Markdown formatting.
-func (v atLeastOneBlockRequiredListValidator) MarkdownDescription(ctx context.Context) string {
+func (v atLeastOneBlockRequiredSetValidator) MarkdownDescription(ctx context.Context) string {
 	return v.Description(ctx)
 }
 
 // Validate performs the validation.
-func (v atLeastOneBlockRequiredListValidator) ValidateList(ctx context.Context, req validator.ListRequest, resp *validator.ListResponse) {
+func (v atLeastOneBlockRequiredSetValidator) ValidateSet(ctx context.Context, req validator.SetRequest, resp *validator.SetResponse) {
 	len := req.ConfigValue.Length(basetypes.CollectionLengthOptions{
 		UnhandledNullAsZero:    true,
 		UnhandledUnknownAsZero: true,
@@ -139,15 +139,15 @@ func (v atLeastOneBlockRequiredListValidator) ValidateList(ctx context.Context, 
 	}
 }
 
-// AtLeastOneBlockRequiredList returns a validator which ensures that at least one
+// AtLeastOneBlockRequiredSet returns a validator which ensures that at least one
 // instance of the nested block is configured.
 //
 // This validator is similar to the `Required` field on attributes and is only
-// practical for use with `schema.ListNestedBlock`.
+// practical for use with `schema.SetNestedBlock`.
 //
-// Unlike [listvalidator.SizeAtLeast] it does not ignore null or unknown values.
-func AtLeastOneBlockRequiredList() validator.List {
-	return atLeastOneBlockRequiredListValidator{}
+// Unlike [setvalidator.SizeAtLeast] it does not ignore null or unknown values.
+func AtLeastOneBlockRequiredSet() validator.Set {
+	return atLeastOneBlockRequiredSetValidator{}
 }
 
 // exactlyOneBlockRequiredSetValidator validates that a set has a configuration

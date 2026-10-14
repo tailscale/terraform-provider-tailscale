@@ -104,11 +104,11 @@ func (r *dnsConfigurationResource) Schema(_ context.Context, _ resource.SchemaRe
 						},
 					},
 					Blocks: map[string]schema.Block{
-						"nameservers": schema.ListNestedBlock{
+						"nameservers": schema.SetNestedBlock{
 							Description: "Set the nameservers used by devices on your network to resolve DNS queries.",
 
-							Validators: []validator.List{
-								AtLeastOneBlockRequiredList(),
+							Validators: []validator.Set{
+								AtLeastOneBlockRequiredSet(),
 							},
 							NestedObject: schema.NestedBlockObject{
 								Attributes: map[string]schema.Attribute{

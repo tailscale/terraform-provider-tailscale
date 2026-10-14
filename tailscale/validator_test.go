@@ -103,48 +103,48 @@ func TestAtLeastOneBlockRequiredListValidator(t *testing.T) {
 
 	testCases := []struct {
 		name    string
-		config  types.List
+		config  types.Set
 		wantErr bool
 	}{
 		{
 			name:    "one-block",
-			config:  types.ListValueMust(types.ObjectType{}, []attr.Value{block}),
+			config:  types.SetValueMust(types.ObjectType{}, []attr.Value{block}),
 			wantErr: false,
 		},
 		{
 			name:    "multiple-blocks",
-			config:  types.ListValueMust(types.ObjectType{}, []attr.Value{block, block}),
+			config:  types.SetValueMust(types.ObjectType{}, []attr.Value{block, block}),
 			wantErr: false,
 		},
 		{
 			name:    "no-blocks",
-			config:  types.ListValueMust(types.ObjectType{}, []attr.Value{}),
+			config:  types.SetValueMust(types.ObjectType{}, []attr.Value{}),
 			wantErr: true,
 		},
 		{
 			name:    "null",
-			config:  types.ListNull(types.ObjectType{}),
+			config:  types.SetNull(types.ObjectType{}),
 			wantErr: true,
 		},
 		{
 			name:    "unknown",
-			config:  types.ListUnknown(types.ObjectType{}),
+			config:  types.SetUnknown(types.ObjectType{}),
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			req := validator.ListRequest{
+			req := validator.SetRequest{
 				ConfigValue: tt.config,
 				Path:        path.Empty().AtName("parent").AtName(blockName),
 			}
 
-			resp := validator.ListResponse{
+			resp := validator.SetResponse{
 				Diagnostics: diag.Diagnostics{},
 			}
 
-			atLeastOneBlockRequiredListValidator{}.ValidateList(t.Context(), req, &resp)
+			atLeastOneBlockRequiredSetValidator{}.ValidateSet(t.Context(), req, &resp)
 
 			errors := resp.Diagnostics.Errors()
 			errorCount := len(errors)
