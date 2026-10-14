@@ -66,6 +66,55 @@ func TestProvider_TailscaleFederatedIdentity(t *testing.T) {
 	})
 }
 
+func TestProvider_TailscaleFederatedIdentityInvalid(t *testing.T) {
+	const resourceName = "tailscale_federated_identity.example_federated_identity"
+	const config = `
+	resource "tailscale_federated_identity" "example_federated_identity" {
+		scopes  = ["auth_keys"]
+		tags    = ["tag:test"]
+		issuer  = "https://example.com"
+		subject = "example-sub-*"
+	}`
+	key := func(id string, invalid bool) tailscale.Key {
+		return tailscale.Key{
+			ID:      id,
+			Scopes:  []string{"auth_keys"},
+			Tags:    []string{"tag:test"},
+			Issuer:  "https://example.com",
+			Subject: "example-sub-*",
+			Invalid: invalid,
+		}
+	}
+
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		ProtoV5ProviderFactories: testProviderFactories(t),
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					testServer.SetResponses([]TestResponse{
+						{Code: http.StatusOK, Body: key("old-key-id", false)},
+					})
+				},
+				Config: config,
+				Check:  resource.TestCheckResourceAttr(resourceName, "id", "old-key-id"),
+			},
+			// Deleted in the admin console, the identity is still served, revoked and
+			// invalid; it must be recreated rather than updated in place.
+			{
+				PreConfig: func() {
+					testServer.SetResponses([]TestResponse{
+						{Code: http.StatusOK, Body: key("old-key-id", true)},
+						{Code: http.StatusOK, Body: key("new-key-id", false)},
+					})
+				},
+				Config: config,
+				Check:  resource.TestCheckResourceAttr(resourceName, "id", "new-key-id"),
+			},
+		},
+	})
+}
+
 func TestProvider_TailscaleFederatedIdentity_ReservedCustomClaimKeys(t *testing.T) {
 	for _, reservedKey := range []string{"sub", "iss"} {
 		t.Run(reservedKey, func(t *testing.T) {
