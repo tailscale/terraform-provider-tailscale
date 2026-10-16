@@ -6,9 +6,11 @@ package tailscale
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/tailscale/hujson"
 )
@@ -16,7 +18,42 @@ import (
 var (
 	_ planmodifier.String = jsonSemanticDiffModifier{}
 	_ planmodifier.String = aclHuJSONModifier{}
+	_ planmodifier.Bool   = boolDefaultIfUnknownModifier{}
 )
+
+// BoolDefaultIfUnknown returns a plan modifier that resolves an unknown planned value to
+// value. It's intended for use on a [schema.BoolAttribute] that is both Optional
+// and Computed. It only considers values to be unknown if they are neither set
+// in the configuration nor on the remote resource.
+//
+// This means that removing the attribute from a configuration leaves the last
+// applied value in place instead of reverting to value. A value the
+// configuration sets from an expression that is still unresolved is also left
+// alone, so it is not replaced by value before Terraform has learnt it.
+func BoolDefaultIfUnknown(value bool) planmodifier.Bool {
+	return boolDefaultIfUnknownModifier{value: value}
+}
+
+// boolDefaultIfUnknownModifier resolves an unknown planned value to a fixed value.
+type boolDefaultIfUnknownModifier struct {
+	value bool
+}
+
+func (m boolDefaultIfUnknownModifier) Description(_ context.Context) string {
+	return fmt.Sprintf("Defaults to %t.", m.value)
+}
+
+func (m boolDefaultIfUnknownModifier) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (m boolDefaultIfUnknownModifier) PlanModifyBool(_ context.Context, req planmodifier.BoolRequest, resp *planmodifier.BoolResponse) {
+	// Only ever apply a default for a value that the configuration
+	// leaves empty.
+	if req.PlanValue.IsUnknown() && req.ConfigValue.IsNull() {
+		resp.PlanValue = types.BoolValue(m.value)
+	}
+}
 
 // jsonSemanticDiffModifier treats strings as equivalent if they correspond
 // to the same JSON value, and differ only in whitespace.
