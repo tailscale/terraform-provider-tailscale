@@ -119,7 +119,13 @@ func (r *dnsConfigurationResource) Schema(_ context.Context, _ resource.SchemaRe
 										Description: "This nameserver will continue to be used when an exit node is selected (requires Tailscale v1.88.1 or later). Defaults to false.",
 										Optional:    true,
 										Computed:    true,
-										Default:     booldefault.StaticBool(false),
+										// Use a custom planmodifier instead of a
+										// booldefault.StaticBool(false) default
+										// here as a temporary fix for
+										// https://github.com/tailscale/terraform-provider-tailscale/issues/836
+										PlanModifiers: []planmodifier.Bool{
+											BoolDefaultIfUnknown(false),
+										},
 									},
 								},
 							},
