@@ -1,0 +1,22 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+The OAuth client secret is returned only once and is stored in Terraform state, even
+though Terraform marks it sensitive. Protect access to state and do not revoke the
+generated credentials while Terraform manages the tailnet. If those credentials
+are lost or revoked, recover access through the creating tailnet or contact
+Tailscale support before attempting deletion again.
+
+## Example Usage
+
+{{ tffile (printf "examples/resources/%s/resource.tf" .Name)}}
+
+{{ .SchemaMarkdown | trimspace }}
