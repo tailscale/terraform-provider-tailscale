@@ -47,6 +47,38 @@ const testDNSConfigurationCreate = `
 		magic_dns = true
 	}`
 
+// Same as testDNSConfigurationCreate, but with use_with_exit_node removed
+// from the first foo.example.com nameserver.
+const testDNSConfigurationUnsetExitNode = `
+       resource "tailscale_dns_configuration" "test_configuration" {
+               nameservers {
+                       address            = "8.8.8.8"
+               }
+               nameservers {
+                       address            = "1.1.1.1"
+                       use_with_exit_node = true
+               }
+               split_dns {
+                       domain             = "foo.example.com"
+                       nameservers {
+                               address            = "1.1.1.2"
+                       }
+                       nameservers {
+                               address            = "1.1.1.3"
+                       }
+               }
+               split_dns {
+                       domain             = "bar.example.com"
+                       nameservers {
+                               address            = "8.8.8.2"
+                               use_with_exit_node = true
+                       }
+               }
+               search_paths       = ["example.com", "anotherexample.com"]
+               override_local_dns = true
+               magic_dns = true
+       }`
+
 const testDNSConfigurationUpdate = `
 	resource "tailscale_dns_configuration" "test_configuration" {
 		nameservers {
@@ -169,6 +201,33 @@ func TestAccTailscaleDNSConfiguration(t *testing.T) {
 			{
 				Config: testDNSConfigurationCreate,
 				Check:  createCheck,
+			},
+			{
+				Config: testDNSConfigurationUnsetExitNode,
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName,
+						checkProperties(&tailscale.DNSConfiguration{
+							Nameservers: []tailscale.DNSConfigurationResolver{{Address: "8.8.8.8"}, {Address: "1.1.1.1", UseWithExitNode: true}},
+							SplitDNS: map[string][]tailscale.DNSConfigurationResolver{
+								"bar.example.com": {{Address: "8.8.8.2", UseWithExitNode: true}},
+								"foo.example.com": {{Address: "1.1.1.2"}, {Address: "1.1.1.3"}},
+							},
+							SearchPaths: []string{"example.com", "anotherexample.com"},
+							Preferences: tailscale.DNSConfigurationPreferences{
+								OverrideLocalDNS: true,
+								MagicDNS:         true,
+							},
+						}),
+					),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "split_dns.*", map[string]string{
+						"domain":                           "foo.example.com",
+						"nameservers.#":                    "2",
+						"nameservers.0.address":            "1.1.1.2",
+						"nameservers.0.use_with_exit_node": "false",
+						"nameservers.1.address":            "1.1.1.3",
+						"nameservers.1.use_with_exit_node": "false",
+					}),
+				),
 			},
 			{
 				Config: testDNSConfigurationUpdate,
