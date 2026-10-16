@@ -5,6 +5,7 @@ package tailscale
 
 import (
 	"context"
+	"maps"
 	"slices"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -95,6 +96,9 @@ func (r *dnsConfigurationResource) Schema(_ context.Context, _ resource.SchemaRe
 			},
 			"split_dns": schema.SetNestedBlock{
 				Description: "Set the nameservers used by devices on your network to resolve DNS queries on specific domains (requires Tailscale v1.8 or later). Configuration does not depend on `override_local_dns`.",
+				PlanModifiers: []planmodifier.Set{
+					splitDNSDefaultsModifier{},
+				},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"domain": schema.StringAttribute{
@@ -115,11 +119,13 @@ func (r *dnsConfigurationResource) Schema(_ context.Context, _ resource.SchemaRe
 										Description: "The nameserver's IPv4 or IPv6 address.",
 										Required:    true,
 									},
+									// Default is applied by splitDNSDefaultsModifier, because
+									// schema defaults inside sets are broken, see
+									// https://github.com/hashicorp/terraform-plugin-framework/issues/783
 									"use_with_exit_node": schema.BoolAttribute{
 										Description: "This nameserver will continue to be used when an exit node is selected (requires Tailscale v1.88.1 or later). Defaults to false.",
 										Optional:    true,
 										Computed:    true,
-										Default:     booldefault.StaticBool(false),
 									},
 								},
 							},
@@ -129,6 +135,79 @@ func (r *dnsConfigurationResource) Schema(_ context.Context, _ resource.SchemaRe
 			},
 		},
 	}
+}
+
+var _ planmodifier.Set = splitDNSDefaultsModifier{}
+
+// splitDNSDefaultsModifier sets use_with_exit_node to false for split DNS
+// nameservers where it is not configured.
+//
+// This replaces a schema default on use_with_exit_node. The framework applies
+// defaults to set elements by looking up the matching element in the config by
+// value, which fails once Terraform fills in computed values from prior state,
+// so the default ends up overwriting configured values.
+// See https://github.com/hashicorp/terraform-plugin-framework/issues/783
+type splitDNSDefaultsModifier struct{}
+
+func (m splitDNSDefaultsModifier) Description(_ context.Context) string {
+	return "Sets use_with_exit_node to false for split DNS nameservers where it is not configured."
+}
+
+func (m splitDNSDefaultsModifier) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (m splitDNSDefaultsModifier) PlanModifySet(ctx context.Context, req planmodifier.SetRequest, resp *planmodifier.SetResponse) {
+	if req.PlanValue.IsNull() || req.PlanValue.IsUnknown() || req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	elems := make([]attr.Value, 0, len(req.ConfigValue.Elements()))
+	for _, elem := range req.ConfigValue.Elements() {
+		obj, ok := elem.(types.Object)
+		if !ok || obj.IsNull() || obj.IsUnknown() {
+			elems = append(elems, elem)
+			continue
+		}
+
+		attrs := maps.Clone(obj.Attributes())
+		if nameservers, ok := attrs["nameservers"].(types.List); ok && !nameservers.IsNull() && !nameservers.IsUnknown() {
+			nsElems := make([]attr.Value, 0, len(nameservers.Elements()))
+			for _, nsElem := range nameservers.Elements() {
+				nsObj, ok := nsElem.(types.Object)
+				if !ok || nsObj.IsNull() || nsObj.IsUnknown() {
+					nsElems = append(nsElems, nsElem)
+					continue
+				}
+
+				nsAttrs := maps.Clone(nsObj.Attributes())
+				if v, ok := nsAttrs["use_with_exit_node"]; ok && v.IsNull() {
+					nsAttrs["use_with_exit_node"] = types.BoolValue(false)
+				}
+				newNsObj, diags := types.ObjectValue(nsObj.AttributeTypes(ctx), nsAttrs)
+				resp.Diagnostics.Append(diags...)
+				nsElems = append(nsElems, newNsObj)
+			}
+
+			newNameservers, diags := types.ListValue(nameservers.ElementType(ctx), nsElems)
+			resp.Diagnostics.Append(diags...)
+			attrs["nameservers"] = newNameservers
+		}
+
+		newObj, diags := types.ObjectValue(obj.AttributeTypes(ctx), attrs)
+		resp.Diagnostics.Append(diags...)
+		elems = append(elems, newObj)
+	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	plan, diags := types.SetValue(req.ConfigValue.ElementType(ctx), elems)
+	resp.Diagnostics.Append(diags...)
+	if diags.HasError() {
+		return
+	}
+	resp.PlanValue = plan
 }
 
 type dnsConfigurationResourceData struct {
