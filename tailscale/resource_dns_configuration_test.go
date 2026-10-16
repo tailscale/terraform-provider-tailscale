@@ -47,6 +47,38 @@ const testDNSConfigurationCreate = `
 		magic_dns = true
 	}`
 
+// Same as testDNSConfigurationCreate, but with use_with_exit_node removed
+// from the first foo.example.com nameserver.
+const testDNSConfigurationUnsetExitNode = `
+	resource "tailscale_dns_configuration" "test_configuration" {
+		nameservers {
+			address            = "8.8.8.8"
+		}
+		nameservers {
+			address            = "1.1.1.1"
+			use_with_exit_node = true
+		}
+		split_dns {
+			domain             = "foo.example.com"
+			nameservers {
+				address            = "1.1.1.2"
+			}
+			nameservers {
+				address            = "1.1.1.3"
+			}
+		}
+		split_dns {
+			domain             = "bar.example.com"
+			nameservers {
+				address            = "8.8.8.2"
+				use_with_exit_node = true
+			}
+		}
+		search_paths       = ["example.com", "anotherexample.com"]
+		override_local_dns = true
+		magic_dns = true
+	}`
+
 const testDNSConfigurationUpdate = `
 	resource "tailscale_dns_configuration" "test_configuration" {
 		nameservers {
@@ -147,7 +179,6 @@ func TestAccTailscaleDNSConfiguration(t *testing.T) {
 			"nameservers.0.address":            "1.1.1.2",
 			"nameservers.0.use_with_exit_node": "true",
 			"nameservers.1.address":            "1.1.1.3",
-			"nameservers.1.use_with_exit_node": "false",
 		}),
 		resource.TestCheckTypeSetElemNestedAttrs(resourceName, "split_dns.*", map[string]string{
 			"domain":                           "bar.example.com",
@@ -169,6 +200,31 @@ func TestAccTailscaleDNSConfiguration(t *testing.T) {
 			{
 				Config: testDNSConfigurationCreate,
 				Check:  createCheck,
+			},
+			{
+				Config: testDNSConfigurationUnsetExitNode,
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName,
+						checkProperties(&tailscale.DNSConfiguration{
+							Nameservers: []tailscale.DNSConfigurationResolver{{Address: "8.8.8.8"}, {Address: "1.1.1.1", UseWithExitNode: true}},
+							SplitDNS: map[string][]tailscale.DNSConfigurationResolver{
+								"bar.example.com": {{Address: "8.8.8.2", UseWithExitNode: true}},
+								"foo.example.com": {{Address: "1.1.1.2"}, {Address: "1.1.1.3"}},
+							},
+							SearchPaths: []string{"example.com", "anotherexample.com"},
+							Preferences: tailscale.DNSConfigurationPreferences{
+								OverrideLocalDNS: true,
+								MagicDNS:         true,
+							},
+						}),
+					),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "split_dns.*", map[string]string{
+						"domain":                "foo.example.com",
+						"nameservers.#":         "2",
+						"nameservers.0.address": "1.1.1.2",
+						"nameservers.1.address": "1.1.1.3",
+					}),
+				),
 			},
 			{
 				Config: testDNSConfigurationUpdate,
@@ -284,6 +340,25 @@ func TestReconcileNameservers(t *testing.T) {
 			},
 		},
 		{
+			// Existing null use_with_exit_node is kept if the update is false,
+			// and replaced if the update is true.
+			name: "preserves-null-if-false",
+			existing: []nameserverModel{
+				{Address: types.StringValue("1.1.1.1"), UseWithExitNode: types.BoolNull()},
+				{Address: types.StringValue("8.8.8.8"), UseWithExitNode: types.BoolNull()},
+			},
+			updates: []tailscale.DNSConfigurationResolver{
+				{Address: "1.1.1.1", UseWithExitNode: false},
+				{Address: "8.8.8.8", UseWithExitNode: true},
+				{Address: "9.9.9.9", UseWithExitNode: false},
+			},
+			want: []nameserverModel{
+				{Address: types.StringValue("1.1.1.1"), UseWithExitNode: types.BoolNull()},
+				{Address: types.StringValue("8.8.8.8"), UseWithExitNode: types.BoolValue(true)},
+				{Address: types.StringValue("9.9.9.9"), UseWithExitNode: types.BoolValue(false)},
+			},
+		},
+		{
 			// Noop update should preserve the existing order.
 			name: "preserves-existing-order-noop",
 			existing: []nameserverModel{
@@ -308,7 +383,7 @@ func TestReconcileNameservers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := reconcileNameservers(tt.existing, tt.updates)
+			got := reconcileNameservers(tt.existing, tt.updates, false)
 			if diff := cmp.Diff(tt.want, got); diff != "" {
 				t.Errorf("reconcileNameservers() mismatch (-want +got):\n%s", diff)
 			}
@@ -403,7 +478,7 @@ func TestReconcileSplitDNS(t *testing.T) {
 				{
 					Domain: types.StringValue("new-domain.com"),
 					Nameservers: []nameserverModel{
-						{Address: types.StringValue("1.1.1.1"), UseWithExitNode: types.BoolValue(false)},
+						{Address: types.StringValue("1.1.1.1"), UseWithExitNode: types.BoolNull()},
 					},
 				},
 			},

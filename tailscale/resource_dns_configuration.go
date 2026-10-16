@@ -115,11 +115,13 @@ func (r *dnsConfigurationResource) Schema(_ context.Context, _ resource.SchemaRe
 										Description: "The nameserver's IPv4 or IPv6 address.",
 										Required:    true,
 									},
+									// Unlike the top-level nameservers, this has no schema
+									// default, because defaults inside sets are broken, see
+									// https://github.com/hashicorp/terraform-plugin-framework/issues/783
+									// Instead, null is treated as false.
 									"use_with_exit_node": schema.BoolAttribute{
 										Description: "This nameserver will continue to be used when an exit node is selected (requires Tailscale v1.88.1 or later). Defaults to false.",
 										Optional:    true,
-										Computed:    true,
-										Default:     booldefault.StaticBool(false),
 									},
 								},
 							},
@@ -164,7 +166,7 @@ func (r *dnsConfigurationResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 
-	state.Nameservers = reconcileNameservers(state.Nameservers, remote.Nameservers)
+	state.Nameservers = reconcileNameservers(state.Nameservers, remote.Nameservers, false)
 	state.SplitDNS = reconcileSplitDNS(state.SplitDNS, remote.SplitDNS)
 	if remote.SearchPaths == nil {
 		remote.SearchPaths = []string{}
@@ -178,7 +180,10 @@ func (r *dnsConfigurationResource) Read(ctx context.Context, req resource.ReadRe
 
 // reconcileNameservers updates an existing list of nameservers with an updated list of nameservers,
 // preserving the original ordering of any retained existing nameservers.
-func reconcileNameservers(existing []nameserverModel, updates []tailscale.DNSConfigurationResolver) []nameserverModel {
+//
+// An existing null use_with_exit_node is preserved if the updated value is false.
+// If nullIfFalse is true, new nameservers get a null use_with_exit_node instead of false.
+func reconcileNameservers(existing []nameserverModel, updates []tailscale.DNSConfigurationResolver, nullIfFalse bool) []nameserverModel {
 	updates = slices.Clone(updates)
 	nameservers := make([]nameserverModel, 0, len(updates))
 
@@ -187,13 +192,21 @@ func reconcileNameservers(existing []nameserverModel, updates []tailscale.DNSCon
 			return u.Address == nameserver.Address.ValueString()
 		})
 		if idx >= 0 {
-			nameservers = append(nameservers, nameserverToMap(updates[idx]))
+			n := nameserverToMap(updates[idx])
+			if nameserver.UseWithExitNode.IsNull() && !updates[idx].UseWithExitNode {
+				n.UseWithExitNode = types.BoolNull()
+			}
+			nameservers = append(nameservers, n)
 			updates = slices.Delete(updates, idx, idx+1)
 		}
 	}
 
-	for _, n := range updates {
-		nameservers = append(nameservers, nameserverToMap(n))
+	for _, u := range updates {
+		n := nameserverToMap(u)
+		if nullIfFalse && !u.UseWithExitNode {
+			n.UseWithExitNode = types.BoolNull()
+		}
+		nameservers = append(nameservers, n)
 	}
 
 	return nameservers
@@ -210,7 +223,7 @@ func reconcileSplitDNS(existing []splitDNSModel, updates map[string][]tailscale.
 		if found {
 			splitDNS = append(splitDNS, splitDNSModel{
 				Domain:      s.Domain,
-				Nameservers: reconcileNameservers(s.Nameservers, nameservers),
+				Nameservers: reconcileNameservers(s.Nameservers, nameservers, true),
 			})
 			delete(updates, domain)
 		}
@@ -219,7 +232,7 @@ func reconcileSplitDNS(existing []splitDNSModel, updates map[string][]tailscale.
 	for domain, nameservers := range updates {
 		splitDNS = append(splitDNS, splitDNSModel{
 			Domain:      types.StringValue(domain),
-			Nameservers: reconcileNameservers(nil, nameservers),
+			Nameservers: reconcileNameservers(nil, nameservers, true),
 		})
 	}
 
