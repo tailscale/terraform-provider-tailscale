@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
@@ -30,6 +32,38 @@ const testDNSConfigurationCreate = `
 			nameservers {
 				address            = "1.1.1.2"
 				use_with_exit_node = true
+			}
+			nameservers {
+				address            = "1.1.1.3"
+			}
+		}
+		split_dns {
+			domain             = "bar.example.com"
+			nameservers {
+				address            = "8.8.8.2"
+				use_with_exit_node = true
+			}
+		}
+		search_paths       = ["example.com", "anotherexample.com"]
+		override_local_dns = true
+		magic_dns = true
+	}`
+
+// Same as testDNSConfigurationCreate, but with use_with_exit_node removed
+// from the first foo.example.com nameserver.
+const testDNSConfigurationUnsetExitNode = `
+	resource "tailscale_dns_configuration" "test_configuration" {
+		nameservers {
+			address            = "8.8.8.8"
+		}
+		nameservers {
+			address            = "1.1.1.1"
+			use_with_exit_node = true
+		}
+		split_dns {
+			domain             = "foo.example.com"
+			nameservers {
+				address            = "1.1.1.2"
 			}
 			nameservers {
 				address            = "1.1.1.3"
@@ -169,6 +203,33 @@ func TestAccTailscaleDNSConfiguration(t *testing.T) {
 			{
 				Config: testDNSConfigurationCreate,
 				Check:  createCheck,
+			},
+			{
+				Config: testDNSConfigurationUnsetExitNode,
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName,
+						checkProperties(&tailscale.DNSConfiguration{
+							Nameservers: []tailscale.DNSConfigurationResolver{{Address: "8.8.8.8"}, {Address: "1.1.1.1", UseWithExitNode: true}},
+							SplitDNS: map[string][]tailscale.DNSConfigurationResolver{
+								"bar.example.com": {{Address: "8.8.8.2", UseWithExitNode: true}},
+								"foo.example.com": {{Address: "1.1.1.2"}, {Address: "1.1.1.3"}},
+							},
+							SearchPaths: []string{"example.com", "anotherexample.com"},
+							Preferences: tailscale.DNSConfigurationPreferences{
+								OverrideLocalDNS: true,
+								MagicDNS:         true,
+							},
+						}),
+					),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "split_dns.*", map[string]string{
+						"domain":                           "foo.example.com",
+						"nameservers.#":                    "2",
+						"nameservers.0.address":            "1.1.1.2",
+						"nameservers.0.use_with_exit_node": "false",
+						"nameservers.1.address":            "1.1.1.3",
+						"nameservers.1.use_with_exit_node": "false",
+					}),
+				),
 			},
 			{
 				Config: testDNSConfigurationUpdate,
@@ -417,6 +478,113 @@ func TestReconcileSplitDNS(t *testing.T) {
 			got := reconcileSplitDNS(tt.existing, tt.updates)
 			if diff := cmp.Diff(tt.want, got); diff != "" {
 				t.Errorf("reconcileSplitDNS() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestSplitDNSDefaultsModifier(t *testing.T) {
+	ctx := context.Background()
+
+	nameserverType := types.ObjectType{AttrTypes: map[string]attr.Type{
+		"address":            types.StringType,
+		"use_with_exit_node": types.BoolType,
+	}}
+	splitDNSType := types.ObjectType{AttrTypes: map[string]attr.Type{
+		"domain":      types.StringType,
+		"nameservers": types.ListType{ElemType: nameserverType},
+	}}
+
+	nameserver := func(address attr.Value, useWithExitNode attr.Value) attr.Value {
+		return types.ObjectValueMust(nameserverType.AttrTypes, map[string]attr.Value{
+			"address":            address,
+			"use_with_exit_node": useWithExitNode,
+		})
+	}
+	splitDNS := func(domain string, nameservers ...attr.Value) attr.Value {
+		return types.ObjectValueMust(splitDNSType.AttrTypes, map[string]attr.Value{
+			"domain":      types.StringValue(domain),
+			"nameservers": types.ListValueMust(nameserverType, nameservers),
+		})
+	}
+	set := func(elems ...attr.Value) types.Set {
+		return types.SetValueMust(splitDNSType, elems)
+	}
+
+	testCases := []struct {
+		name   string
+		config types.Set
+		plan   types.Set
+		want   types.Set
+	}{
+		{
+			name:   "fills-unset-values",
+			config: set(splitDNS("example.com", nameserver(types.StringValue("1.1.1.1"), types.BoolNull()))),
+			plan:   set(splitDNS("example.com", nameserver(types.StringValue("1.1.1.1"), types.BoolUnknown()))),
+			want:   set(splitDNS("example.com", nameserver(types.StringValue("1.1.1.1"), types.BoolValue(false)))),
+		},
+		{
+			// Regression test for https://github.com/hashicorp/terraform-plugin-framework/issues/783
+			name: "preserves-configured-values-next-to-unset",
+			config: set(splitDNS("example.com",
+				nameserver(types.StringValue("1.1.1.1"), types.BoolValue(true)),
+				nameserver(types.StringValue("1.1.1.2"), types.BoolNull()),
+			)),
+			plan: set(splitDNS("example.com",
+				nameserver(types.StringValue("1.1.1.1"), types.BoolValue(true)),
+				nameserver(types.StringValue("1.1.1.2"), types.BoolValue(false)),
+			)),
+			want: set(splitDNS("example.com",
+				nameserver(types.StringValue("1.1.1.1"), types.BoolValue(true)),
+				nameserver(types.StringValue("1.1.1.2"), types.BoolValue(false)),
+			)),
+		},
+		{
+			name:   "preserves-unknown-value",
+			config: set(splitDNS("example.com", nameserver(types.StringValue("1.1.1.1"), types.BoolUnknown()))),
+			plan:   set(splitDNS("example.com", nameserver(types.StringValue("1.1.1.1"), types.BoolUnknown()))),
+			want:   set(splitDNS("example.com", nameserver(types.StringValue("1.1.1.1"), types.BoolUnknown()))),
+		},
+		{
+			// Removing use_with_exit_node from config resets it to false,
+			// rather than keeping the prior state value.
+			name:   "resets-removed-value",
+			config: set(splitDNS("example.com", nameserver(types.StringValue("1.1.1.1"), types.BoolNull()))),
+			plan:   set(splitDNS("example.com", nameserver(types.StringValue("1.1.1.1"), types.BoolValue(true)))),
+			want:   set(splitDNS("example.com", nameserver(types.StringValue("1.1.1.1"), types.BoolValue(false)))),
+		},
+		{
+			name:   "preserves-unknown-address",
+			config: set(splitDNS("example.com", nameserver(types.StringUnknown(), types.BoolNull()))),
+			plan:   set(splitDNS("example.com", nameserver(types.StringUnknown(), types.BoolUnknown()))),
+			want:   set(splitDNS("example.com", nameserver(types.StringUnknown(), types.BoolValue(false)))),
+		},
+		{
+			name:   "config-unknown",
+			config: types.SetUnknown(splitDNSType),
+			plan:   types.SetUnknown(splitDNSType),
+			want:   types.SetUnknown(splitDNSType),
+		},
+		{
+			name:   "plan-null",
+			config: set(splitDNS("example.com", nameserver(types.StringValue("1.1.1.1"), types.BoolNull()))),
+			plan:   types.SetNull(splitDNSType),
+			want:   types.SetNull(splitDNSType),
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			req := planmodifier.SetRequest{ConfigValue: tt.config, PlanValue: tt.plan}
+			resp := &planmodifier.SetResponse{PlanValue: tt.plan}
+			splitDNSDefaultsModifier{}.PlanModifySet(ctx, req, resp)
+			if resp.Diagnostics.HasError() {
+				t.Fatalf("unexpected diagnostics: %v", resp.Diagnostics)
+			}
+			if !resp.PlanValue.Equal(tt.want) {
+				t.Errorf("PlanModifySet() = %v, want %v", resp.PlanValue, tt.want)
 			}
 		})
 	}

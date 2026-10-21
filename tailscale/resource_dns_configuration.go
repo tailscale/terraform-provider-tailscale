@@ -5,6 +5,7 @@ package tailscale
 
 import (
 	"context"
+	"maps"
 	"slices"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -95,6 +96,11 @@ func (r *dnsConfigurationResource) Schema(_ context.Context, _ resource.SchemaRe
 			},
 			"split_dns": schema.SetNestedBlock{
 				Description: "Set the nameservers used by devices on your network to resolve DNS queries on specific domains (requires Tailscale v1.8 or later). Configuration does not depend on `override_local_dns`.",
+				// Custom plan modifier used to enforce default of `false` for
+				// `use_with_exit_node` for split DNS nameservers.
+				// This is a workaround for the framework's broken defaults in set elements:
+				// https://github.com/hashicorp/terraform-plugin-framework/issues/783
+				PlanModifiers: []planmodifier.Set{splitDNSDefaultsModifier{}},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"domain": schema.StringAttribute{
@@ -119,7 +125,6 @@ func (r *dnsConfigurationResource) Schema(_ context.Context, _ resource.SchemaRe
 										Description: "This nameserver will continue to be used when an exit node is selected (requires Tailscale v1.88.1 or later). Defaults to false.",
 										Optional:    true,
 										Computed:    true,
-										Default:     booldefault.StaticBool(false),
 									},
 								},
 							},
@@ -129,6 +134,102 @@ func (r *dnsConfigurationResource) Schema(_ context.Context, _ resource.SchemaRe
 			},
 		},
 	}
+}
+
+var _ planmodifier.Set = splitDNSDefaultsModifier{}
+
+// splitDNSDefaultsModifier sets use_with_exit_node to false for split DNS
+// nameservers where it is not configured.
+//
+// This replaces a schema default on use_with_exit_node, which is broken:
+// See https://github.com/hashicorp/terraform-plugin-framework/issues/783
+type splitDNSDefaultsModifier struct{}
+
+func (m splitDNSDefaultsModifier) Description(_ context.Context) string {
+	return "Sets use_with_exit_node to false for split DNS nameservers where it is not configured."
+}
+
+func (m splitDNSDefaultsModifier) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (m splitDNSDefaultsModifier) PlanModifySet(ctx context.Context, req planmodifier.SetRequest, resp *planmodifier.SetResponse) {
+	if req.PlanValue.IsNull() || req.PlanValue.IsUnknown() ||
+		req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	elems := make([]attr.Value, 0, len(req.ConfigValue.Elements()))
+	for _, elem := range req.ConfigValue.Elements() {
+		updated, diags := defaultSplitDNS(ctx, elem)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		elems = append(elems, updated)
+	}
+
+	plan, diags := types.SetValue(req.ConfigValue.ElementType(ctx), elems)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.PlanValue = plan
+}
+
+// defaultSplitDNS applies nameserver defaults to one split DNS entry.
+func defaultSplitDNS(ctx context.Context, elem attr.Value) (attr.Value, diag.Diagnostics) {
+	obj, ok := elem.(types.Object)
+	if !ok || obj.IsNull() || obj.IsUnknown() {
+		return elem, nil
+	}
+
+	attrs := maps.Clone(obj.Attributes())
+	nameservers, ok := attrs["nameservers"].(types.List)
+	if !ok || nameservers.IsNull() || nameservers.IsUnknown() {
+		return elem, nil
+	}
+
+	nsElems := make([]attr.Value, 0, len(nameservers.Elements()))
+	for _, nsElem := range nameservers.Elements() {
+		updated, diags := defaultNameserver(ctx, nsElem)
+		if diags.HasError() {
+			return nil, diags
+		}
+
+		nsElems = append(nsElems, updated)
+	}
+
+	updatedNameservers, diags := types.ListValue(
+		nameservers.ElementType(ctx),
+		nsElems,
+	)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	attrs["nameservers"] = updatedNameservers
+	return types.ObjectValue(obj.AttributeTypes(ctx), attrs)
+}
+
+// defaultNameserver defaults use_with_exit_node to false only when null.
+// Explicit true/false and unknown values are preserved.
+func defaultNameserver(ctx context.Context, elem attr.Value) (attr.Value, diag.Diagnostics) {
+	obj, ok := elem.(types.Object)
+	if !ok || obj.IsNull() || obj.IsUnknown() {
+		return elem, nil
+	}
+
+	attrs := obj.Attributes()
+	useWithExitNode, ok := attrs["use_with_exit_node"]
+	if !ok || !useWithExitNode.IsNull() {
+		return elem, nil
+	}
+
+	attrs = maps.Clone(attrs)
+	attrs["use_with_exit_node"] = types.BoolValue(false)
+
+	return types.ObjectValue(obj.AttributeTypes(ctx), attrs)
 }
 
 type dnsConfigurationResourceData struct {
