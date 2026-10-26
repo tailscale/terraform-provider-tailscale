@@ -1,6 +1,6 @@
 module github.com/tailscale/terraform-provider-tailscale
 
-go 1.27.1
+go 1.27.3
 
 require (
 	github.com/google/go-cmp v0.7.0
@@ -13,7 +13,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/tailscale/hujson v0.0.0-20260727124030-b80ff77dac4f
 	golang.org/x/tools v0.52.0
-	tailscale.com v1.104.1
+	tailscale.com v1.104.2
 	tailscale.com/client/tailscale/v2 v2.12.0
 )
 
