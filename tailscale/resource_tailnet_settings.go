@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -22,10 +24,11 @@ import (
 )
 
 var (
-	_ resource.Resource                = &tailnetSettingsResource{}
-	_ resource.ResourceWithConfigure   = &tailnetSettingsResource{}
-	_ resource.ResourceWithImportState = &tailnetSettingsResource{}
-	_ resource.ResourceWithModifyPlan  = &tailnetSettingsResource{}
+	_ resource.Resource                     = &tailnetSettingsResource{}
+	_ resource.ResourceWithConfigure        = &tailnetSettingsResource{}
+	_ resource.ResourceWithImportState      = &tailnetSettingsResource{}
+	_ resource.ResourceWithModifyPlan       = &tailnetSettingsResource{}
+	_ resource.ResourceWithConfigValidators = &tailnetSettingsResource{}
 )
 
 type tailnetSettingsResourceModel struct {
@@ -143,12 +146,15 @@ func (s *tailnetSettingsResource) Schema(_ context.Context, _ resource.SchemaReq
 				},
 			},
 			"regional_routing_on": schema.BoolAttribute{
-				Description: "Whether regional routing is enabled for the tailnet",
-				Optional:    true,
-				Computed:    true,
+				Description: "Whether regional routing is enabled for the tailnet. This is a deprecated view of " +
+					"`route_selection`, and is equivalent to `route_selection = \"regional-routing\"`. Setting both " +
+					"`regional_routing_on` and `route_selection` in the same configuration is an error.",
+				Optional: true,
+				Computed: true,
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
 				},
+				DeprecationMessage: "Deprecated starting 2026-10-09; prefer setting route_selection instead.",
 			},
 			"posture_identity_collection_on": schema.BoolAttribute{
 				Description: "Whether identity collection is enabled for device posture integrations for the tailnet",
@@ -167,9 +173,10 @@ func (s *tailnetSettingsResource) Schema(_ context.Context, _ resource.SchemaReq
 				},
 			},
 			"route_selection": schema.StringAttribute{
-				Description: "The route selection algorithm in use by the tailnet",
-				Optional:    true,
-				Computed:    true,
+				Description: "The route selection algorithm in use by the tailnet. Supersedes the deprecated " +
+					"`regional_routing_on`; setting both in the same configuration is an error.",
+				Optional: true,
+				Computed: true,
 				Validators: []validator.String{
 					stringvalidator.OneOf(
 						string(tailscale.RouteSelectionActivePassiveFailover),
@@ -183,6 +190,20 @@ func (s *tailnetSettingsResource) Schema(_ context.Context, _ resource.SchemaReq
 				},
 			},
 		},
+	}
+}
+
+func (s *tailnetSettingsResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{
+		// regional_routing_on and route_selection are two views of a single tailnet
+		// setting, and the API rejects requests that specify both. While we shouldn't necessarily
+		// encode API constraints in clients/providers like this, catching it here reports the error
+		// at plan time, before any diff suppression, so we consistently catch the issue early
+		// instead of hoping the apply's result and/or state diff do the right dance.
+		resourcevalidator.Conflicting(
+			path.MatchRoot("regional_routing_on"),
+			path.MatchRoot("route_selection"),
+		),
 	}
 }
 
@@ -298,15 +319,18 @@ func (s *tailnetSettingsResource) Update(ctx context.Context, req resource.Updat
 }
 
 func (s *tailnetSettingsResource) resourceTailnetSettingsDoUpdate(ctx context.Context, plan tailnetSettingsResourceModel, state tailnetSettingsResourceModel) error {
+	// An unknown plan value means the provider will learn the value by reading it back
+	// after apply, so it must not be sent. Note that ValueBoolPointer and equivalents only
+	// return nil for null values, not unknown ones, so this has to be checked explicitly.
 	boolIfDiff := func(plan types.Bool, state types.Bool) *bool {
-		if plan.Equal(state) {
+		if plan.IsUnknown() || plan.Equal(state) {
 			return nil
 		}
 		return plan.ValueBoolPointer()
 	}
 
 	strIfDiff := func(plan types.String, state types.String) *string {
-		if plan.Equal(state) {
+		if plan.IsUnknown() || plan.Equal(state) {
 			return nil
 		}
 		return plan.ValueStringPointer()
@@ -321,7 +345,7 @@ func (s *tailnetSettingsResource) resourceTailnetSettingsDoUpdate(ctx context.Co
 	}
 
 	intIfDiff := func(plan types.Int64, state types.Int64) *int {
-		if plan.Equal(state) {
+		if plan.IsUnknown() || plan.Equal(state) {
 			return nil
 		}
 		v := int(plan.ValueInt64())
@@ -358,5 +382,34 @@ func (s *tailnetSettingsResource) ModifyPlan(ctx context.Context, req resource.M
 			"Destroying this resource will only remove the resource from the Terraform state and will not undo or change any tailnet settings. "+
 				"Use a tailscale_tailnet_settings resource to explicitly change any settings you want to set back, or manually update them via the admin console.",
 		)
+		return
+	}
+
+	// regional_routing_on (deprecated) and route_selection are two views of the same
+	// underlying tailnet setting. Patching either one can change what the API returns
+	// for the other. [tailnetSettingsResource.ConfigValidators] rejects configs that set both,
+	// so at most one of them is set by the time we get here.
+	//
+	// In Terraform parlance, this also means we should mark the "other" attribute unknown if
+	// either one of these attributes is changing in the configuration. Otherwise,
+	// [stringplanmodifier.UseStateForUnknown] simply carries over the last known value,
+	// which would differ from the result of the apply, resulting in an
+	// "inconsistent result after apply" error.
+
+	var routeSelectionConfig, routeSelectionState types.String
+	var regionalRoutingConfig, regionalRoutingState types.Bool
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("route_selection"), &routeSelectionConfig)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("route_selection"), &routeSelectionState)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("regional_routing_on"), &regionalRoutingConfig)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("regional_routing_on"), &regionalRoutingState)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	switch {
+	case !routeSelectionConfig.IsNull() && !routeSelectionConfig.Equal(routeSelectionState):
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("regional_routing_on"), types.BoolUnknown())...)
+	case !regionalRoutingConfig.IsNull() && !regionalRoutingConfig.Equal(regionalRoutingState):
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("route_selection"), types.StringUnknown())...)
 	}
 }

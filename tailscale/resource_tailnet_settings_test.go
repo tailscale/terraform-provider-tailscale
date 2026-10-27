@@ -5,6 +5,7 @@ package tailscale
 
 import (
 	"context"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -50,6 +51,25 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 	const testTailnetSettingsOneSet = `
 		resource "tailscale_tailnet_settings" "test_settings" {
 			acls_externally_managed_on = true
+		}`
+
+	// regional_routing_on and route_selection are two views of a single setting. These
+	// configs set exactly one of the two at a time.
+	const testTailnetSettingsRouteSelectionRegional = `
+		resource "tailscale_tailnet_settings" "test_settings" {
+			route_selection = "regional-routing"
+		}`
+
+	const testTailnetSettingsRegionalRoutingOn = `
+		resource "tailscale_tailnet_settings" "test_settings" {
+			regional_routing_on = true
+		}`
+
+	// Restores the route selection left by testTailnetSettingsUpdate, so that the steps
+	// above are self-contained and the checks that follow this test case still hold.
+	const testTailnetSettingsRouteSelectionMagicRoute = `
+		resource "tailscale_tailnet_settings" "test_settings" {
+			route_selection = "magicroute"
 		}`
 
 	checkProperties := func(expected *tailscale.TailnetSettings) func(client *tailscale.Client, rs *terraform.ResourceState) error {
@@ -193,6 +213,76 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 				),
 			},
 			{
+				// Changing only route_selection must not send the derived
+				// regional_routing_on alongside it, and must pass.
+				Config: testTailnetSettingsRouteSelectionRegional,
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName,
+						checkProperties(&tailscale.TailnetSettings{
+							ACLsExternallyManagedOn:                true,
+							ACLsExternalLink:                       "https://bar.com",
+							DevicesApprovalOn:                      false,
+							DevicesAutoUpdatesOn:                   false,
+							DevicesKeyDurationDays:                 10,
+							UsersApprovalOn:                        false,
+							UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsAdmin,
+							PostureIdentityCollectionOn:            false,
+							HTTPSEnabled:                           false,
+							RegionalRoutingOn:                      true,
+							RouteSelection:                         tailscale.RouteSelectionRegionalRouting,
+						}),
+					),
+					resource.TestCheckResourceAttr(resourceName, "route_selection", "regional-routing"),
+					resource.TestCheckResourceAttr(resourceName, "regional_routing_on", "true"),
+				),
+			},
+			{
+				// route_selection moving between two non-default values.
+				Config: testTailnetSettingsRouteSelectionMagicRoute,
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName,
+						checkProperties(&tailscale.TailnetSettings{
+							ACLsExternallyManagedOn:                true,
+							ACLsExternalLink:                       "https://bar.com",
+							DevicesApprovalOn:                      false,
+							DevicesAutoUpdatesOn:                   false,
+							DevicesKeyDurationDays:                 10,
+							UsersApprovalOn:                        false,
+							UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsAdmin,
+							PostureIdentityCollectionOn:            false,
+							HTTPSEnabled:                           false,
+							RegionalRoutingOn:                      false,
+							RouteSelection:                         tailscale.RouteSelectionMagicRoute,
+						}),
+					),
+					resource.TestCheckResourceAttr(resourceName, "route_selection", "magicroute"),
+					resource.TestCheckResourceAttr(resourceName, "regional_routing_on", "false"),
+				),
+			},
+			{
+				// The deprecated attribute still works, and updates the derived route_selection.
+				Config: testTailnetSettingsRegionalRoutingOn,
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName,
+						checkProperties(&tailscale.TailnetSettings{
+							ACLsExternallyManagedOn:                true,
+							ACLsExternalLink:                       "https://bar.com",
+							DevicesApprovalOn:                      false,
+							DevicesAutoUpdatesOn:                   false,
+							DevicesKeyDurationDays:                 10,
+							UsersApprovalOn:                        false,
+							UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsAdmin,
+							PostureIdentityCollectionOn:            false,
+							HTTPSEnabled:                           false,
+							RegionalRoutingOn:                      true,
+							RouteSelection:                         tailscale.RouteSelectionRegionalRouting,
+						}),
+					),
+					resource.TestCheckResourceAttr(resourceName, "regional_routing_on", "true"),
+					resource.TestCheckResourceAttr(resourceName, "route_selection", "regional-routing"),
+				),
+			},
+			{
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -215,7 +305,8 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 					UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsMember,
 					PostureIdentityCollectionOn:            true,
 					HTTPSEnabled:                           true,
-					RouteSelection:                         tailscale.RouteSelectionMagicRoute,
+					RegionalRoutingOn:                      true,
+					RouteSelection:                         tailscale.RouteSelectionRegionalRouting,
 				}),
 			),
 			resource.TestCheckResourceAttr(resourceName, "acls_externally_managed_on", "true"),
@@ -227,6 +318,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 			resource.TestCheckResourceAttr(resourceName, "users_role_allowed_to_join_external_tailnet", "member"),
 			resource.TestCheckResourceAttr(resourceName, "posture_identity_collection_on", "true"),
 			resource.TestCheckResourceAttr(resourceName, "https_enabled", "true"),
+			resource.TestCheckResourceAttr(resourceName, "regional_routing_on", "true"),
 		))
 
 	resource.Test(t, resource.TestCase{
@@ -290,4 +382,35 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 		},
 	})
 
+}
+
+// TestProvider_ResourceTailscaleTailnetSettings_InvalidConfig asserts that we reject
+// setting both regional_routing_on and route_selection in the same configuration.
+func TestProvider_ResourceTailscaleTailnetSettings_InvalidConfig(t *testing.T) {
+	const wantErr = `These attributes cannot be configured together:\s\[regional_routing_on,route_selection\]`
+
+	testCases := []expectedErrorTestCase{
+		{
+			Name: "agreeing-values",
+			Config: `
+					resource "tailscale_tailnet_settings" "test_settings" {
+						regional_routing_on = true
+						route_selection     = "regional-routing"
+					}
+				`,
+			ExpectError: regexp.MustCompile(wantErr),
+		},
+		{
+			Name: "contradictory-values",
+			Config: `
+					resource "tailscale_tailnet_settings" "test_settings" {
+						regional_routing_on = false
+						route_selection     = "regional-routing"
+					}
+				`,
+			ExpectError: regexp.MustCompile(wantErr),
+		},
+	}
+
+	runExpectedErrorTests(t, testCases)
 }
