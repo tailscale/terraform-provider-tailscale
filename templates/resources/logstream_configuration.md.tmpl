@@ -1,0 +1,46 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+## Example Usage
+
+{{ tffile (printf "examples/resources/%s/resource.tf" .Name)}}
+
+### Write-only token
+
+Use `token_wo` to supply an authentication token without storing it in plan or
+state files. It accepts ephemeral values, including values fetched from a
+secret manager's ephemeral resource. This requires Terraform 1.11+ or OpenTofu
+1.11+.
+
+{{ tffile (printf "examples/resources/%s/write_only.tf" .Name)}}
+
+Set `token_wo_version` alongside `token_wo` and increment it when rotating the
+token. Changing only `token_wo` does not trigger an update because its previous
+value is not retained. The provider sends the current token on creation and
+every configuration update, including updates to other arguments.
+
+To migrate an existing resource, replace `token` with `token_wo` and set
+`token_wo_version`. Applying removes the old `token` value from the current
+resource state without replacing the logstream configuration. Previous state
+snapshots and saved plans still contain any tokens they previously recorded.
+The secret's source must also avoid persisting its value; a regular secret
+data source still stores its results in state.
+
+After importing a resource, configure `token_wo` and `token_wo_version` to manage
+its token. The API does not return the token or its version.
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import is supported using the following syntax:
+
+{{ codefile "shell" (printf "examples/resources/%s/import.sh" .Name)}}
