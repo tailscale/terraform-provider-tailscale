@@ -31,7 +31,7 @@ resource "tailscale_tailnet_settings" "sample_tailnet_settings" {
 
 ### Optional
 
-- `acls_external_link` (String) Link to your external ACL definition or management system. Must be a valid URL.
+- `acls_external_link` (String) Link to your external ACL definition or management system. Must be a valid URL, or an empty string to clear the link.
 - `acls_externally_managed_on` (Boolean) Prevent users from editing policies in the admin console to avoid conflicts with external management workflows like GitOps or Terraform.
 - `devices_approval_on` (Boolean) Whether device approval is enabled for the tailnet
 - `devices_auto_updates_on` (Boolean) Whether auto updates are enabled for devices that belong to this tailnet
