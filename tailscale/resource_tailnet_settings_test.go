@@ -58,6 +58,11 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 				return err
 			}
 
+			// RouteSelection isn't supported by the provider yet, and the API
+			// always returns a non-empty value for it. We'll ignore it for now.
+			// TODO: unignore once we add support for route_selection.
+			actual.RouteSelection = ""
+
 			if err := assertEqual(expected, actual, "wrong Tailnet settings"); err != nil {
 				return err
 			}
