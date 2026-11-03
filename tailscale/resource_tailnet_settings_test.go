@@ -5,6 +5,7 @@ package tailscale
 
 import (
 	"context"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -40,6 +41,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 			users_role_allowed_to_join_external_tailnet = "admin"
 			posture_identity_collection_on = false
 			https_enabled = false
+			route_selection = "magicroute"
 		}`
 
 	const testTailnetSettingsEmpty = `
@@ -51,17 +53,31 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 			acls_externally_managed_on = true
 		}`
 
+	// regional_routing_on and route_selection are two views of a single setting. These
+	// configs set exactly one of the two at a time.
+	const testTailnetSettingsRouteSelectionRegional = `
+		resource "tailscale_tailnet_settings" "test_settings" {
+			route_selection = "regional-routing"
+		}`
+
+	const testTailnetSettingsRegionalRoutingOn = `
+		resource "tailscale_tailnet_settings" "test_settings" {
+			regional_routing_on = true
+		}`
+
+	// Restores the route selection left by testTailnetSettingsUpdate, so that the steps
+	// above are self-contained and the checks that follow this test case still hold.
+	const testTailnetSettingsRouteSelectionMagicRoute = `
+		resource "tailscale_tailnet_settings" "test_settings" {
+			route_selection = "magicroute"
+		}`
+
 	checkProperties := func(expected *tailscale.TailnetSettings) func(client *tailscale.Client, rs *terraform.ResourceState) error {
 		return func(client *tailscale.Client, rs *terraform.ResourceState) error {
 			actual, err := client.TailnetSettings().Get(context.Background())
 			if err != nil {
 				return err
 			}
-
-			// RouteSelection isn't supported by the provider yet, and the API
-			// always returns a non-empty value for it. We'll ignore it for now.
-			// TODO: unignore once we add support for route_selection.
-			actual.RouteSelection = ""
 
 			if err := assertEqual(expected, actual, "wrong Tailnet settings"); err != nil {
 				return err
@@ -89,6 +105,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 							UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsMember,
 							PostureIdentityCollectionOn:            true,
 							HTTPSEnabled:                           true,
+							RouteSelection:                         tailscale.RouteSelectionActivePassiveFailover,
 						}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "acls_externally_managed_on", "true"),
@@ -100,6 +117,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "users_role_allowed_to_join_external_tailnet", "member"),
 					resource.TestCheckResourceAttr(resourceName, "posture_identity_collection_on", "true"),
 					resource.TestCheckResourceAttr(resourceName, "https_enabled", "true"),
+					resource.TestCheckResourceAttr(resourceName, "route_selection", "active-passive-failover"),
 				),
 			},
 			{
@@ -116,6 +134,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 							UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsAdmin,
 							PostureIdentityCollectionOn:            false,
 							HTTPSEnabled:                           false,
+							RouteSelection:                         tailscale.RouteSelectionMagicRoute,
 						}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "acls_externally_managed_on", "false"),
@@ -127,6 +146,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "users_role_allowed_to_join_external_tailnet", "admin"),
 					resource.TestCheckResourceAttr(resourceName, "posture_identity_collection_on", "false"),
 					resource.TestCheckResourceAttr(resourceName, "https_enabled", "false"),
+					resource.TestCheckResourceAttr(resourceName, "route_selection", "magicroute"),
 				),
 			},
 			{
@@ -143,6 +163,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 							UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsAdmin,
 							PostureIdentityCollectionOn:            false,
 							HTTPSEnabled:                           false,
+							RouteSelection:                         tailscale.RouteSelectionMagicRoute,
 						}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "acls_externally_managed_on", "false"),
@@ -154,6 +175,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "users_role_allowed_to_join_external_tailnet", "admin"),
 					resource.TestCheckResourceAttr(resourceName, "posture_identity_collection_on", "false"),
 					resource.TestCheckResourceAttr(resourceName, "https_enabled", "false"),
+					resource.TestCheckResourceAttr(resourceName, "route_selection", "magicroute"),
 				),
 			},
 			{
@@ -170,6 +192,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 							UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsAdmin,
 							PostureIdentityCollectionOn:            false,
 							HTTPSEnabled:                           false,
+							RouteSelection:                         tailscale.RouteSelectionMagicRoute,
 						}),
 					),
 					resource.TestCheckResourceAttr(resourceName, "acls_externally_managed_on", "true"),
@@ -181,6 +204,77 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "users_role_allowed_to_join_external_tailnet", "admin"),
 					resource.TestCheckResourceAttr(resourceName, "posture_identity_collection_on", "false"),
 					resource.TestCheckResourceAttr(resourceName, "https_enabled", "false"),
+					resource.TestCheckResourceAttr(resourceName, "route_selection", "magicroute"),
+				),
+			},
+			{
+				// Changing only route_selection must not send the derived
+				// regional_routing_on alongside it, and must pass.
+				Config: testTailnetSettingsRouteSelectionRegional,
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName,
+						checkProperties(&tailscale.TailnetSettings{
+							ACLsExternallyManagedOn:                true,
+							ACLsExternalLink:                       "https://bar.com",
+							DevicesApprovalOn:                      false,
+							DevicesAutoUpdatesOn:                   false,
+							DevicesKeyDurationDays:                 10,
+							UsersApprovalOn:                        false,
+							UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsAdmin,
+							PostureIdentityCollectionOn:            false,
+							HTTPSEnabled:                           false,
+							RegionalRoutingOn:                      true,
+							RouteSelection:                         tailscale.RouteSelectionRegionalRouting,
+						}),
+					),
+					resource.TestCheckResourceAttr(resourceName, "route_selection", "regional-routing"),
+					resource.TestCheckResourceAttr(resourceName, "regional_routing_on", "true"),
+				),
+			},
+			{
+				// route_selection moving between two non-default values.
+				Config: testTailnetSettingsRouteSelectionMagicRoute,
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName,
+						checkProperties(&tailscale.TailnetSettings{
+							ACLsExternallyManagedOn:                true,
+							ACLsExternalLink:                       "https://bar.com",
+							DevicesApprovalOn:                      false,
+							DevicesAutoUpdatesOn:                   false,
+							DevicesKeyDurationDays:                 10,
+							UsersApprovalOn:                        false,
+							UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsAdmin,
+							PostureIdentityCollectionOn:            false,
+							HTTPSEnabled:                           false,
+							RegionalRoutingOn:                      false,
+							RouteSelection:                         tailscale.RouteSelectionMagicRoute,
+						}),
+					),
+					resource.TestCheckResourceAttr(resourceName, "route_selection", "magicroute"),
+					resource.TestCheckResourceAttr(resourceName, "regional_routing_on", "false"),
+				),
+			},
+			{
+				// The deprecated attribute still works, and updates the derived route_selection.
+				Config: testTailnetSettingsRegionalRoutingOn,
+				Check: resource.ComposeTestCheckFunc(
+					checkResourceRemoteProperties(resourceName,
+						checkProperties(&tailscale.TailnetSettings{
+							ACLsExternallyManagedOn:                true,
+							ACLsExternalLink:                       "https://bar.com",
+							DevicesApprovalOn:                      false,
+							DevicesAutoUpdatesOn:                   false,
+							DevicesKeyDurationDays:                 10,
+							UsersApprovalOn:                        false,
+							UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsAdmin,
+							PostureIdentityCollectionOn:            false,
+							HTTPSEnabled:                           false,
+							RegionalRoutingOn:                      true,
+							RouteSelection:                         tailscale.RouteSelectionRegionalRouting,
+						}),
+					),
+					resource.TestCheckResourceAttr(resourceName, "regional_routing_on", "true"),
+					resource.TestCheckResourceAttr(resourceName, "route_selection", "regional-routing"),
 				),
 			},
 			{
@@ -206,6 +300,8 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 					UsersRoleAllowedToJoinExternalTailnets: tailscale.RoleAllowedToJoinExternalTailnetsMember,
 					PostureIdentityCollectionOn:            true,
 					HTTPSEnabled:                           true,
+					RegionalRoutingOn:                      true,
+					RouteSelection:                         tailscale.RouteSelectionRegionalRouting,
 				}),
 			),
 			resource.TestCheckResourceAttr(resourceName, "acls_externally_managed_on", "true"),
@@ -217,6 +313,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 			resource.TestCheckResourceAttr(resourceName, "users_role_allowed_to_join_external_tailnet", "member"),
 			resource.TestCheckResourceAttr(resourceName, "posture_identity_collection_on", "true"),
 			resource.TestCheckResourceAttr(resourceName, "https_enabled", "true"),
+			resource.TestCheckResourceAttr(resourceName, "regional_routing_on", "true"),
 		))
 
 	resource.Test(t, resource.TestCase{
@@ -243,9 +340,9 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 						HTTPSEnabled:                           new(true),
 						NetworkFlowLoggingOn:                   new(true),
 						PostureIdentityCollectionOn:            new(true),
-						RegionalRoutingOn:                      new(true),
 						UsersApprovalOn:                        new(true),
 						UsersRoleAllowedToJoinExternalTailnets: new(tailscale.RoleAllowedToJoinExternalTailnets("member")),
+						RouteSelection:                         new(tailscale.RouteSelectionRegionalRouting),
 					}
 					err := client.TailnetSettings().Update(context.Background(), settingsRequest)
 					if err != nil {
@@ -272,6 +369,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 							RegionalRoutingOn:                      true,
 							UsersApprovalOn:                        true,
 							UsersRoleAllowedToJoinExternalTailnets: "member",
+							RouteSelection:                         tailscale.RouteSelectionRegionalRouting,
 						}),
 					),
 				),
@@ -279,4 +377,35 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 		},
 	})
 
+}
+
+// TestProvider_ResourceTailscaleTailnetSettings_InvalidConfig asserts that we reject
+// setting both regional_routing_on and route_selection in the same configuration.
+func TestProvider_ResourceTailscaleTailnetSettings_InvalidConfig(t *testing.T) {
+	const wantErr = `These attributes cannot be configured together:\s\[regional_routing_on,route_selection\]`
+
+	testCases := []expectedErrorTestCase{
+		{
+			Name: "agreeing-values",
+			Config: `
+					resource "tailscale_tailnet_settings" "test_settings" {
+						regional_routing_on = true
+						route_selection     = "regional-routing"
+					}
+				`,
+			ExpectError: regexp.MustCompile(wantErr),
+		},
+		{
+			Name: "contradictory-values",
+			Config: `
+					resource "tailscale_tailnet_settings" "test_settings" {
+						regional_routing_on = false
+						route_selection     = "regional-routing"
+					}
+				`,
+			ExpectError: regexp.MustCompile(wantErr),
+		},
+	}
+
+	runExpectedErrorTests(t, testCases)
 }

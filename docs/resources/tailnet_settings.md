@@ -39,7 +39,8 @@ resource "tailscale_tailnet_settings" "sample_tailnet_settings" {
 - `https_enabled` (Boolean) Whether provisioning of HTTPS certificates is enabled for the tailnet
 - `network_flow_logging_on` (Boolean) Whether network flow logs are enabled for the tailnet
 - `posture_identity_collection_on` (Boolean) Whether identity collection is enabled for device posture integrations for the tailnet
-- `regional_routing_on` (Boolean) Whether regional routing is enabled for the tailnet
+- `regional_routing_on` (Boolean, Deprecated) Whether regional routing is enabled for the tailnet. This is a deprecated view of `route_selection`, and is equivalent to `route_selection = "regional-routing"`. Setting both `regional_routing_on` and `route_selection` in the same configuration is an error.
+- `route_selection` (String) The route selection algorithm in use by the tailnet. Supersedes the deprecated `regional_routing_on`; setting both in the same configuration is an error.
 - `users_approval_on` (Boolean) Whether user approval is enabled for this tailnet
 - `users_role_allowed_to_join_external_tailnet` (String) Which user roles are allowed to join external tailnets
 
