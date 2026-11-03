@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"tailscale.com/client/tailscale/v2"
@@ -34,6 +35,28 @@ func (d *ResourceBase) Configure(ctx context.Context, req resource.ConfigureRequ
 			fmt.Sprintf(
 				"Expected *tailscale.Client, got: %T. Please report this error at https://github.com/tailscale/tailscale.",
 				req.ProviderData),
+		)
+		return
+	}
+
+	d.Client = client
+}
+
+// EphemeralResourceBase provides the authenticated client to ephemeral resources.
+type EphemeralResourceBase struct {
+	Client *tailscale.Client
+}
+
+func (d *EphemeralResourceBase) Configure(_ context.Context, req ephemeral.ConfigureRequest, resp *ephemeral.ConfigureResponse) {
+	if req.ProviderData == nil {
+		return
+	}
+
+	client, ok := req.ProviderData.(*tailscale.Client)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Ephemeral Resource Configure Type",
+			fmt.Sprintf("Expected *tailscale.Client, got: %T.", req.ProviderData),
 		)
 		return
 	}
