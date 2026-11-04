@@ -191,12 +191,14 @@ func (r *federatedIdentityResource) Read(ctx context.Context, req resource.ReadR
 	}
 
 	key, err := r.Client.Keys().Get(ctx, data.ID.ValueString())
-	if err != nil {
-		if tailscale.IsNotFound(err) {
-			resp.State.RemoveResource(ctx)
-			return
-		}
+	if err != nil && !tailscale.IsNotFound(err) {
 		resp.Diagnostics.AddError("Failed to fetch federated identity", err.Error())
+		return
+	}
+	// A deleted identity is served as a revoked, invalid record rather than a 404. It
+	// can never mint a token again, so it is as gone as one.
+	if tailscale.IsNotFound(err) || key.Invalid {
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
