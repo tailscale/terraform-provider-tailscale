@@ -55,6 +55,54 @@ func TestProvider_TailscaleWebhook(t *testing.T) {
 	})
 }
 
+// TestProvider_TailscaleWebhookDeletedOutsideTerraform checks that a webhook
+// that no longer exists is removed from state on refresh, and that deleting a
+// webhook that is already gone succeeds.
+func TestProvider_TailscaleWebhookDeletedOutsideTerraform(t *testing.T) {
+	webhook := tailscale.Webhook{
+		EndpointID:    "12345",
+		EndpointURL:   "https://example.com/endpoint",
+		ProviderType:  tailscale.WebhookSlackProviderType,
+		Subscriptions: []tailscale.WebhookSubscriptionType{"userNeedsApproval", "nodeCreated"},
+		Secret:        new("123"),
+	}
+
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		ProtoV5ProviderFactories: testProviderFactories(t),
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					testServer.ResponseCode = http.StatusOK
+					testServer.ResponseBody = webhook
+				},
+				Config: testWebhookCreate,
+			},
+			{
+				PreConfig: func() {
+					testServer.ResponseCode = http.StatusNotFound
+					testServer.ResponseBody = nil
+				},
+				Config:             testWebhookCreate,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				PreConfig: func() {
+					testServer.HandleRequest = func(method, _ string) TestResponse {
+						if method == http.MethodDelete {
+							return TestResponse{Code: http.StatusNotFound}
+						}
+						return TestResponse{Code: http.StatusOK, Body: webhook}
+					}
+				},
+				Config:  testWebhookCreate,
+				Destroy: true,
+			},
+		},
+	})
+}
+
 func TestAccTailscaleWebhook(t *testing.T) {
 	const resourceName = "tailscale_webhook.test_webhook"
 
