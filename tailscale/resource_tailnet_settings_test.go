@@ -30,6 +30,7 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 			devices_key_duration_days = 5
 			users_approval_on = true
 			users_role_allowed_to_join_external_tailnet = "member"
+			network_flow_logging_on = false
 			posture_identity_collection_on = true
 			https_enabled = true
 		}`
@@ -58,12 +59,11 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 		}`
 
 	// regional_routing_on and route_selection are two views of a single setting. These
-	// configs set exactly one of the two at a time.
+	// configs set exactly one of the two at a time and are expected to pass.
 	const testTailnetSettingsRouteSelectionRegional = `
 		resource "tailscale_tailnet_settings" "test_settings" {
 			route_selection = "regional-routing"
 		}`
-
 	const testTailnetSettingsRegionalRoutingOn = `
 		resource "tailscale_tailnet_settings" "test_settings" {
 			regional_routing_on = true
@@ -91,8 +91,33 @@ func TestAccTailscaleTailnetSettings(t *testing.T) {
 		}
 	}
 
+	// So we can run this suite multiple times using the same devcontrol fixture
+	resetTailnetSettings := func(t *testing.T) {
+		t.Helper()
+		client := getAccTestClient()
+		err := client.TailnetSettings().Update(context.Background(), tailscale.UpdateTailnetSettingsRequest{
+			ACLsExternallyManagedOn:                new(false),
+			ACLsExternalLink:                       new(""),
+			DevicesApprovalOn:                      new(false),
+			DevicesAutoUpdatesOn:                   new(false),
+			DevicesKeyDurationDays:                 new(180),
+			UsersApprovalOn:                        new(false),
+			UsersRoleAllowedToJoinExternalTailnets: new(tailscale.RoleAllowedToJoinExternalTailnetsNone),
+			NetworkFlowLoggingOn:                   new(false),
+			PostureIdentityCollectionOn:            new(false),
+			HTTPSEnabled:                           new(false),
+			RouteSelection:                         new(tailscale.RouteSelectionActivePassiveFailover),
+		})
+		if err != nil {
+			t.Fatalf("resetting tailnet settings: %s", err)
+		}
+	}
+
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			resetTailnetSettings(t)
+		},
 		ProtoV5ProviderFactories: testAccProviderFactories(t),
 		Steps: []resource.TestStep{
 			{
