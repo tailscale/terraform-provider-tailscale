@@ -24,10 +24,10 @@ var (
 )
 
 type aclResourceModel struct {
-	ID                       types.String `tfsdk:"id"`
-	ACL                      types.String `tfsdk:"acl"`
-	OverwriteExistingContent types.Bool   `tfsdk:"overwrite_existing_content"`
-	ResetACLOnDestroy        types.Bool   `tfsdk:"reset_acl_on_destroy"`
+	ID                       types.String   `tfsdk:"id"`
+	ACL                      aclHuJSONValue `tfsdk:"acl"`
+	OverwriteExistingContent types.Bool     `tfsdk:"overwrite_existing_content"`
+	ResetACLOnDestroy        types.Bool     `tfsdk:"reset_acl_on_destroy"`
 }
 
 // NewACLResource returns a new ACL resource.
@@ -64,6 +64,7 @@ func (r *aclResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 				},
 			},
 			"acl": schema.StringAttribute{
+				CustomType:  aclHuJSONType{},
 				Required:    true,
 				Description: "The policy that defines which devices and users are allowed to connect in your network. Can be either a JSON or a HuJSON string.",
 				PlanModifiers: []planmodifier.String{
@@ -98,7 +99,7 @@ func (r *aclResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
-	state.ACL = types.StringValue(acl.HuJSON)
+	state.ACL = newACLHuJSONValue(acl.HuJSON)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
