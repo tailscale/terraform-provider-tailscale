@@ -6,6 +6,7 @@ package tailscale
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -91,6 +92,53 @@ func testPostureCheckProperties(expected tailscale.PostureIntegration) func(clie
 
 		return nil
 	}
+}
+
+// TestProvider_TailscalePostureIntegrationDeletedOutsideTerraform checks that
+// a posture integration that no longer exists is removed from state on
+// refresh, and that deleting one that is already gone succeeds.
+func TestProvider_TailscalePostureIntegrationDeletedOutsideTerraform(t *testing.T) {
+	integration := tailscale.PostureIntegration{
+		ID:       "12345",
+		Provider: tailscale.PostureIntegrationProviderFalcon,
+		CloudID:  "us-1",
+		ClientID: "clientid1",
+	}
+
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		ProtoV5ProviderFactories: testProviderFactories(t),
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					testServer.ResponseCode = http.StatusOK
+					testServer.ResponseBody = integration
+				},
+				Config: testPostureIntegrationCreate,
+			},
+			{
+				PreConfig: func() {
+					testServer.ResponseCode = http.StatusNotFound
+					testServer.ResponseBody = nil
+				},
+				Config:             testPostureIntegrationCreate,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				PreConfig: func() {
+					testServer.HandleRequest = func(method, _ string) TestResponse {
+						if method == http.MethodDelete {
+							return TestResponse{Code: http.StatusNotFound}
+						}
+						return TestResponse{Code: http.StatusOK, Body: integration}
+					}
+				},
+				Config:  testPostureIntegrationCreate,
+				Destroy: true,
+			},
+		},
+	})
 }
 
 func TestAccTailscalePostureIntegration(t *testing.T) {

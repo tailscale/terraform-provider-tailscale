@@ -187,6 +187,10 @@ func (r *webhookResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	webhook, err := r.Client.Webhooks().Get(ctx, state.ID.ValueString())
 	if err != nil {
+		if tailscale.IsNotFound(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError("Error fetching webhook", err.Error())
 		return
 	}
@@ -235,7 +239,7 @@ func (r *webhookResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 	endpointID := state.ID.ValueString()
 
-	if err := r.Client.Webhooks().Delete(ctx, endpointID); err != nil {
+	if err := r.Client.Webhooks().Delete(ctx, endpointID); err != nil && !tailscale.IsNotFound(err) {
 		resp.Diagnostics.AddError("Failed to delete webhook", err.Error())
 		return
 	}
