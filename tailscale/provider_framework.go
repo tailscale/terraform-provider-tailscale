@@ -15,6 +15,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -24,7 +25,10 @@ import (
 	"tailscale.com/wif"
 )
 
-var _ provider.Provider = NewFrameworkProvider()
+var (
+	_ provider.Provider                       = NewFrameworkProvider()
+	_ provider.ProviderWithEphemeralResources = NewFrameworkProvider()
+)
 
 type tailscaleProvider struct {
 	Client tailscale.Client
@@ -34,7 +38,7 @@ type tailscaleProvider struct {
 //
 // TODO(alexc): This name is to distinguish it from the old provider written using
 // the plugin SDK. When we delete the plugin SDK code, we can rename this to NewProvider.
-func NewFrameworkProvider() provider.Provider {
+func NewFrameworkProvider() provider.ProviderWithEphemeralResources {
 	return &tailscaleProvider{}
 }
 
@@ -192,10 +196,11 @@ func (p *tailscaleProvider) Configure(ctx context.Context, req provider.Configur
 
 	p.Client = createTailscaleClient(parsedBaseURL, userAgent, tailnet, apiKey, oauthClientID, oauthClientSecret, identityToken, audience, scopes)
 
-	// Make the Tailscale client available during DataSource and Resource
-	// type Configure methods.
+	// Make the Tailscale client available during DataSource, Resource, and
+	// EphemeralResource type Configure methods.
 	resp.ResourceData = &p.Client
 	resp.DataSourceData = &p.Client
+	resp.EphemeralResourceData = &p.Client
 }
 
 // resolveValueFromFile returns the value as-is, or if it starts with "file:",
@@ -240,6 +245,14 @@ func (p *tailscaleProvider) Resources(_ context.Context) []func() resource.Resou
 		NewTailnetSettingsResource,
 		NewWebhookResource,
 		NewFederatedIdentityResource,
+	}
+}
+
+// EphemeralResources returns a slice of ephemeral resources.
+func (p *tailscaleProvider) EphemeralResources(_ context.Context) []func() ephemeral.EphemeralResource {
+	return []func() ephemeral.EphemeralResource{
+		NewOAuthClientEphemeralResource,
+		NewTailnetKeyEphemeralResource,
 	}
 }
 

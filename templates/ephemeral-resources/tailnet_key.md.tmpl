@@ -1,0 +1,16 @@
+---
+page_title: "{{.Name}} {{.Type}} - terraform-provider-tailscale"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+## Example Usage
+
+{{ tffile (printf "examples/ephemeral-resources/%s/ephemeral.tf" .Name)}}
+
+{{ .SchemaMarkdown | trimspace }}

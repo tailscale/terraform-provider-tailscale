@@ -1,0 +1,18 @@
+---
+page_title: "{{.Name}} {{.Type}} - terraform-provider-tailscale"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+> **Note:** This ephemeral resource revokes the OAuth client when Terraform closes it. It is intended for temporary clients and is not suitable when the client must remain active after the Terraform operation. The managed resource keeps clients active, but its sensitive client secret is stored in Terraform state.
+
+## Example Usage
+
+{{ tffile (printf "examples/ephemeral-resources/%s/ephemeral.tf" .Name)}}
+
+{{ .SchemaMarkdown | trimspace }}

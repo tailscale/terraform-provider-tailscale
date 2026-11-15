@@ -8,7 +8,7 @@ import (
 	"flag"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"github.com/hashicorp/terraform-plugin-go/tfprotov5/tf5server"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6/tf6server"
 
 	"github.com/tailscale/terraform-provider-tailscale/tailscale"
 )
@@ -20,13 +20,13 @@ func main() {
 	flag.Parse()
 
 	provider := tailscale.NewFrameworkProvider()
-	tfServer := providerserver.NewProtocol5(provider)
+	tfServer := providerserver.NewProtocol6(provider)
 
-	var serveOpts []tf5server.ServeOpt
+	var serveOpts []tf6server.ServeOpt
 
 	if debug {
-		serveOpts = append(serveOpts, tf5server.WithManagedDebug())
+		serveOpts = append(serveOpts, tf6server.WithManagedDebug())
 	}
 
-	tf5server.Serve("registry.terraform.io/tailscale/tailscale", tfServer, serveOpts...)
+	tf6server.Serve("registry.terraform.io/tailscale/tailscale", tfServer, serveOpts...)
 }
