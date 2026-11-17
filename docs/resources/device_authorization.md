@@ -32,6 +32,10 @@ resource "tailscale_device_authorization" "sample_authorization" {
 - `authorized` (Boolean) Whether or not the device is authorized
 - `device_id` (String) The device to set as authorized
 
+### Optional
+
+- `delete_on_destroy` (Boolean) Whether to delete the device from the tailnet when this resource is destroyed. Defaults to `false`, in which case destroying this resource only removes it from the Terraform state. Terraform destroys a resource using the values recorded in its state, so this must be set to `true` and applied before the resource is removed from the configuration or destroyed. Changing `device_id` forces replacement, which destroys the resource, so with this set to `true` the previous device is deleted.
+
 ### Read-Only
 
 - `id` (String) The ID of this resource.
