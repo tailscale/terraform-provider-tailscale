@@ -64,7 +64,7 @@ func (r retryDeadlineValidator) MarkdownDescription(ctx context.Context) string 
 }
 
 func (r retryDeadlineValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-	if req.ConfigValue.IsNull() {
+	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
 		return
 	}
 	waitFor, err := time.ParseDuration(req.ConfigValue.ValueString())

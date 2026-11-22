@@ -61,6 +61,14 @@ func TestRetryDeadlineValidator(t *testing.T) {
 			config:  types.StringValue("1ms"),
 			wantErr: true,
 		},
+		{
+			name:   "null",
+			config: types.StringNull(),
+		},
+		{
+			name:   "unknown",
+			config: types.StringUnknown(),
+		},
 	}
 
 	runStringValidatorTests(t, retryDeadlineValidator{}, testCases)
