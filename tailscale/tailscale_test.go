@@ -25,17 +25,27 @@ type TestResponse struct {
 type TestServer struct {
 	t *testing.T
 
-	Method string
-	Path   string
-	Body   *bytes.Buffer
+	Method   string
+	Path     string
+	Body     *bytes.Buffer
+	Requests []TestRequest
 
 	HandleRequest func(method string, path string) TestResponse
 
-	calls     int
-	Responses []TestResponse
+	calls              int
+	Responses          []TestResponse
+	ResponsesByRequest map[string]TestResponse
 
 	ResponseCode int
 	ResponseBody interface{}
+}
+
+type TestRequest struct {
+	Header   http.Header
+	Method   string
+	Path     string
+	Body     string
+	RawQuery string
 }
 
 func NewTestHarness(t *testing.T) (baseURL string, server *TestServer) {
@@ -79,11 +89,29 @@ func (t *TestServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	t.Method = r.Method
 	t.Path = r.URL.Path
 
-	resp := t.HandleRequest(r.Method, t.Path)
+	var resp TestResponse
+	if t.ResponsesByRequest != nil {
+		if response, ok := t.ResponsesByRequest[r.Method+" "+r.URL.RequestURI()]; ok {
+			resp = response
+		} else if response, ok := t.ResponsesByRequest[r.Method+" "+r.URL.Path]; ok {
+			resp = response
+		}
+	}
+	if resp.Code == 0 {
+		resp = t.HandleRequest(r.Method, t.Path)
+	}
 
 	t.Body = bytes.NewBuffer([]byte{})
 	_, err := io.Copy(t.Body, r.Body)
 	assert.NoError(t.t, err)
+	t.Requests = append(t.Requests, TestRequest{
+		Header:   r.Header.Clone(),
+		Method:   t.Method,
+		Path:     t.Path,
+		Body:     t.Body.String(),
+		RawQuery: r.URL.RawQuery,
+	})
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(resp.Code)
 	switch body := resp.Body.(type) {
 	case []byte:

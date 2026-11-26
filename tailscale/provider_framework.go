@@ -237,6 +237,7 @@ func (p *tailscaleProvider) Resources(_ context.Context) []func() resource.Resou
 		NewPostureIntegrationResource,
 		NewServiceResource,
 		NewTailnetKeyResource,
+		NewTailnetResource,
 		NewTailnetSettingsResource,
 		NewWebhookResource,
 		NewFederatedIdentityResource,
@@ -253,6 +254,7 @@ func (p *tailscaleProvider) DataSources(_ context.Context) []func() datasource.D
 		NewMultipleDevicesDataSource,
 		NewServiceDataSource,
 		NewSingleDeviceDataSource,
+		NewTailnetsDataSource,
 	}
 }
 
