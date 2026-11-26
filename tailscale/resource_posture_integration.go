@@ -116,9 +116,13 @@ func (p *postureIntegrationResource) Read(ctx context.Context, req resource.Read
 
 	state.ID = types.StringValue(integration.ID)
 	state.PostureProvider = types.StringValue(string(integration.Provider))
-	state.CloudID = CoalesceStringEmptyOrNull(state.CloudID, integration.CloudID)
-	state.ClientID = CoalesceStringEmptyOrNull(state.ClientID, integration.ClientID)
-	state.TenantID = CoalesceStringEmptyOrNull(state.TenantID, integration.TenantID)
+	// cloud_id / client_id / tenant_id all have a schema Default of "", so represent
+	// empty values as "" rather than null. Otherwise an empty value reads back as
+	// null on import, leaving a permanent null-vs-"" mismatch (a spurious in-place
+	// update).
+	state.CloudID = types.StringValue(integration.CloudID)
+	state.ClientID = types.StringValue(integration.ClientID)
+	state.TenantID = types.StringValue(integration.TenantID)
 
 	diags = resp.State.Set(ctx, state)
 	resp.Diagnostics.Append(diags...)

@@ -93,6 +93,44 @@ func TestProvider_TailscaleFederatedIdentity_ReservedCustomClaimKeys(t *testing.
 	}
 }
 
+// TestProvider_TailscaleFederatedIdentity_ImportEmptyDescription is a regression
+// test for a federated identity with no description. The description attribute has
+// a Default of "", but Read null-ified an empty description, leaving a permanent
+// null-vs-"" mismatch that showed up as a spurious in-place update on import.
+func TestProvider_TailscaleFederatedIdentity_ImportEmptyDescription(t *testing.T) {
+	const testFederatedIdentityNoDescription = `
+	resource "tailscale_federated_identity" "example_federated_identity" {
+		scopes  = ["auth_keys"]
+		issuer  = "https://example.com"
+		subject = "example-sub-*"
+	}`
+
+	resource.Test(t, resource.TestCase{
+		IsUnitTest: true,
+		PreCheck: func() {
+			testServer.ResponseCode = http.StatusOK
+			testServer.ResponseBody = tailscale.Key{
+				ID:      "test",
+				Scopes:  []string{"auth_keys"},
+				Issuer:  "https://example.com",
+				Subject: "example-sub-*",
+				// Description intentionally left empty.
+			}
+		},
+		ProtoV5ProviderFactories: testProviderFactories(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testFederatedIdentityNoDescription,
+			},
+			{
+				ResourceName:      "tailscale_federated_identity.example_federated_identity",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func TestAccTailscaleFederatedIdentity(t *testing.T) {
 	const resourceName = "tailscale_federated_identity.test_federated_identity"
 
